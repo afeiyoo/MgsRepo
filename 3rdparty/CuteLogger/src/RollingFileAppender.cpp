@@ -15,9 +15,6 @@ RollingFileAppender::RollingFileAppender(const QString &baseFileName)
     QString fullFileName = baseFileName
                            + QDateTime::currentDateTime().toString(datePatternString());
     setFileName(fullFileName);
-
-    // 第三方库修改 2026-05-11 启动时清理旧日志，避免程序重启后，未删除过期日志
-    removeOldFiles();
 }
 
 void RollingFileAppender::append(const QDateTime &timeStamp,
@@ -141,13 +138,16 @@ void RollingFileAppender::removeOldFiles()
     QFileInfo fileInfo(fileName());
     QDir logDirectory(fileInfo.absoluteDir());
     logDirectory.setFilter(QDir::Files);
-    logDirectory.setNameFilters(QStringList() << fileInfo.fileName() + "*");
+
+    QString baseName = QFileInfo(m_baseFileName).fileName();
+    logDirectory.setNameFilters(QStringList() << QFileInfo(m_baseFileName).fileName() + "*");
     QFileInfoList logFiles = logDirectory.entryInfoList();
 
     QMap<QDateTime, QString> fileDates;
     for (int i = 0; i < logFiles.length(); ++i) {
         QString name = logFiles[i].fileName();
-        QString suffix = name.mid(name.indexOf(fileInfo.fileName()) + fileInfo.fileName().length());
+
+        QString suffix = name.mid(name.indexOf(baseName) + baseName.length());
         QDateTime fileDateTime = QDateTime::fromString(suffix, datePatternString());
 
         if (fileDateTime.isValid())
@@ -155,9 +155,9 @@ void RollingFileAppender::removeOldFiles()
     }
 
     QList<QString> fileDateNames = fileDates.values();
-    // 2026-05-11 第三方库修改 避免多删除一个文件
-    for (int i = 0; i < fileDateNames.length() - m_logFilesLimit; ++i)
+    for (int i = 0; i < fileDateNames.length() - m_logFilesLimit + 1; ++i) {
         QFile::remove(fileDateNames[i]);
+    }
 }
 
 void RollingFileAppender::computeRollOverTime()

@@ -2555,9 +2555,7 @@ QString BizHandler::requestRemoteAPI(int type, const QString &id, const QString 
 
     Http httpClient;
     QByteArray result;
-    LOG_INFO().noquote() << "测试日志<1>: " << httpClient.getRequestHeaders();
     httpClient.addRequestHeader("UserToken", QString("%1").arg(token).toUtf8());
-    LOG_INFO().noquote() << "测试日志<2>: " << httpClient.getRequestHeaders();
     bool ok = httpClient.postSync(result, url, data.toUtf8(), "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
