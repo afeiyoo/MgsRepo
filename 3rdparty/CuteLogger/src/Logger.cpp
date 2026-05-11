@@ -1059,7 +1059,7 @@ LoggerTimingHelper::~LoggerTimingHelper()
 CuteMessageLogger::~CuteMessageLogger()
 {
     // 第三方库修改 2025-07-24 日志内容信号传出，便于他用
-    emit m_l->sigLogWrite(m_message, m_category);
+    emit m_l->sigLogWrite(m_level, m_message, m_category);
     m_l->write(m_level, m_file, m_line, m_function, m_category, m_message);
 }
 

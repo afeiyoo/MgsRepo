@@ -1,6 +1,6 @@
 include($$PWD/../../Public.pri)
 
-QT       *= core gui network
+QT       *= core gui network multimedia
 
 TARGET = MgsToolsKit
 TEMPLATE = app
@@ -25,24 +25,35 @@ DEFINES += QT_NO_DEBUG_OUTPUT
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/HttpClient/HttpClient.pri)
+include($$THIRD_PARTY_LIBRARY_PATH/NlohmannJson/NlohmannJson.pri)
+include($$THIRD_PARTY_LIBRARY_PATH/QZXing/QZXing.pri)
 include($$PWD/../SmartLaneController/SmartLaneController.pri)
 
 SOURCES += \
+    bend/cardrobot/cardrobothandler.cpp \
     bend/infoboard/infoboardhandler.cpp \
+    dialogs/t_cardrobotstatus.cpp \
     global/globalmanager.cpp \
+    global/signalmanager.cpp \
     main.cpp \
     mainwindow.cpp \
     pages/t_basepage.cpp \
+    pages/t_cardrobot.cpp \
     pages/t_deskprinter.cpp \
     pages/t_infoboard.cpp \
     pages/t_smartcontroller.cpp
 
 HEADERS += \
+    bend/cardrobot/cardrobothandler.h \
     bend/infoboard/infoboardhandler.h \
+    dialogs/t_cardrobotstatus.h \
+    global/appdefs.h \
+    global/signalmanager.h \
     mainwindow.h \
     global/constant.h \
     global/globalmanager.h \
     pages/t_basepage.h \
+    pages/t_cardrobot.h \
     pages/t_deskprinter.h \
     pages/t_infoboard.h \
     pages/t_smartcontroller.h

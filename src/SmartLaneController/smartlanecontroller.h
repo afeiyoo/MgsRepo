@@ -13,14 +13,12 @@ public:
     struct ST_PendingCommand
     {
         QString type;
-        QByteArray data;
         uchar seq;
         int retryCount;
         QTimer *timer = nullptr;
 
-        ST_PendingCommand(const QString &t, const QByteArray &d, uchar s, int r, QTimer *tm)
+        ST_PendingCommand(const QString &t, uchar s, int r, QTimer *tm)
             : type(t)
-            , data(d)
             , seq(s)
             , retryCount(r)
             , timer(tm)
@@ -45,6 +43,7 @@ public:
 public slots:
     void onStateChanged(QAbstractSocket::SocketState state);
     void onTryConnect();
+    void onErrorOccurred(QAbstractSocket::SocketError error);
 
     void onReadyRead();
 
@@ -57,7 +56,6 @@ private:
     void sendResponse(uchar cmdType, uchar status, uchar seq);
     uchar getClientSeq();
     QString makeKey(const QString &type, uchar seq);
-    void sendCommandWithSeq(const QString &type, const QByteArray &data, uchar seq);
     void handleACmd(const QString &type, uchar seq, const QByteArray &command);
 
 private:
@@ -75,4 +73,6 @@ private:
     QByteArray m_buffer; // 用于缓存从 socket 中读到但还未解析完的数据（处理粘包问题）
 
     QMap<QString, ST_PendingCommand *> m_pendingCommands; // 重发等待队列
+
+    QMap<QString, QByteArray> m_lastCommand;
 };

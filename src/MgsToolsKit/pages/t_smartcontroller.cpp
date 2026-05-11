@@ -74,10 +74,12 @@ T_SmartController::T_SmartController(QWidget *parent)
         }
     });
 
+    connect(m_logClearButton, &ElaPushButton::clicked, m_logEdit, &ElaPlainTextEdit::clear);
+
     connect(m_smartController, &SmartLaneController::sigRecvFromSmartLaneController, this, &T_SmartController::onRecvFromSmartLaneController);
 
     // 界面显示日志信息
-    connect(cuteLogger, &Logger::sigLogWrite, this, [=](const QString &log, const QString &cat) {
+    connect(cuteLogger, &Logger::sigLogWrite, this, [=](Logger::LogLevel level, const QString &log, const QString &cat) {
         if (cat == "smartctrl") {
             m_logEdit->appendPlainText(DataDealUtils::curDateTimeStr() + " | " + log + "\n");
         }
@@ -90,21 +92,21 @@ void T_SmartController::initContent()
 {
     // 局部布局1
     m_connectInfoEdit = new ElaLineEdit(this);
-    m_connectInfoEdit->setPlaceholderText("请输入智能网关IP地址与端口,用冒号分隔");
-    m_connectInfoEdit->setFixedSize(270, 35);
+    m_connectInfoEdit->setPlaceholderText("请输入IP地址与端口,用冒号分隔");
+    m_connectInfoEdit->setFixedSize(240, 35);
     m_connectButton = new ElaPushButton("连接", this);
     m_sendButton = new ElaPushButton("发送", this);
 
     ElaText *devCtrlTip = new ElaText("设备开关", this);
     devCtrlTip->setTextPixelSize(15);
-    devCtrlTip->setWordWrap(false);
+    devCtrlTip->setIsWrapAnywhere(false);
 
     m_devSwitch = new ElaToggleSwitch(this);
     m_devSwitch->setFixedHeight(20);
 
     ElaText *modeTip = new ElaText("模式", this);
     modeTip->setTextPixelSize(15);
-    modeTip->setWordWrap(false);
+    modeTip->setIsWrapAnywhere(false);
 
     m_outputButton = new ElaRadioButton("输出", this);
     m_inputButton = new ElaRadioButton("输入", this);
@@ -130,10 +132,10 @@ void T_SmartController::initContent()
     // 局部布局2
     ElaText *offsetTip = new ElaText("偏移位(第1位)", this);
     offsetTip->setTextPixelSize(15);
-    offsetTip->setWordWrap(false);
+    offsetTip->setIsWrapAnywhere(false);
 
     m_offsetButton = new ElaToggleButton("0", this);
-    m_offsetButton->setFixedWidth(75);
+    m_offsetButton->setFixedWidth(65);
 
     QHBoxLayout *partHLayout2 = new QHBoxLayout();
     partHLayout2->setContentsMargins(0, 0, 0, 0);
@@ -144,13 +146,13 @@ void T_SmartController::initContent()
     // 局部布局3
     ElaText *controlTip = new ElaText("控制位(第2位)", this);
     controlTip->setTextPixelSize(15);
-    controlTip->setWordWrap(false);
+    controlTip->setIsWrapAnywhere(false);
 
     QGridLayout *gridLayout = new QGridLayout();
     gridLayout->setContentsMargins(0, 0, 0, 0);
     for (int i = 0; i < 16; ++i) {
         ElaToggleButton *controlButton = new ElaToggleButton(QString::number(i), this);
-        controlButton->setFixedWidth(75);
+        controlButton->setFixedWidth(65);
         m_controlButton.append(controlButton);
 
         int row = i / 8;
@@ -167,11 +169,11 @@ void T_SmartController::initContent()
     // 局部布局4
     ElaText *triggerTip = new ElaText("电平位(第3位)", this);
     triggerTip->setTextPixelSize(15);
-    triggerTip->setWordWrap(false);
+    triggerTip->setIsWrapAnywhere(false);
 
     for (int i = 0; i < 2; ++i) {
         ElaToggleButton *triggerButton = new ElaToggleButton(QString::number(i), this);
-        triggerButton->setFixedWidth(75);
+        triggerButton->setFixedWidth(65);
         m_triggerButton.append(triggerButton);
 
         connect(triggerButton, &ElaToggleButton::toggled, this, [=](bool checked) {
@@ -195,19 +197,25 @@ void T_SmartController::initContent()
 
     // 局部布局5
     ElaText *logTipText = new ElaText("交互日志显示区", this);
+    QFont logTipFont = logTipText->font();
+    logTipFont.setBold(true);
+    logTipText->setFont(logTipFont);
+
     m_heartStatusText = new ElaText("设备心跳异常", this);
     m_heartStatusText->setStyleSheet("color: #ff0000");
 
     QList<ElaText *> texts = {logTipText, m_heartStatusText};
     for (auto text : texts) {
         text->setTextPixelSize(15);
-        text->setWordWrap(false);
-        text->setFixedHeight(35);
+        text->setIsWrapAnywhere(false);
     }
+
+    m_logClearButton = new ElaPushButton("清除", this);
 
     QHBoxLayout *partHLayout5 = new QHBoxLayout();
     partHLayout5->setContentsMargins(0, 0, 0, 0);
     partHLayout5->addWidget(logTipText);
+    partHLayout5->addWidget(m_logClearButton);
     partHLayout5->addStretch();
     partHLayout5->addWidget(m_heartStatusText);
 
@@ -222,7 +230,7 @@ void T_SmartController::initContent()
     centralWidget->setWindowTitle("智能网关测试工具");
     QVBoxLayout *centralLayout = new QVBoxLayout(centralWidget);
     centralLayout->setContentsMargins(0, 0, 5, 0);
-    centralLayout->addSpacing(13);
+    centralLayout->addSpacing(5);
     centralLayout->addLayout(partHLayout1);
     centralLayout->addLayout(partHLayout2);
     centralLayout->addLayout(partHLayout3);
@@ -241,11 +249,9 @@ void T_SmartController::onConnectServer()
     }
 
     QString info = m_connectInfoEdit->text().simplified();
-    if (info.isEmpty()) {
-        ElaMessageBar::error(ElaMessageBarType::BottomRight, "连接失败", "连接信息为空，请检查", 1000, this);
-        LOG_CERROR("smartctrl").noquote() << "Tcp连接智能网关失败: 连接信息为空";
+    if (info.isEmpty())
         return;
-    }
+
     QStringList parts = info.split(":");
     if (parts.size() != 2) {
         ElaMessageBar::error(ElaMessageBarType::BottomRight, "连接失败", "连接信息填写错误，请检查", 1000, this);
@@ -356,7 +362,7 @@ void T_SmartController::onSendToSmartLaneController()
     QMap<int, bool> relayMap;
     for (int i = 0; i < m_controlButton.size(); ++i) {
         relayMap.insert(i + 1, 0); // 所有路默认关闭
-        if(i == 0)  // 输出的话，路数从1开始排序（相当于按钮0是废了）
+        if (i == 0)                // 输出的话，路数从1开始排序（相当于按钮0是废了）
             continue;
         if (m_controlButton[i]->getIsToggled() && devSwitch) {
             relayMap[i] = 1;

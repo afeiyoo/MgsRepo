@@ -4,6 +4,7 @@
 #include "Logger.h"
 #include "RollingFileAppender.h"
 #include "global/constant.h"
+#include "global/signalmanager.h"
 #include "utils/fileutils.h"
 
 using namespace Utils;
@@ -12,7 +13,9 @@ Q_GLOBAL_STATIC(GlobalManager, ins)
 
 GlobalManager::GlobalManager(QObject *parent)
     : QObject{parent}
-{}
+{
+    m_signalMan = new SignalManager(this);
+}
 
 GlobalManager::~GlobalManager() {}
 
@@ -39,8 +42,11 @@ void GlobalManager::init()
     // 轮转日志 智能车控器日志
     FileName smartControllerLogPath = logDir + QString("/smartController.log");
     RollingFileAppender *smartControllerAppender = new RollingFileAppender(FileUtils::canonicalPath(smartControllerLogPath).toString());
+    // 轮转日志 发卡机日志
+    FileName cardRobotLogPath = logDir + QString("/cardRobot.log");
+    RollingFileAppender *cardRobotAppender = new RollingFileAppender(FileUtils::canonicalPath(cardRobotLogPath).toString());
 
-    QList<RollingFileAppender *> appenders = {mainAppender, infoboardAppender, smartControllerAppender};
+    QList<RollingFileAppender *> appenders = {mainAppender, infoboardAppender, smartControllerAppender, cardRobotAppender};
     for (auto appender : appenders) {
         appender->setFormat(Constant::Log::FORMAT);
         appender->setLogFilesLimit(90);
@@ -50,6 +56,7 @@ void GlobalManager::init()
     cuteLogger->registerAppender(mainAppender);
     cuteLogger->registerCategoryAppender("infoboard", infoboardAppender);
     cuteLogger->registerCategoryAppender("smartctrl", smartControllerAppender);
+    cuteLogger->registerCategoryAppender("cardrobot", cardRobotAppender);
 
     LOG_INFO().noquote() << "开始程序初始化...";
 }

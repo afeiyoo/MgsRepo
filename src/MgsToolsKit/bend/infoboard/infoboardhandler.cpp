@@ -1,6 +1,8 @@
 #include "infoboardhandler.h"
 
 #include "Logger.h"
+#include "global/globalmanager.h"
+#include "global/signalmanager.h"
 #include "qevent.h"
 #include "utils/datadealutils.h"
 #include "utils/fileutils.h"
@@ -19,6 +21,7 @@ InfoBoardHandler::InfoBoardHandler(QObject *parent)
 
     connect(m_socket, &QTcpSocket::stateChanged, this, &InfoBoardHandler::onStateChanged);
     connect(m_socket, &QTcpSocket::readyRead, this, &InfoBoardHandler::onReadyRead);
+    connect(m_socket, &QTcpSocket::errorOccurred, this, &InfoBoardHandler::onErrorOccurred);
 
     m_reconnectTimer = new QTimer(this);
     m_reconnectTimer->setInterval(1000 * 60);
@@ -35,11 +38,9 @@ bool InfoBoardHandler::connectServer(const QString &ip, quint16 port)
     m_isForceDisconnect = false; // 复位
     m_peerAddr = ip;
     m_peerPort = port;
+
+    LOG_CINFO("infoboard").noquote() << QString("开始连接情报板(IP: %1, Port: %2)").arg(ip).arg(port);
     m_socket->connectToHost(ip, port);
-    if (!m_socket->waitForConnected(5 * 1000)) {
-        LOG_CWARNING("infoboard").noquote() << "无法连接情报板";
-        return false;
-    }
 
     return true;
 }
@@ -61,12 +62,14 @@ bool InfoBoardHandler::filePublishAndShowImmediate(const QByteArray &fileData, c
     QByteArray sendData = constructFilePublishAndShowImmediateFrame(fileData, fileName);
 
     LOG_CINFO("infoboard").noquote() << QString("播放列表文件下发并立即显示: %1").arg(DataDealUtils::byteArrayToHexStr(sendData));
-    m_socket->write(sendData);
-    if (!m_socket->waitForBytesWritten(1000)) {
-        LOG_CWARNING("infoboard").noquote() << "播放列表文件下发超时";
+    qint64 ret = m_socket->write(sendData);
+    if (ret == -1) {
+        LOG_CWARNING("infoboard").noquote() << "数据写入失败";
         return false;
     }
-    LOG_CINFO("infoboard").noquote() << "播放列表文件下发并显示完成";
+    m_socket->flush();
+    LOG_CINFO("infoboard").noquote() << "数据已进入发送队列";
+
     return true;
 }
 
@@ -123,12 +126,14 @@ bool InfoBoardHandler::filePublish(const QString &fileName)
     QByteArray sendData = constructSendData(cmd, data);
 
     LOG_CINFO("infoboard").noquote() << QString("文件%1下发: %2").arg(fileName, DataDealUtils::byteArrayToHexStr(sendData));
-    m_socket->write(sendData);
-    if (!m_socket->waitForBytesWritten(1000)) {
-        LOG_CWARNING("infoboard").noquote() << QString("文件%1下发超时").arg(fileName);
+    qint64 ret = m_socket->write(sendData);
+    if (ret == -1) {
+        LOG_CWARNING("infoboard").noquote() << "数据写入失败";
         return false;
     }
-    LOG_CINFO("infoboard").noquote() << QString("文件%1下发完成").arg(fileName);
+    m_socket->flush();
+    LOG_CINFO("infoboard").noquote() << "数据已进入发送队列";
+
     return true;
 }
 
@@ -142,12 +147,14 @@ bool InfoBoardHandler::setupUrl(const QString &url, ushort interval, bool isRepo
     QByteArray sendData = constructSetupUrlFrame(url, interval, isReport);
 
     LOG_CINFO("infoboard").noquote() << QString("设置状态上报Url请求: %1").arg(DataDealUtils::byteArrayToHexStr(sendData));
-    m_socket->write(sendData);
-    if (!m_socket->waitForBytesWritten(1000)) {
-        LOG_CWARNING("infoboard").noquote() << "设置状态上报Url超时";
+    qint64 ret = m_socket->write(sendData);
+    if (ret == -1) {
+        LOG_CWARNING("infoboard").noquote() << "数据写入失败";
         return false;
     }
-    LOG_CINFO("infoboard").noquote() << "设置状态上报Url完成";
+    m_socket->flush();
+    LOG_CINFO("infoboard").noquote() << "数据已进入发送队列";
+
     return true;
 }
 
@@ -167,7 +174,7 @@ void InfoBoardHandler::onStateChanged(QAbstractSocket::SocketState state)
         m_connected = true;
         m_reconnectCount = 0;
         m_reconnectTimer->stop();
-        emit sigNetworkStatusChanged(true);
+        emit GM_INSTANCE->m_signalMan->sigNetworkStatusChanged(true);
         break;
     case QAbstractSocket::UnconnectedState:
         LOG_CINFO("infoboard").noquote() << "情报板断开连接";
@@ -175,7 +182,7 @@ void InfoBoardHandler::onStateChanged(QAbstractSocket::SocketState state)
         if (m_isEnableRetryConnect && !m_isForceDisconnect && m_reconnectCount < m_reconnectMaxTimes) {
             m_reconnectTimer->start();
         }
-        emit sigNetworkStatusChanged(false);
+        emit GM_INSTANCE->m_signalMan->sigNetworkStatusChanged(false);
         break;
     default:
         break;
@@ -291,9 +298,9 @@ void InfoBoardHandler::onReadyRead()
 
             // 下屏协议无效
             if (upState == 0x30) {
-                emit sigDevStatusChanged(true);
+                emit GM_INSTANCE->m_signalMan->sigDevStatusChanged(true);
             } else {
-                emit sigDevStatusChanged(false);
+                emit GM_INSTANCE->m_signalMan->sigDevStatusChanged(false);
             }
         } else {
             LOG_CWARNING("infoboard").noquote() << QString("未知的命令类型: %1").arg(DataDealUtils::byteArrayToHexStr(cmdType));
@@ -317,6 +324,13 @@ void InfoBoardHandler::onTryConnect()
     LOG_CINFO("infoboard").noquote() << QString("第%1次尝试重连情报板").arg(++m_reconnectCount);
     m_socket->abort();
     connectServer(m_peerAddr, m_peerPort);
+}
+
+void InfoBoardHandler::onErrorOccurred(QAbstractSocket::SocketError error)
+{
+    Q_UNUSED(error)
+
+    LOG_CWARNING("infoboard").noquote() << QString("Socket错误: %1").arg(m_socket->errorString());
 }
 
 uint InfoBoardHandler::genCRC(const uchar *buffer, int bufferLen)

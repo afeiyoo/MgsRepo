@@ -4,6 +4,7 @@
 
 #define GM_INSTANCE GlobalManager::instance()
 
+class SignalManager;
 class GlobalManager : public QObject
 {
     Q_OBJECT
@@ -15,5 +16,6 @@ public:
 
     void init();
 
-signals:
+public:
+    SignalManager *m_signalMan = nullptr;
 };

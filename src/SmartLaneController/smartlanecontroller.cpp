@@ -3,9 +3,7 @@
 #include <QNetworkProxy>
 
 #include "Logger.h"
-#include "RollingFileAppender.h"
 #include "utils/datadealutils.h"
-#include "utils/fileutils.h"
 
 using namespace Utils;
 
@@ -40,6 +38,7 @@ SmartLaneController::SmartLaneController(QObject *parent)
 
     connect(m_tcpSocket, &QTcpSocket::stateChanged, this, &SmartLaneController::onStateChanged);
     connect(m_tcpSocket, &QTcpSocket::readyRead, this, &SmartLaneController::onReadyRead);
+    connect(m_tcpSocket, &QTcpSocket::errorOccurred, this, &SmartLaneController::onErrorOccurred);
 
     m_reconnectTimer = new QTimer(this);
     m_reconnectTimer->setInterval(1000 * 30);
@@ -57,11 +56,10 @@ bool SmartLaneController::connectServer(const QString &ip, quint16 port)
     // 连接服务端
     m_peerAddr = ip;
     m_peerPort = port;
+
+    LOG_CINFO("smartctrl").noquote() << QString("开始连接智能网关(IP: %1, Port: %2)").arg(ip).arg(port);
     m_tcpSocket->connectToHost(ip, port);
-    if (!m_tcpSocket->waitForConnected(5 * 1000)) {
-        LOG_CWARNING("smartctrl").noquote() << "无法连接智能网关";
-        return false;
-    }
+
     return true;
 }
 
@@ -126,6 +124,13 @@ void SmartLaneController::onTryConnect()
     connectServer(m_peerAddr, m_peerPort);
 }
 
+void SmartLaneController::onErrorOccurred(QAbstractSocket::SocketError error)
+{
+    Q_UNUSED(error)
+
+    LOG_CWARNING("smartctrl").noquote() << QString("Socket错误: %1").arg(m_tcpSocket->errorString());
+}
+
 void SmartLaneController::sendCommand(const QString &type, QByteArray data)
 {
     if (!m_connected) {
@@ -150,23 +155,41 @@ void SmartLaneController::sendCommand(const QString &type, QByteArray data)
     QByteArray crc = DataDealUtils::getCRCCode(buffer.mid(STX_LEN));
     buffer.append(crc);
 
-    LOG_CINFO("smartctrl").noquote() << QString("向智能网关发送%1帧: %2").arg(type, DataDealUtils::byteArrayToHexStr(buffer));
-    m_tcpSocket->write(buffer);
+    LOG_CINFO("smartctrl").noquote() << QString("向智能网关发送%1帧[%2]: %3")
+                                            .arg(type)
+                                            .arg(seq, 2, 16, QLatin1Char('0'))
+                                            .arg(DataDealUtils::byteArrayToHexStr(buffer));
+    qint64 ret = m_tcpSocket->write(buffer);
+    if (ret == -1) {
+        LOG_CWARNING("smartctrl").noquote() << "数据写入失败";
+    }
+    m_tcpSocket->flush();
+    LOG_CINFO("smartctrl").noquote() << "数据已进入发送队列";
+
+    m_lastCommand[type] = buffer; // 记录最终状态信息帧
 
     // 设置超时监听队列，超时未返回，则重发3次
     QString key = makeKey(type, seq);
     if (!m_pendingCommands.contains(key)) {
-        ST_PendingCommand *cmd = new ST_PendingCommand(type, data, seq, 0, new QTimer(this));
+        ST_PendingCommand *cmd = new ST_PendingCommand(type, seq, 0, new QTimer(this));
         m_pendingCommands[key] = cmd;
 
         cmd->timer->setSingleShot(true);
         connect(cmd->timer, &QTimer::timeout, this, [=]() {
-            LOG_CINFO("smartctrl").noquote() << "测试日志: " << "超时重发" << cmd->retryCount;
             if (cmd->retryCount < 3) {
                 cmd->retryCount += 1;
-                LOG_CINFO("smartctrl").noquote() << QString("向智能网关发送%1帧超时，进行第%2次重传").arg(type).arg(cmd->retryCount);
-                sendCommandWithSeq(cmd->type, cmd->data, cmd->seq);
-                cmd->timer->start(1500);
+                LOG_CINFO("smartctrl").noquote() << QString("向智能网关发送%1帧[%2]超时，进行第%2次重传(重传最新帧)")
+                                                        .arg(type)
+                                                        .arg(cmd->seq, 2, 16, QLatin1Char('0'))
+                                                        .arg(cmd->retryCount);
+                if (!m_connected) {
+                    LOG_CERROR("smartctrl").noquote() << "向智能网关重传数据失败: 未与服务端建立连接";
+                } else {
+                    LOG_CINFO("smartctrl").noquote()
+                        << QString("重传%1帧的最新信息: %2").arg(type, DataDealUtils::byteArrayToHexStr(m_lastCommand.value(cmd->type)));
+                    m_tcpSocket->write(m_lastCommand.value(cmd->type));
+                }
+                cmd->timer->start(750);
             } else {
                 LOG_CWARNING("smartctrl").noquote() << QString("%1帧重发3次失败，放弃发送").arg(type);
                 m_pendingCommands.remove(key);
@@ -175,7 +198,7 @@ void SmartLaneController::sendCommand(const QString &type, QByteArray data)
             }
         });
 
-        cmd->timer->start(1500); // 第一次启动超时检测
+        cmd->timer->start(750); // 第一次启动超时检测
     }
 }
 
@@ -302,7 +325,12 @@ void SmartLaneController::sendResponse(uchar cmdType, uchar status, uchar seq)
     buffer.append(crc);
 
     LOG_CINFO("smartctrl").noquote() << QString("返回应答: %1").arg(DataDealUtils::byteArrayToHexStr(buffer));
-    m_tcpSocket->write(buffer);
+    qint64 ret = m_tcpSocket->write(buffer);
+    if (ret == -1) {
+        LOG_CWARNING("smartctrl").noquote() << "数据写入失败";
+    }
+    m_tcpSocket->flush();
+    LOG_CINFO("smartctrl").noquote() << "数据已进入发送队列";
 }
 
 uchar SmartLaneController::getClientSeq()
@@ -322,27 +350,6 @@ uchar SmartLaneController::getClientSeq()
 QString SmartLaneController::makeKey(const QString &type, uchar seq)
 {
     return QString("%1_%2").arg(type).arg(seq, 2, 16, QLatin1Char('0'));
-}
-
-void SmartLaneController::sendCommandWithSeq(const QString &type, const QByteArray &data, uchar seq)
-{
-    if (!m_connected) {
-        LOG_CERROR("smartctrl").noquote() << QString("向智能网关发送%1帧[%2]失败: 未与服务端建立连接").arg(type, makeKey(type, seq));
-        return;
-    }
-
-    QByteArray buffer;
-    buffer.append(STX);
-    buffer.append(VER);
-    buffer.append(seq);
-    buffer.append(DataDealUtils::intToByte(data.size()));
-    buffer.append(data);
-
-    QByteArray crc = DataDealUtils::getCRCCode(buffer.mid(STX_LEN));
-    buffer.append(crc);
-
-    LOG_CINFO("smartctrl").noquote() << QString("向智能网关发送%1帧: %2").arg(type, DataDealUtils::byteArrayToHexStr(buffer));
-    m_tcpSocket->write(buffer);
 }
 
 void SmartLaneController::handleACmd(const QString &type, uchar seq, const QByteArray &command)

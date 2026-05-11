@@ -8,6 +8,8 @@
 #include "ElaText.h"
 #include "ElaToolButton.h"
 
+#include "global/constant.h"
+#include "pages/t_cardrobot.h"
 #include "pages/t_deskprinter.h"
 #include "pages/t_infoboard.h"
 #include "pages/t_smartcontroller.h"
@@ -40,15 +42,16 @@ MainWindow::~MainWindow() {}
 void MainWindow::initWindow()
 {
     setFocusPolicy(Qt::StrongFocus);
-    setWindowIcon(QIcon(":/static/images/mgskj_icon.png"));
+    setWindowIcon(QIcon(Constant::APP::ICON_PATH));
     setWindowTitle("车道运维工具箱");
     setUserInfoCardVisible(false); // 用户信息卡不可见
-    setNavigationBarWidth(200);
+    setNavigationBarWidth(180);
+    setNavigationBarDisplayMode(ElaNavigationType::Compact);
     setWindowButtonFlag(ElaAppBarType::ThemeChangeButtonHint, false);
     setWindowButtonFlag(ElaAppBarType::RouteBackButtonHint, false);
     setWindowButtonFlag(ElaAppBarType::RouteForwardButtonHint, false);
 
-    resize(1000, 680);
+    resize(780, 680);
 
     // 自定义AppBar菜单（TODO）
 
@@ -118,4 +121,7 @@ void MainWindow::initContent()
 
     m_smartControllerPage = new T_SmartController(this);
     addPageNode("智能网关测试工具", m_smartControllerPage, ElaIconType::NetworkWired);
+
+    m_cardRobotPage = new T_CardRobot(this);
+    addPageNode("自动发卡机测试工具", m_cardRobotPage, ElaIconType::UserRobot);
 }
