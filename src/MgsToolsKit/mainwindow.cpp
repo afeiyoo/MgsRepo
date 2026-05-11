@@ -45,7 +45,7 @@ void MainWindow::initWindow()
     setWindowIcon(QIcon(Constant::APP::ICON_PATH));
     setWindowTitle("车道运维工具箱");
     setUserInfoCardVisible(false); // 用户信息卡不可见
-    setNavigationBarWidth(180);
+    setNavigationBarWidth(200);
     setNavigationBarDisplayMode(ElaNavigationType::Compact);
     setWindowButtonFlag(ElaAppBarType::ThemeChangeButtonHint, false);
     setWindowButtonFlag(ElaAppBarType::RouteBackButtonHint, false);
