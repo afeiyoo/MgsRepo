@@ -220,7 +220,7 @@ private:
 
 signals:
     // 第三方库修改 2025-07-24  日志内容信号传出，便于他用
-    void sigLogWrite(const QString &log, const QString &category);
+    void sigLogWrite(LogLevel logLevel, const QString &log, const QString &category);
 };
 
 class CUTELOGGER_EXPORT CuteMessageLogger

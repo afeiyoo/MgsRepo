@@ -15,6 +15,8 @@
 #include "Logger.h"
 #include "NlohmannJson/nlojson.hpp"
 #include "bend/infoboard/infoboardhandler.h"
+#include "global/globalmanager.h"
+#include "global/signalmanager.h"
 #include "qhostaddress.h"
 #include "utils/datadealutils.h"
 #include "utils/fileutils.h"
@@ -58,25 +60,27 @@ T_InfoBoard::T_InfoBoard(QWidget *parent)
     connect(m_sendButton, &ElaPushButton::clicked, this, &T_InfoBoard::onSendMsg);
     connect(m_confirmButton, &ElaPushButton::clicked, this, &T_InfoBoard::onSetupUrl);
 
-    connect(m_infoBoardHandler, &InfoBoardHandler::sigNetworkStatusChanged, this, [=](bool isOnline) {
+    connect(GM_INSTANCE->m_signalMan, &SignalManager::sigNetworkStatusChanged, this, [=](bool isOnline) {
         if (isOnline) {
-            updateNetworkStatus("连接正常", true);
+            updateNetworkStatus("正常", true);
             m_isTcpConnected = true;
         } else {
-            updateNetworkStatus("连接断开", false);
+            updateNetworkStatus("断开", false);
             m_isTcpConnected = false;
         }
     });
-    connect(m_infoBoardHandler, &InfoBoardHandler::sigDevStatusChanged, this, [=](bool isNormal) {
+    connect(GM_INSTANCE->m_signalMan, &SignalManager::sigDevStatusChanged, this, [=](bool isNormal) {
         if (isNormal) {
-            updateDevStatus("状态正常");
+            updateDevStatus("正常");
         } else {
-            updateDevStatus("状态异常", true);
+            updateDevStatus("异常", true);
         }
     });
 
+    connect(m_logClearButton, &ElaPushButton::clicked, m_logEdit, &ElaPlainTextEdit::clear);
+
     // 界面显示日志信息
-    connect(cuteLogger, &Logger::sigLogWrite, this, [=](const QString &log, const QString &cat) {
+    connect(cuteLogger, &Logger::sigLogWrite, this, [=](Logger::LogLevel level, const QString &log, const QString &cat) {
         if (cat == "infoboard") {
             m_logEdit->appendPlainText(DataDealUtils::curDateTimeStr() + " | " + log + "\n");
         }
@@ -123,9 +127,9 @@ void T_InfoBoard::initContent()
     m_confirmButton = new ElaPushButton("设置", this);
 
     ElaText *devStatusTip = new ElaText("设备状态:", this);
-    m_devStatusText = new ElaText("状态异常");
+    m_devStatusText = new ElaText("异常");
     ElaText *networkStatusTip = new ElaText("TCP连接:", this);
-    m_networkStatusText = new ElaText("连接断开");
+    m_networkStatusText = new ElaText("断开");
 
     QList<ElaText *> texts = {devStatusTip, m_devStatusText, networkStatusTip, m_networkStatusText};
     for (auto text : texts) {
@@ -180,9 +184,19 @@ void T_InfoBoard::initContent()
 
     // 局部控件4
     ElaText *logTipText = new ElaText("交互日志显示区", this);
+    QFont logTipFont = logTipText->font();
+    logTipFont.setBold(true);
+    logTipText->setFont(logTipFont);
     logTipText->setTextPixelSize(15);
     logTipText->setWordWrap(false);
-    logTipText->setFixedHeight(35);
+
+    m_logClearButton = new ElaPushButton("清除", this);
+
+    QHBoxLayout *partHLayout4 = new QHBoxLayout();
+    partHLayout4->setContentsMargins(0, 0, 0, 0);
+    partHLayout4->addWidget(logTipText);
+    partHLayout4->addWidget(m_logClearButton);
+    partHLayout4->addStretch();
 
     // 局部控件5
     m_logEdit = new ElaPlainTextEdit(this);
@@ -195,11 +209,11 @@ void T_InfoBoard::initContent()
     centralWidget->setWindowTitle("折叠情报板测试工具");
     QVBoxLayout *centralLayout = new QVBoxLayout(centralWidget);
     centralLayout->setContentsMargins(0, 0, 5, 0);
-    centralLayout->addSpacing(13);
+    centralLayout->addSpacing(5);
     centralLayout->addLayout(partHLayout1);
     centralLayout->addLayout(partHLayout2);
     centralLayout->addLayout(partHLayout3);
-    centralLayout->addWidget(logTipText);
+    centralLayout->addLayout(partHLayout4);
     centralLayout->addWidget(m_logEdit);
 
     addCentralWidget(centralWidget, true, true, 0);
@@ -213,11 +227,9 @@ void T_InfoBoard::onConnectServer()
     }
 
     QString info = m_connectInfoEdit->text().simplified();
-    if (info.isEmpty()) {
-        ElaMessageBar::error(ElaMessageBarType::BottomRight, "连接失败", "连接信息为空，请检查", 1000, this);
-        LOG_CERROR("infoboard").noquote() << "Tcp连接折叠情报板失败: 连接信息为空";
+    if (info.isEmpty())
         return;
-    }
+
     QStringList parts = info.split(":");
     if (parts.size() != 2) {
         ElaMessageBar::error(ElaMessageBarType::BottomRight, "连接失败", "连接信息填写错误，请检查", 1000, this);

@@ -46,6 +46,7 @@ private:
     ElaRadioButton *m_xlButton = nullptr;
 
     ElaPlainTextEdit *m_logEdit = nullptr;
+    ElaPushButton *m_logClearButton = nullptr;
 
     // 后台
     InfoBoardHandler *m_infoBoardHandler = nullptr;

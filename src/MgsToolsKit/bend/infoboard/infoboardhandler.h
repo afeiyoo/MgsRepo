@@ -40,10 +40,7 @@ public slots:
     void onStateChanged(QAbstractSocket::SocketState state);
     void onReadyRead();
     void onTryConnect();
-
-signals:
-    void sigDevStatusChanged(bool isNormal);
-    void sigNetworkStatusChanged(bool isOnline);      // 网络状态信号
+    void onErrorOccurred(QAbstractSocket::SocketError error);
 
 private:
     uint genCRC(const uchar *buffer, int bufferLen);
@@ -62,6 +59,6 @@ private:
     // 网络重连定时器
     QTimer *m_reconnectTimer = nullptr;
     quint32 m_reconnectCount = 0;
-    ushort m_reconnectMaxTimes = 3; // 默认重连3次
-    bool m_isForceDisconnect = false;   // 是否主动断连
+    ushort m_reconnectMaxTimes = 3;   // 默认重连3次
+    bool m_isForceDisconnect = false; // 是否主动断连
 };

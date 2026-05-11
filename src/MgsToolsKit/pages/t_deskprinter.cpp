@@ -33,6 +33,7 @@ T_DeskPrinter::T_DeskPrinter(QWidget *parent)
     });
 
     connect(m_sendButton, &ElaPushButton::clicked, this, &T_DeskPrinter::onPostToPrinter);
+    connect(m_logClearButton, &ElaPushButton::clicked, m_logEdit, &ElaPlainTextEdit::clear);
 }
 
 T_DeskPrinter::~T_DeskPrinter() {}
@@ -48,7 +49,7 @@ void T_DeskPrinter::initContent()
 
     ElaText *codingTypeText = new ElaText("报文编码类型", this);
     codingTypeText->setTextPixelSize(15);
-    codingTypeText->setWordWrap(false);
+    codingTypeText->setIsWrapAnywhere(false);
 
     m_gbkButton = new ElaRadioButton("GBK", this);
     m_utfButton = new ElaRadioButton("UTF-8", this);
@@ -65,8 +66,11 @@ void T_DeskPrinter::initContent()
 
     // 局部布局2
     ElaText *inputTipText = new ElaText("发送报文输入区", this);
+    QFont inputTipFont = inputTipText->font();
+    inputTipFont.setBold(true);
+    inputTipText->setFont(inputTipFont);
     inputTipText->setTextPixelSize(15);
-    inputTipText->setWordWrap(false);
+    inputTipText->setIsWrapAnywhere(false);
     m_inputButton = new ElaPushButton("默认报文", this);
     m_inputButton->setFixedHeight(35);
 
@@ -83,9 +87,19 @@ void T_DeskPrinter::initContent()
 
     // 局部控件4
     ElaText *logTipText = new ElaText("交互日志显示区", this);
+    QFont logTipFont = logTipText->font();
+    logTipFont.setBold(true);
+    logTipText->setFont(logTipFont);
     logTipText->setTextPixelSize(15);
-    logTipText->setWordWrap(false);
-    logTipText->setFixedHeight(35);
+    logTipText->setIsWrapAnywhere(false);
+
+    m_logClearButton = new ElaPushButton("清除", this);
+
+    QHBoxLayout *partHLayout3 = new QHBoxLayout();
+    partHLayout3->setContentsMargins(0, 0, 0, 0);
+    partHLayout3->addWidget(logTipText);
+    partHLayout3->addWidget(m_logClearButton);
+    partHLayout3->addStretch();
 
     // 局部控件5
     m_logEdit = new ElaPlainTextEdit(this);
@@ -98,11 +112,11 @@ void T_DeskPrinter::initContent()
     centralWidget->setWindowTitle("桌面打印机测试工具");
     QVBoxLayout *centralVLayout = new QVBoxLayout(centralWidget);
     centralVLayout->setContentsMargins(0, 0, 5, 0);
-    centralVLayout->addSpacing(13);
+    centralVLayout->addSpacing(5);
     centralVLayout->addLayout(partHLayout1);
     centralVLayout->addLayout(partHLayout2);
     centralVLayout->addWidget(m_inputEdit);
-    centralVLayout->addWidget(logTipText);
+    centralVLayout->addLayout(partHLayout3);
     centralVLayout->addWidget(m_logEdit);
 
     addCentralWidget(centralWidget, true, true, 0);
