@@ -8,6 +8,6 @@ SUBDIRS +=  \
     # 3rdparty/Jcon \
     # 3rdparty/QJson \
     # 3rdparty/QSimpleUpdater \
-    src/PadService \
+    # src/PadService \
     # src/SmartLaneController \
     src/MgsToolsKit

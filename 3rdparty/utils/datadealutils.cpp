@@ -465,6 +465,17 @@ QString DataDealUtils::byteArrayToAsciiStr(const QByteArray &data)
     return temp.trimmed();
 }
 
+QString DataDealUtils::byteArrayToBCDStr(const QByteArray &data)
+{
+    QString result;
+    for (auto b : data) {
+        quint8 v = static_cast<quint8>(b);
+        result += QString::number((v >> 4) & 0x0F); // 高4位
+        result += QString::number(v & 0x0F);        // 低4位
+    }
+    return result;
+}
+
 QByteArray DataDealUtils::hexStrToByteArray(const QString &str)
 {
     QByteArray senddata;
@@ -878,6 +889,22 @@ QByteArray DataDealUtils::encodeString(const QString &text, int coding)
         return codec ? codec->fromUnicode(text) : text.toUtf8();
     }
     return text.toLocal8Bit();
+}
+
+QString DataDealUtils::decodeByteArray(const QByteArray &data, int coding)
+{
+    switch (coding) {
+    case 1: {
+        static QTextCodec *codec = QTextCodec::codecForName("GBK");
+        return codec ? codec->toUnicode(data) : QString::fromLocal8Bit(data);
+    } break;
+    case 2: {
+        return QString::fromUtf8(data);
+    } break;
+    default: {
+        return QString::fromLocal8Bit(data);
+    } break;
+    }
 }
 
 void DataDealUtils::appendStrWithSubStr(QString &str, const QString &subStr, const QString &delimiter)

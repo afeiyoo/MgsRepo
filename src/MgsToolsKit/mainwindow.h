@@ -9,6 +9,7 @@ class ElaSuggestBox;
 class T_DeskPrinter;
 class T_InfoBoard;
 class T_SmartController;
+class T_CardRobot;
 
 class MainWindow : public ElaWindow
 {
@@ -29,4 +30,5 @@ private:
     T_DeskPrinter *m_deskPrinterPage = nullptr;
     T_InfoBoard *m_infoBoardPage = nullptr;
     T_SmartController *m_smartControllerPage = nullptr;
+    T_CardRobot *m_cardRobotPage = nullptr;
 };

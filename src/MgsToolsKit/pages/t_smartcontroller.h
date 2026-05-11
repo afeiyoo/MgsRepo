@@ -43,6 +43,7 @@ private:
 
     ElaText *m_heartStatusText = nullptr;
     ElaPlainTextEdit *m_logEdit = nullptr;
+    ElaPushButton *m_logClearButton = nullptr;
 
     // 后台
     SmartLaneController *m_smartController = nullptr;

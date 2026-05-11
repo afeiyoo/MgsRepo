@@ -24,7 +24,7 @@ public:
     // XModem CRC16校验
     static quint16 getXModem16(quint8 *data, int len);
 
-    // X25 CRC16校验
+    // X25 CRC16校(卡机，智能网关校验使用)
     static quint16 getX2516(quint8 *data, int len);
 
     // CRC16校验, type默认为3(X25 CRC16校验), 2(XModem CRC16校验), 1(Modbus CRC16校验)
@@ -117,6 +117,9 @@ public:
     // 字节数组转Ascii字符串
     static QString byteArrayToAsciiStr(const QByteArray &data);
 
+    // 字节数组转bcd编码字符串
+    static QString byteArrayToBCDStr(const QByteArray &data);
+
     // 16进制字符串转字节数组
     static QByteArray hexStrToByteArray(const QString &str);
     static char convertHexChar(char ch);
@@ -140,6 +143,9 @@ public:
 
     // 将字符串转换成指定编码 1. 转GBK编码 2. 转UTF8编码
     static QByteArray encodeString(const QString &text, int coding);
+
+    // 将指定编码的字节数组转换成字符串 1. GBK编码 2. UTF8编码
+    static QString decodeByteArray(const QByteArray &data, int coding);
 
     //输出：str + delimiter + substr内容
     static void appendStrWithSubStr(QString &str, const QString &subStr, const QString &delimiter);

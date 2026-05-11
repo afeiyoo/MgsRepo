@@ -24,6 +24,7 @@ private:
     ElaPushButton *m_inputButton = nullptr;
     ElaPlainTextEdit *m_inputEdit = nullptr;
     ElaPlainTextEdit *m_logEdit = nullptr;
+    ElaPushButton *m_logClearButton = nullptr;
     ElaRadioButton *m_gbkButton = nullptr;
     ElaRadioButton *m_utfButton = nullptr;
 
