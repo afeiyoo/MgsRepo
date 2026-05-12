@@ -138,13 +138,16 @@ void RollingFileAppender::removeOldFiles()
     QFileInfo fileInfo(fileName());
     QDir logDirectory(fileInfo.absoluteDir());
     logDirectory.setFilter(QDir::Files);
-    logDirectory.setNameFilters(QStringList() << fileInfo.fileName() + "*");
+
+    QString baseName = QFileInfo(m_baseFileName).fileName();
+    logDirectory.setNameFilters(QStringList() << QFileInfo(m_baseFileName).fileName() + "*");
     QFileInfoList logFiles = logDirectory.entryInfoList();
 
     QMap<QDateTime, QString> fileDates;
     for (int i = 0; i < logFiles.length(); ++i) {
         QString name = logFiles[i].fileName();
-        QString suffix = name.mid(name.indexOf(fileInfo.fileName()) + fileInfo.fileName().length());
+
+        QString suffix = name.mid(name.indexOf(baseName) + baseName.length());
         QDateTime fileDateTime = QDateTime::fromString(suffix, datePatternString());
 
         if (fileDateTime.isValid())
@@ -152,8 +155,9 @@ void RollingFileAppender::removeOldFiles()
     }
 
     QList<QString> fileDateNames = fileDates.values();
-    for (int i = 0; i < fileDateNames.length() - m_logFilesLimit + 1; ++i)
+    for (int i = 0; i < fileDateNames.length() - m_logFilesLimit + 1; ++i) {
         QFile::remove(fileDateNames[i]);
+    }
 }
 
 void RollingFileAppender::computeRollOverTime()
