@@ -8,6 +8,7 @@ SUBDIRS +=  \
     # 3rdparty/Jcon \
     # 3rdparty/QJson \
     # 3rdparty/QSimpleUpdater \
+    # src/FullBlackListDealer \
     src/PadService \
     # src/SmartLaneController \
     src/MgsToolsKit
