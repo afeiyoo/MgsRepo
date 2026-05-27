@@ -9,6 +9,7 @@ SUBDIRS +=  \
     # 3rdparty/QJson \
     # 3rdparty/QSimpleUpdater \
     # src/FullBlackListDealer \
-    src/PadService \
+    src/LaneSystemGUI \
+    # src/PadService \
     # src/SmartLaneController \
-    src/MgsToolsKit
+    # src/MgsToolsKit

@@ -29,7 +29,7 @@ UiUtils::UiUtils(QObject *parent)
 
 UiUtils::~UiUtils() {}
 
-void UiUtils::addLine(QBoxLayout *layout, Qt::Orientation orientation /*= Qt::Vertical*/, int thickness /*= 3*/, QString color /*= #cdcdcd*/)
+void UiUtils::addLine(QBoxLayout *layout, int thickness /*= 3*/, int height /*= 10*/, QString color /*= #cdcdcd*/)
 {
     if (!layout)
         return;
@@ -43,13 +43,9 @@ void UiUtils::addLine(QBoxLayout *layout, Qt::Orientation orientation /*= Qt::Ve
     line->setStyleSheet(style);
 
     // 设置粗细和大小策略
-    if (orientation == Qt::Vertical) {
-        line->setFixedWidth(thickness);
-        line->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
-    } else {
-        line->setFixedHeight(thickness);
-        line->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    }
+    line->setFixedWidth(thickness);
+    line->setFixedHeight(height);
+    line->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     layout->addWidget(line);
 }

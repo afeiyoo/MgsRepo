@@ -18,7 +18,7 @@ public:
     ~UiUtils() override;
 
     // 添加分割线
-    static void addLine(QBoxLayout *layout, Qt::Orientation orientation = Qt::Vertical, int thickness = 3, QString color = "#cdcdcd");
+    static void addLine(QBoxLayout *layout, int thickness = 3, int height = 10, QString color = "#cdcdcd");
 
     // 为控件widget应用阴影效果
     static void applyShadow(QWidget *widget);
