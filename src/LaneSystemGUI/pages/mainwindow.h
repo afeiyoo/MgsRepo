@@ -4,7 +4,7 @@
 
 #include "ElaWidgetTools/ElaWindow.h"
 
-class BasePage;
+class MtcInPage;
 class LANESYSTEMGUI_EXPORT MainWindow : public ElaWindow
 {
     Q_OBJECT
@@ -16,5 +16,5 @@ public:
 
 private:
     // 主页面
-    BasePage *m_mainPage = nullptr;
+    MtcInPage *m_mainPage = nullptr;
 };

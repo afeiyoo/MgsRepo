@@ -3,15 +3,21 @@
 #include <QDebug>
 #include <QHBoxLayout>
 
-IconButton::IconButton(ElaIconType::IconName awesome, int pixelSize, QWidget *parent)
+IconButton::IconButton(ElaIconType::IconName awesome, int pixelSize, QFont::Weight weight, QWidget *parent)
     : QWidget(parent)
 {
     m_text = new ElaText(this);
     m_text->setTextPixelSize(pixelSize);
     m_text->setContentsMargins(0, 0, 0, 0);
+    QFont textFont = m_text->font();
+    textFont.setWeight(weight);
+    m_text->setFont(textFont);
     m_text->setIsWrapAnywhere(false);
 
     m_icon = new ElaIconButton(awesome, pixelSize, pixelSize, pixelSize, this);
+    QFont iconFont = m_icon->font();
+    iconFont.setWeight(weight);
+    m_icon->setFont(iconFont);
     m_icon->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
     QHBoxLayout *layout = new QHBoxLayout(this);
@@ -22,8 +28,8 @@ IconButton::IconButton(ElaIconType::IconName awesome, int pixelSize, QWidget *pa
     layout->addStretch();
 }
 
-IconButton::IconButton(ElaIconType::IconName awesome, QString text, int pixelSize, QWidget *parent)
-    : IconButton(awesome, pixelSize, parent)
+IconButton::IconButton(ElaIconType::IconName awesome, QString text, int pixelSize, QFont::Weight weight, QWidget *parent)
+    : IconButton(awesome, pixelSize, weight, parent)
 {
     m_text->setText(text);
 }

@@ -10,8 +10,6 @@
 #include "global/uiconst.h"
 #include "utils/uiutils.h"
 
-#include <QDebug>
-
 using namespace Utils;
 
 MtcInPage::MtcInPage(QWidget *parent)
@@ -20,69 +18,126 @@ MtcInPage::MtcInPage(QWidget *parent)
 
 MtcInPage::~MtcInPage() {}
 
-void MtcInPage::setPlate(const QString &plate)
+void MtcInPage::setTotalVehCnt(uint cnt)
 {
-    if (!m_plate)
+    if (!m_totalVehCnt)
+        return;
+    m_totalVehCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setTotalCardCnt(uint cnt)
+{
+    if (!m_totalCardCnt)
+        return;
+    m_totalCardCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setNoFlagCardCnt(uint cnt)
+{
+    if (!m_noFlagCardCnt)
+        return;
+    m_noFlagCardCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setPeccanyVehCnt(uint cnt)
+{
+    if (!m_peccanyVehCnt)
+        return;
+    m_peccanyVehCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setFleetVehCnt(uint cnt)
+{
+    if (!m_fleetVehCnt)
+        return;
+    m_fleetVehCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setCpcCardCnt(uint cnt)
+{
+    if (!m_cpcCardCnt)
+        return;
+    m_cpcCardCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setEtcCardCnt(uint cnt)
+{
+    if (!m_etcCardCnt)
+        return;
+    m_etcCardCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setBadCardCnt(uint cnt)
+{
+    if (!m_badCardCnt)
+        return;
+    m_badCardCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setPaperCardCnt(uint cnt)
+{
+    if (!m_paperCardCnt)
+        return;
+    m_paperCardCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setHolidayFreeVehCnt(uint cnt)
+{
+    if (!m_holidayFreeVehCnt)
+        return;
+    m_holidayFreeVehCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setRestTickCnt(uint cnt)
+{
+    if (!m_restTicketCnt)
+        return;
+    m_restTicketCnt->setText(QString("%1").arg(cnt));
+}
+
+void MtcInPage::setStartTicketNum(uint num)
+{
+    if (!m_startTicketNum)
         return;
 
-    m_plate->setText(plate);
-
-    QString bgImage;
-    QColor textColor = Qt::white; // 默认字体颜色
-
-    if (plate.startsWith("白")) {
-        bgImage = Path::WHITE_PLATE;
-        textColor = Qt::black;
-    } else if (plate.startsWith("黑")) {
-        bgImage = Path::BLACK_PLATE;
-        textColor = Qt::white;
-    } else if (plate.startsWith("黄")) {
-        bgImage = Path::YELLOW_PLATE;
-        textColor = Qt::black;
-    } else if (plate.startsWith("绿")) {
-        bgImage = Path::GREEN_PLATE;
-        textColor = Qt::black;
-    } else if (plate.startsWith("渐")) {
-        bgImage = Path::GRADIENT_PLATE;
-        textColor = Qt::black;
-    } else if (plate.startsWith("拼")) {
-        bgImage = Path::MIX_PLATE;
-        textColor = Qt::black;
-    } else if (plate.startsWith("蓝")) {
-        bgImage = Path::BLUE_PLATE;
-        textColor = Qt::white;
+    QFont font = m_startTicketNum->font();
+    if (num > 9999) {
+        font.setPixelSize(16);
     } else {
-        bgImage = Path::WHITE_PLATE;
-        textColor = Qt::black;
+        font.setPixelSize(22);
     }
+    m_startTicketNum->setFont(font);
+    m_startTicketNum->setText(QString("%1").arg(num));
+}
 
-    if (!bgImage.isEmpty()) {
-        m_plate->setStyleSheet(QString("border-image: url(%1) 0 0 0 0 stretch stretch; color: %2;").arg(bgImage, textColor.name()));
+void MtcInPage::setEndTicketNum(uint num)
+{
+    if (!m_endTicketNum)
+        return;
+
+    QFont font = m_endTicketNum->font();
+    if (num > 9999) {
+        font.setPixelSize(16);
     } else {
-        m_plate->setStyleSheet(""); // 没有匹配到颜色，清除样式
+        font.setPixelSize(22);
     }
+    m_endTicketNum->setFont(font);
+    m_endTicketNum->setText(QString("%1").arg(num));
 }
 
-void MtcInPage::setVehClass(const QString &vehClass)
+void MtcInPage::setCurTicketNum(uint num)
 {
-    if (!m_vehClass)
+    if (!m_curTicketNum)
         return;
-    m_vehClass->setText(vehClass);
-}
 
-void MtcInPage::setVehStatus(const QString &vehStatus)
-{
-    if (!m_vehStatus)
-        return;
-    m_vehStatus->setText(vehStatus);
-}
-
-void MtcInPage::setSituation(const QString &situation)
-{
-    if (!m_situation)
-        return;
-    m_situation->setText(situation);
-    m_situation->setStyleSheet(QString("color: %1").arg(Color::WARN_TC));
+    QFont font = m_curTicketNum->font();
+    if (num > 9999) {
+        font.setPixelSize(16);
+    } else {
+        font.setPixelSize(22);
+    }
+    m_curTicketNum->setFont(font);
+    m_curTicketNum->setText(QString("%1").arg(num));
 }
 
 void MtcInPage::setCardType(const QString &cardType)
@@ -127,31 +182,6 @@ void MtcInPage::setCardStatus(const QString &cardStatus)
     m_cardStatus->setText(cardStatus);
 }
 
-void MtcInPage::setWeightInfo(const QString &info)
-{
-    Q_UNUSED(info);
-}
-
-void MtcInPage::setEnPlate(const QString &plate)
-{
-    Q_UNUSED(plate);
-}
-
-void MtcInPage::setLabel1(const QString &info)
-{
-    Q_UNUSED(info);
-}
-
-void MtcInPage::setLabel2(const QString &info)
-{
-    Q_UNUSED(info);
-}
-
-void MtcInPage::setToll(const QString &toll)
-{
-    Q_UNUSED(toll);
-}
-
 void MtcInPage::setObuHint(const QString &obuHint, const QString &color)
 {
     if (!m_obuHint)
@@ -161,25 +191,143 @@ void MtcInPage::setObuHint(const QString &obuHint, const QString &color)
     m_obuHint->setText(obuHint);
 }
 
-void MtcInPage::appendHintButton(const QString &hint, const QString &fontColor, const QString &bgColor)
+void MtcInPage::setRobotStatus1(bool isOk, ushort restCard)
 {
-    Q_UNUSED(hint);
-    Q_UNUSED(fontColor);
-    Q_UNUSED(bgColor);
+    if (!m_robotStatus1)
+        return;
+
+    QString styleStr = QString("background-color: %1; color: %2; border: none; border-radius: 4px;");
+    m_robotStatus1->setText(QString::number(restCard));
+    if (!isOk || restCard < 10) {
+        m_robotStatus1->setStyleSheet(styleStr.arg(Color::WARN_BUTTON_BG, Color::BUTTON_TC));
+    } else {
+        m_robotStatus1->setStyleSheet(styleStr.arg(Color::INFO_BUTTON_BG, Color::BUTTON_TC));
+    }
 }
 
-void MtcInPage::setDeviceList(const QList<uint> &devList)
+void MtcInPage::setRobotStatus2(bool isOk, ushort restCard)
 {
-    if (!m_deviceIconPanel)
+    if (!m_robotStatus2)
         return;
-    m_deviceIconPanel->setDeviceList(devList);
+
+    QString styleStr = QString("background-color: %1; color: %2; border: none; border-radius: 4px;");
+    m_robotStatus2->setText(QString::number(restCard));
+    if (!isOk || restCard < 10) {
+        m_robotStatus2->setStyleSheet(styleStr.arg(Color::WARN_BUTTON_BG, Color::BUTTON_TC));
+    } else {
+        m_robotStatus2->setStyleSheet(styleStr.arg(Color::INFO_BUTTON_BG, Color::BUTTON_TC));
+    }
 }
 
-void MtcInPage::updateDeviceStatus(EM_DeviceIcon::DeviceIcon dev, uint status)
+void MtcInPage::setRobotStatus3(bool isOk, ushort restCard)
 {
-    if (!m_deviceIconPanel)
+    if (!m_robotStatus3)
         return;
-    m_deviceIconPanel->changeDevStatus(dev, status);
+
+    QString styleStr = QString("background-color: %1; color: %2; border: none; border-radius: 4px;");
+    m_robotStatus3->setText(QString::number(restCard));
+    if (!isOk || restCard < 10) {
+        m_robotStatus3->setStyleSheet(styleStr.arg(Color::WARN_BUTTON_BG, Color::BUTTON_TC));
+    } else {
+        m_robotStatus3->setStyleSheet(styleStr.arg(Color::INFO_BUTTON_BG, Color::BUTTON_TC));
+    }
+}
+
+void MtcInPage::setRobotStatus4(bool isOk, ushort restCard)
+{
+    if (!m_robotStatus4)
+        return;
+
+    QString styleStr = QString("background-color: %1; color: %2; border: none; border-radius: 4px;");
+    m_robotStatus4->setText(QString::number(restCard));
+    if (!isOk || restCard < 10) {
+        m_robotStatus4->setStyleSheet(styleStr.arg(Color::WARN_BUTTON_BG, Color::BUTTON_TC));
+    } else {
+        m_robotStatus4->setStyleSheet(styleStr.arg(Color::INFO_BUTTON_BG, Color::BUTTON_TC));
+    }
+}
+
+void MtcInPage::initLeftUi()
+{
+    // 抓拍显示区域
+    m_displayArea = initDisplayArea();
+    m_displayArea->setParent(this);
+
+    // 车道状态显示区域
+    m_laneStatusArea = initLaneStatusArea();
+    m_laneStatusArea->setParent(this);
+
+    QWidget *shiftAndLogArea = new QWidget(this);
+    shiftAndLogArea->setMinimumHeight(298);
+
+    // 工班信息显示区域
+    m_shiftInfoArea = initShiftInfoArea();
+    m_shiftInfoArea->setParent(shiftAndLogArea);
+
+    // 日志显示区域
+    m_logArea = initLogBrowseArea();
+    m_logArea->setParent(shiftAndLogArea);
+
+    QVBoxLayout *shiftAndLogVLayout = new QVBoxLayout(shiftAndLogArea);
+    shiftAndLogVLayout->setContentsMargins(0, 0, 0, 0);
+    shiftAndLogVLayout->setSpacing(8);
+    shiftAndLogVLayout->addWidget(m_shiftInfoArea);
+    shiftAndLogVLayout->addWidget(m_logArea, 1);
+
+    // 左侧主布局
+    m_leftWidget = new QWidget(this);
+    QVBoxLayout *leftVLayout = new QVBoxLayout(m_leftWidget);
+    leftVLayout->setContentsMargins(0, 0, 0, 0);
+    leftVLayout->setSpacing(8);
+
+    leftVLayout->addWidget(m_displayArea, m_displayArea->minimumHeight());
+    leftVLayout->addWidget(m_laneStatusArea, m_laneStatusArea->minimumHeight());
+    leftVLayout->addWidget(shiftAndLogArea, shiftAndLogArea->minimumHeight());
+}
+
+void MtcInPage::initRightUi()
+{
+    // 滚动提示显示区域
+    m_scrollTipArea = initScrollTipArea();
+    m_scrollTipArea->setParent(this);
+
+    // 当前车辆与卡内信息显示区域
+    m_vehInfoArea = initVehInfoArea();
+    m_vehInfoArea->setParent(this);
+
+    // 交易提示区域
+    m_tradeHintArea = initTradeHintArea();
+    m_tradeHintArea->setParent(this);
+
+    // 称重信息显示区域
+    m_weightInfoArea = initWeightInfoArea();
+    m_weightInfoArea->setParent(this);
+
+    // 近期交易记录查看区域
+    m_recentTradePanel = initRecentTradeArea();
+    m_recentTradePanel->setParent(this);
+
+    // 卡机状态区域
+    m_robotStatusArea = initRobotStatusArea();
+    m_robotStatusArea->setParent(this);
+
+    // 设备图标显示区域
+    m_deviceIconPanel = initDeviceArea();
+    m_deviceIconPanel->setParent(this);
+
+    // 右侧主布局
+    m_rightWidget = new QWidget(this);
+    QVBoxLayout *rightVLayout = new QVBoxLayout(m_rightWidget);
+    rightVLayout->setContentsMargins(0, 0, 0, 0);
+    rightVLayout->setSpacing(8);
+
+    rightVLayout->addWidget(m_scrollTipArea, m_scrollTipArea->minimumHeight());
+    rightVLayout->addWidget(m_vehInfoArea, m_vehInfoArea->minimumHeight());
+    rightVLayout->addWidget(m_tradeHintArea, m_tradeHintArea->minimumHeight());
+    rightVLayout->addWidget(m_weightInfoArea);
+    rightVLayout->addWidget(m_recentTradePanel);
+    rightVLayout->addWidget(m_robotStatusArea);
+    rightVLayout->addWidget(m_deviceIconPanel, m_deviceIconPanel->minimumHeight());
 }
 
 QWidget *MtcInPage::initDisplayArea()
@@ -205,16 +353,35 @@ PageArea *MtcInPage::initShiftInfoArea()
     shiftInfoArea->setBorderRadius(8);
     shiftInfoArea->setMinimumHeight(156);
 
-    QWidget *widget1 = createShiftInfoBlock("总过车数", m_totalVehCnt, 70, 70, shiftInfoArea);
-    QWidget *widget2 = createShiftInfoBlock("总发卡数", m_totalCardCnt, 70, 70, shiftInfoArea);
-    QWidget *widget3 = createShiftInfoBlock("错标卡数", m_noFlagCardCnt, 70, 70, shiftInfoArea);
-    QWidget *widget4 = createShiftInfoBlock("冲关车数", m_peccanyVehCnt, 70, 70, shiftInfoArea);
-    QWidget *widget5 = createShiftInfoBlock("车队车数", m_fleetVehCnt, 70, 70, shiftInfoArea);
-    QWidget *widget6 = createShiftInfoBlock("通行卡数", m_cpcCardCnt, 70, 70, shiftInfoArea);
-    QWidget *widget7 = createShiftInfoBlock("闽通卡数", m_etcCardCnt, 70, 70, shiftInfoArea);
-    QWidget *widget8 = createShiftInfoBlock("坏卡数", m_badCardCnt, 70, 70, shiftInfoArea);
-    QWidget *widget9 = createShiftInfoBlock("纸性券数", m_paperCardCnt, 70, 70, shiftInfoArea);
-    QWidget *widget10 = createShiftInfoBlock("动免车数", m_holidayFreeVehCnt, 70, 70, shiftInfoArea);
+    QWidget *widget1 = createShiftInfoBlock("总过车", 16, m_totalVehCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget2 = createShiftInfoBlock("总发卡", 16, m_totalCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget3 = createShiftInfoBlock("错标卡", 16, m_noFlagCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget4 = createShiftInfoBlock("冲关车", 16, m_peccanyVehCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget5 = createShiftInfoBlock("车队车", 16, m_fleetVehCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget6 = createShiftInfoBlock("通行卡", 16, m_cpcCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget7 = createShiftInfoBlock("闽通卡", 16, m_etcCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget8 = createShiftInfoBlock("坏卡数", 16, m_badCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget9 = createShiftInfoBlock("纸券数", 16, m_paperCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget10 = createShiftInfoBlock("动免车", 16, m_holidayFreeVehCnt, 18, 70, 70, shiftInfoArea);
+
+    // 纸券信息区域
+    m_paperInfoArea = new PageArea(shiftInfoArea);
+    m_paperInfoArea->setBorderRadius(4);
+    m_paperInfoArea->setFixedHeight(70);
+    m_paperInfoArea->setIsUseBorder(true);
+    m_paperInfoArea->setBackgroundColor(QColor(Color::PAPER_AREA_BG));
+
+    QWidget *widget11 = createShiftInfoBlock("剩余券数", 16, m_restTicketCnt, 18, 90, 70, shiftInfoArea);
+    QWidget *widget12 = createShiftInfoBlock("起始券号", 16, m_startTicketNum, 18, 90, 70, shiftInfoArea);
+    QWidget *widget13 = createShiftInfoBlock("结束券号", 16, m_endTicketNum, 18, 90, 70, shiftInfoArea);
+    QWidget *widget14 = createShiftInfoBlock("当前券号", 16, m_curTicketNum, 18, 90, 70, shiftInfoArea);
+
+    QHBoxLayout *paperInfoHLayout = new QHBoxLayout(m_paperInfoArea);
+    paperInfoHLayout->setContentsMargins(0, 0, 0, 0);
+    paperInfoHLayout->addWidget(widget11);
+    paperInfoHLayout->addWidget(widget12);
+    paperInfoHLayout->addWidget(widget13);
+    paperInfoHLayout->addWidget(widget14);
 
     QGridLayout *shiftInfoAreaLayout = new QGridLayout(shiftInfoArea);
     shiftInfoAreaLayout->setContentsMargins(8, 8, 8, 8);
@@ -229,6 +396,7 @@ PageArea *MtcInPage::initShiftInfoArea()
     shiftInfoAreaLayout->addWidget(widget8, 1, 2);
     shiftInfoAreaLayout->addWidget(widget9, 1, 3);
     shiftInfoAreaLayout->addWidget(widget10, 1, 4);
+    shiftInfoAreaLayout->addWidget(m_paperInfoArea, 2, 0, 1, 5);
 
     return shiftInfoArea;
 }
@@ -246,7 +414,7 @@ PageArea *MtcInPage::initVehInfoArea()
 {
     PageArea *vehInfoArea = new PageArea();
     vehInfoArea->setBorderRadius(8);
-    vehInfoArea->setMinimumHeight(146);
+    vehInfoArea->setMinimumHeight(138);
 
     // 车辆信息区：抓拍车牌，车型，车种，特情
     QWidget *carInfoWidget = new QWidget(vehInfoArea);
@@ -256,11 +424,11 @@ PageArea *MtcInPage::initVehInfoArea()
     m_plate = new QLabel(carInfoWidget);
     m_plate->setMinimumWidth(160);
     m_vehClass = new QLabel(carInfoWidget);
-    m_vehClass->setMinimumWidth(73);
+    m_vehClass->setMinimumWidth(70);
     m_vehStatus = new QLabel(carInfoWidget);
     m_vehStatus->setMinimumWidth(133);
     m_situation = new QLabel(carInfoWidget);
-    m_situation->setMinimumWidth(242);
+    m_situation->setMinimumWidth(245);
 
     QList<QLabel *> carTexts = {m_plate, m_vehClass, m_vehStatus, m_situation};
     for (auto *t : carTexts) {
@@ -285,7 +453,7 @@ PageArea *MtcInPage::initVehInfoArea()
 
     // 卡内信息区
     QWidget *cardInfoWidget = new QWidget(vehInfoArea);
-    cardInfoWidget->setMinimumHeight(82);
+    cardInfoWidget->setMinimumHeight(74);
 
     QLabel *label1 = new QLabel("卡类型", cardInfoWidget);
     QLabel *label2 = new QLabel("卡内余额", cardInfoWidget);
@@ -313,6 +481,7 @@ PageArea *MtcInPage::initVehInfoArea()
     for (auto *t : cardTexts) {
         QFont font = t->font();
         font.setPixelSize(16);
+        font.setWeight(QFont::DemiBold);
         t->setFont(font);
         t->setWordWrap(false);
     }
@@ -320,7 +489,7 @@ PageArea *MtcInPage::initVehInfoArea()
     QGridLayout *cardInfoGLayout = new QGridLayout(cardInfoWidget);
     cardInfoGLayout->setContentsMargins(0, 0, 0, 0);
     cardInfoGLayout->setHorizontalSpacing(8);
-    cardInfoGLayout->setVerticalSpacing(8);
+    cardInfoGLayout->setVerticalSpacing(4);
 
     // 设置标签列最小化，值列弹性拉伸
     cardInfoGLayout->setColumnStretch(0, 0);
@@ -359,7 +528,7 @@ PageArea *MtcInPage::initTradeHintArea()
 {
     PageArea *tradeHintArea = new PageArea();
     tradeHintArea->setBorderRadius(8);
-    tradeHintArea->setMinimumHeight(140);
+    tradeHintArea->setMinimumHeight(135);
 
     m_tradeHint = new QLabel(tradeHintArea);
     m_tradeHint->setWordWrap(true);
@@ -377,7 +546,7 @@ PageArea *MtcInPage::initTradeHintArea()
 
     QVBoxLayout *tradeHintAreaLayout = new QVBoxLayout(tradeHintArea);
     tradeHintAreaLayout->setContentsMargins(8, 8, 8, 8);
-    tradeHintAreaLayout->setSpacing(8);
+    tradeHintAreaLayout->setSpacing(5);
     tradeHintAreaLayout->addStretch();
     tradeHintAreaLayout->addWidget(m_tradeHint);
     tradeHintAreaLayout->addStretch();
@@ -388,28 +557,65 @@ PageArea *MtcInPage::initTradeHintArea()
 
 RecentTradePanel *MtcInPage::initRecentTradeArea()
 {
+    // 交易记录表格
     QStringList header = {"车牌", "车型", "入口时间", "卡类型", "卡号"};
     RecentTradePanel *recentTradePanel = new RecentTradePanel(header);
-    recentTradePanel->setMinimumHeight(103);
+    recentTradePanel->setMinimumHeight(96);
     QTableView *view = recentTradePanel->getRecentTradeView();
-    // 初始列表宽度
     view->setColumnWidth(0, 100);
     view->setColumnWidth(1, 50);
     view->setColumnWidth(2, 130);
     view->setColumnWidth(3, 80);
+
     return recentTradePanel;
 }
 
-QWidget *MtcInPage::initDeviceArea()
+QWidget *MtcInPage::initRobotStatusArea()
 {
-    QWidget *deviceArea = new QWidget();
-    deviceArea->setMinimumHeight(50);
+    QWidget *robotStatusWidget = new QWidget();
+    robotStatusWidget->setFixedHeight(20);
+    UiUtils::disableMouseEvents(robotStatusWidget);
 
-    m_deviceIconPanel = new DevicePanel(deviceArea);
+    QLabel *label1 = new QLabel("●上工位1状态");
+    QLabel *label2 = new QLabel("●上工位2状态");
+    QLabel *label3 = new QLabel("●下工位1状态");
+    QLabel *label4 = new QLabel("●下工位2状态");
+    QList<QLabel *> labels = {label1, label2, label3, label4};
+    for (auto *l : labels) {
+        l->setStyleSheet(QString("color: %1;").arg(Color::INFO_TC));
+        QFont font = l->font();
+        font.setPixelSize(14);
+        font.setWeight(QFont::DemiBold);
+        l->setFont(font);
+    }
 
-    QVBoxLayout *deviceAreaVLayout = new QVBoxLayout(deviceArea);
-    deviceAreaVLayout->setContentsMargins(0, 0, 0, 0);
-    deviceAreaVLayout->addWidget(m_deviceIconPanel);
+    m_robotStatus1 = new QPushButton("0", robotStatusWidget);
+    m_robotStatus2 = new QPushButton("0", robotStatusWidget);
+    m_robotStatus3 = new QPushButton("0", robotStatusWidget);
+    m_robotStatus4 = new QPushButton("0", robotStatusWidget);
+    QList<QPushButton *> robotStatusButtons = {m_robotStatus1, m_robotStatus2, m_robotStatus3, m_robotStatus4};
+    for (auto *rcb : robotStatusButtons) {
+        rcb->setFixedSize(45, 16);
+        rcb->setStyleSheet(QString("background-color: %1; color: %2; border: none; border-radius: 4px;").arg(Color::INFO_BUTTON_BG, Color::BUTTON_TC));
+        QFont font = rcb->font();
+        font.setPixelSize(14);
+        rcb->setFont(font);
+    }
 
-    return deviceArea;
+    QHBoxLayout *statusHLayout = new QHBoxLayout(robotStatusWidget);
+    statusHLayout->setContentsMargins(8, 2, 8, 2);
+    statusHLayout->setSpacing(5);
+    statusHLayout->addWidget(label1);
+    statusHLayout->addWidget(m_robotStatus1);
+    statusHLayout->addStretch();
+    statusHLayout->addWidget(label2);
+    statusHLayout->addWidget(m_robotStatus2);
+    statusHLayout->addStretch();
+    statusHLayout->addWidget(label3);
+    statusHLayout->addWidget(m_robotStatus3);
+    statusHLayout->addStretch();
+    statusHLayout->addWidget(label4);
+    statusHLayout->addWidget(m_robotStatus4);
+
+    return robotStatusWidget;
 }

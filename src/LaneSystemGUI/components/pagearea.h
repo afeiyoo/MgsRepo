@@ -17,6 +17,8 @@ public:
     QColor getBackgroundColor() const;
     void setBackgroundColor(const QColor &newBackgroundColor);
 
+    void setIsUseBorder(bool isUseBorder);
+
 signals:
     void borderRadiusChanged();
 
@@ -30,4 +32,6 @@ private:
     int m_borderRadius;
     // 背景颜色
     QColor m_backgroundColor;
+    // 是否设置边框
+    bool m_isUseBorder = false;
 };

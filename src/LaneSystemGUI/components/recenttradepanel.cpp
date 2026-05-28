@@ -77,7 +77,6 @@ RecentTradePanel::RecentTradePanel(QStringList header, PageArea *parent)
     : PageArea{parent}
 {
     setBorderRadius(8);
-    setBackgroundColor(Color::CUSTOM_AREA_BG);
 
     initUi();
     m_recentTradeModel = new RecentTradeModel(this);
@@ -135,6 +134,7 @@ void RecentTradePanel::initUi()
     m_recentTradeView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_recentTradeView->setShowGrid(true);           // 启用表格线
     m_recentTradeView->setGridStyle(Qt::SolidLine); // 使用实线
+    m_recentTradeView->verticalHeader()->setDefaultSectionSize(30);
 
     m_recentTradeView->viewport()->setAutoFillBackground(false);
     m_recentTradeView->horizontalHeader()->setStyleSheet(

@@ -3,6 +3,7 @@
 #include "pages/basepage.h"
 
 #include <QLabel>
+#include <QPushButton>
 
 class PageArea;
 class MtcInPage : public BasePage
@@ -12,42 +13,53 @@ public:
     Q_INVOKABLE explicit MtcInPage(QWidget *parent = nullptr);
     ~MtcInPage() override;
 
+    // 工班信息显示区域API
+    void setTotalVehCnt(uint cnt);       // 总过车数
+    void setTotalCardCnt(uint cnt);      // 总发卡数
+    void setNoFlagCardCnt(uint cnt);     // 错标卡数
+    void setPeccanyVehCnt(uint cnt);     // 冲关车数
+    void setFleetVehCnt(uint cnt);       // 车队车数
+    void setCpcCardCnt(uint cnt);        // 通行卡数
+    void setEtcCardCnt(uint cnt);        // 闽通卡数
+    void setBadCardCnt(uint cnt);        // 坏卡数
+    void setPaperCardCnt(uint cnt);      // 发纸券数
+    void setHolidayFreeVehCnt(uint cnt); // 动免车数
+    void setRestTickCnt(uint cnt);       // 剩余券数
+    void setStartTicketNum(uint num);    // 起始券号
+    void setEndTicketNum(uint num);      // 结束券号
+    void setCurTicketNum(uint num);      // 当前券号
+
     // 当前车辆与卡内信息显示区域API
-    void setPlate(const QString &plate) override;
-    void setVehClass(const QString &vehClass) override;
-    void setVehStatus(const QString &vehStatus) override;
-    void setSituation(const QString &situation) override;
-    void setCardType(const QString &cardType) override;           // 卡类型
-    void setCardNum(const QString &cardNum) override;             // 卡号
-    void setBalance(const QString &balance) override;             // 卡内余额
-    void setEnTime(const QString &enTime) override;               // 入口时间
-    void setEnStationName(const QString &enStationName) override; // 入口站名
-    void setCardStatus(const QString &cardStatus) override;       // 卡状态
-    void setWeightInfo(const QString &info) override;             // 称重
-    void setEnPlate(const QString &plate) override;               // 入口车牌
-    void setLabel1(const QString &info) override;                 // 标签1
-    void setLabel2(const QString &info) override;                 // 标签2
-    void setToll(const QString &toll) override;                   // 收费
+    void setCardType(const QString &cardType);           // 卡类型
+    void setCardNum(const QString &cardNum);             // 卡号
+    void setBalance(const QString &balance);             // 卡内余额
+    void setEnTime(const QString &enTime);               // 入口时间
+    void setEnStationName(const QString &enStationName); // 入口站名
+    void setCardStatus(const QString &cardStatus);       // 卡状态
 
     // 交易提示区域API
     void setTradeHint(const QString &tradeHint, const QString &color = "#000000") override;
     void setObuHint(const QString &obuHint, const QString &color = "#0C4E94") override;
-    void appendHintButton(const QString &hint, const QString &fontColor = "#FFFFFF", const QString &bgColor = "#08C134") override;
 
-    // 设备图标显示区域API
-    void setDeviceList(const QList<uint> &devList) override;
-    void updateDeviceStatus(EM_DeviceIcon::DeviceIcon dev, uint status) override;
+    // 卡机状态区域API
+    void setRobotStatus1(bool isOk, ushort restCard);
+    void setRobotStatus2(bool isOk, ushort restCard);
+    void setRobotStatus3(bool isOk, ushort restCard);
+    void setRobotStatus4(bool isOk, ushort restCard);
 
 protected:
+    void initLeftUi() override;
+    void initRightUi() override;
+
     QWidget *initDisplayArea() override;
     PageArea *initShiftInfoArea() override;
     PageArea *initVehInfoArea() override;
     PageArea *initTradeHintArea() override;
     RecentTradePanel *initRecentTradeArea() override;
-    QWidget *initDeviceArea() override;
+    QWidget *initRobotStatusArea();
 
 private:
-    // 交易信息显示区域
+    // 工班信息显示区域
     QLabel *m_totalVehCnt = nullptr;       // 总过车数
     QLabel *m_totalCardCnt = nullptr;      // 总发卡数
     QLabel *m_noFlagCardCnt = nullptr;     // 错标卡数
@@ -58,12 +70,13 @@ private:
     QLabel *m_badCardCnt = nullptr;        // 坏卡数
     QLabel *m_paperCardCnt = nullptr;      // 发纸券数
     QLabel *m_holidayFreeVehCnt = nullptr; // 动免车数
+    QLabel *m_restTicketCnt = nullptr;     // 剩余券数
+    QLabel *m_startTicketNum = nullptr;    // 起始券号
+    QLabel *m_endTicketNum = nullptr;      // 结束券号
+    QLabel *m_curTicketNum = nullptr;      // 当前券号
+    PageArea *m_paperInfoArea = nullptr;   // 纸券信息区域
 
     // 当前车辆与卡内信息显示区域
-    QLabel *m_plate = nullptr;         // 车牌
-    QLabel *m_vehClass = nullptr;      // 车型
-    QLabel *m_vehStatus = nullptr;     // 车种
-    QLabel *m_situation = nullptr;     // 特情
     QLabel *m_cardType = nullptr;      // 卡类型
     QLabel *m_cardNum = nullptr;       // 卡号
     QLabel *m_balance = nullptr;       // 卡内余额
@@ -71,10 +84,10 @@ private:
     QLabel *m_enStationName = nullptr; // 入口站名
     QLabel *m_cardStatus = nullptr;    // 卡状态
 
-    // 交易提示区域
-    QLabel *m_tradeHint = nullptr;
-    QLabel *m_obuHint = nullptr;
-
-    // 设备图标显示区域
-    DevicePanel *m_deviceIconPanel = nullptr;
+    // 卡机状态区域
+    QWidget *m_robotStatusArea = nullptr;
+    QPushButton *m_robotStatus1 = nullptr;
+    QPushButton *m_robotStatus2 = nullptr;
+    QPushButton *m_robotStatus3 = nullptr;
+    QPushButton *m_robotStatus4 = nullptr;
 };

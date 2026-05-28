@@ -26,7 +26,11 @@ void PageArea::paintEvent(QPaintEvent *event)
     painter.setRenderHint(QPainter::Antialiasing);
 
     QRect rect(1, 1, width() - 1, height() - 1);
-    painter.setPen(Qt::NoPen);
+    if (m_isUseBorder) {
+        painter.setPen(QColor("#D9DEE5"));
+    } else {
+        painter.setPen(Qt::NoPen);
+    }
     // 设置背景刷（根据透明度判断）
     if (m_backgroundColor.alpha() > 0) {
         painter.setBrush(m_backgroundColor);
@@ -48,6 +52,11 @@ void PageArea::setBackgroundColor(const QColor &newBackgroundColor)
         return;
     m_backgroundColor = newBackgroundColor;
     emit backgroundColorChanged();
+}
+
+void PageArea::setIsUseBorder(bool isUseBorder)
+{
+    m_isUseBorder = isUseBorder;
 }
 
 int PageArea::getBorderRadius() const

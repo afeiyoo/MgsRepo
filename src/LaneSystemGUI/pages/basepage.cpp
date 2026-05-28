@@ -3,6 +3,7 @@
 #include "ElaWidgetTools/ElaIconButton.h"
 #include "ElaWidgetTools/ElaImageCard.h"
 #include "ElaWidgetTools/ElaPushButton.h"
+#include "components/devicepanel.h"
 #include "components/iconbutton.h"
 #include "components/pagearea.h"
 #include "components/recenttradepanel.h"
@@ -11,10 +12,10 @@
 #include "global/uiconst.h"
 #include "utils/datadealutils.h"
 #include "utils/uiutils.h"
-#include <QTableView>
 
 #include <QDebug>
 #include <QHBoxLayout>
+#include <QTableView>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -51,76 +52,6 @@ void BasePage::initUi()
     centralHlayout->setSpacing(8);
     centralHlayout->addWidget(m_leftWidget, 370);
     centralHlayout->addWidget(m_rightWidget, 630);
-
-    setStationInfo("福州西(6701)(港口站)");
-    setLaneID(12);
-    setUserInfo("测试员(3501911)");
-    setShiftInfo("2025-12-25晚班");
-    setModeText("混合自动发卡");
-
-    setVirtualGantryInfo("福州西B向门架(34090.H)");
-    setAppVer("v1.0.1");
-    setFeeRateVer("1908");
-    setFullBlackVer("20250801");
-    setPartBlackVer("202508111211");
-
-    setScrollTip("欢迎使用福建省高速公路收费软件（如遇到软件问题请致电福建省高速公路信息科技有限公司）");
-
-    setPlate("蓝闽B8L722");
-    setVehClass("货四");
-    setVehStatus("抢险救灾车");
-    setSituation("超限");
-
-    setCardType("CPC卡");
-    setCardNum("35012042230602103792");
-    setEnTime("2025-07-12 12:00:04");
-    setEnStationName("福建莆田西站");
-    setBalance("88.2元");
-    setCardStatus("正常");
-
-    setTradeHint("自动发卡,等待过车");
-    setObuHint("大件运输车; 蓝闽B8L722; 普通车; 专二; OBUSN: 35011603330999998340 12轴型 2轴 10.00吨 限重18.00吨 超限0.00%");
-
-    setWeightLow(true);
-    setCurWeightInfo("12轴型 2轴 10.00吨 限重18.00吨 超限0.00%");
-    setCurWeightInfoCount(1);
-    ST_WeightInfoItem item1;
-    item1.plate = "闽A12345";
-    item1.axisType = 1127;
-    item1.axisNum = 6;
-    item1.tollWeight = 25.74;
-    item1.status = 1;
-    appendWeightInfoItem(item1);
-    ST_WeightInfoItem item2;
-    item2.plate = "闽B100000";
-    item2.axisType = 1127;
-    item2.axisNum = 6;
-    item2.tollWeight = 25.74;
-    item2.status = 0;
-    appendWeightInfoItem(item2);
-    ST_WeightInfoItem item3;
-    item3.plate = "闽BA50430";
-    item3.axisType = 125;
-    item3.axisNum = 4;
-    item3.tollWeight = 22.74;
-    item3.status = 0;
-    appendWeightInfoItem(item3);
-    ST_WeightInfoItem item4;
-    item4.plate = "闽BA50430";
-    item4.axisType = 125;
-    item4.axisNum = 4;
-    item4.tollWeight = 22.74;
-    item4.status = 0;
-    appendWeightInfoItem(item4);
-
-    appendTradeItem({"闽A12345", "货一", "07-12 12:00:04", "CPC卡", "35012042230602103792"});
-    appendTradeItem({"闽A12345", "货一", "07-12 12:00:04", "纸券", "35012042230602103792"});
-    appendTradeItem({"闽A12345F", "货一", "07-12 12:00:04", "ETC卡", "35012042230602103792"});
-    appendTradeItem({"闽A12345", "货一", "07-12 12:00:04", "CPC卡", "35012042230602103792"});
-    appendTradeItem({"闽A12345", "货一", "07-12 12:00:04", "无卡", ""});
-
-    setDeviceList({EM_DeviceIcon::WEIGHT, EM_DeviceIcon::FIRST_COIL, EM_DeviceIcon::CELLING_LAMP, EM_DeviceIcon::CAP_COIL, EM_DeviceIcon::CAPTURE,
-                   EM_DeviceIcon::RAILLING_COIL, EM_DeviceIcon::PASSING_LAMP, EM_DeviceIcon::RAILING_MACHINE, EM_DeviceIcon::RSU});
 }
 
 void BasePage::setStationInfo(const QString &stationInfo)
@@ -241,10 +172,10 @@ void BasePage::logAppend(EM_LogLevel::LogLevel logLevel, const QString &log)
     m_logBrowser->clear();
     for (int i = 0; i < m_logBuffer.size(); ++i) {
         const QString &line = m_logBuffer[i];
-        QColor textColor = Qt::black;
-        if (line.contains("[ERROR]") || line.contains("[WARN]"))
+        QColor textColor = QColor(Color::INFO_TC);
+        if (line.contains("[ERROR]") || line.contains("[WARN]")) {
             textColor = Qt::red;
-
+        }
         QTextCursor cursor = m_logBrowser->textCursor();
         cursor.movePosition(QTextCursor::End);
 
@@ -258,6 +189,71 @@ void BasePage::logAppend(EM_LogLevel::LogLevel logLevel, const QString &log)
 
     m_logBrowser->moveCursor(QTextCursor::End);
     m_logBrowser->ensureCursorVisible();
+}
+
+void BasePage::setPlate(const QString &plate)
+{
+    if (!m_plate)
+        return;
+
+    m_plate->setText(plate);
+
+    QString bgImage;
+    QColor textColor = Qt::white; // 默认字体颜色
+
+    if (plate.startsWith("白")) {
+        bgImage = Path::WHITE_PLATE;
+        textColor = Qt::black;
+    } else if (plate.startsWith("黑")) {
+        bgImage = Path::BLACK_PLATE;
+        textColor = Qt::white;
+    } else if (plate.startsWith("黄")) {
+        bgImage = Path::YELLOW_PLATE;
+        textColor = Qt::black;
+    } else if (plate.startsWith("绿")) {
+        bgImage = Path::GREEN_PLATE;
+        textColor = Qt::black;
+    } else if (plate.startsWith("渐")) {
+        bgImage = Path::GRADIENT_PLATE;
+        textColor = Qt::black;
+    } else if (plate.startsWith("拼")) {
+        bgImage = Path::MIX_PLATE;
+        textColor = Qt::black;
+    } else if (plate.startsWith("蓝")) {
+        bgImage = Path::BLUE_PLATE;
+        textColor = Qt::white;
+    } else {
+        bgImage = Path::WHITE_PLATE;
+        textColor = Qt::black;
+    }
+
+    if (!bgImage.isEmpty()) {
+        m_plate->setStyleSheet(QString("border-image: url(%1) 0 0 0 0 stretch stretch; color: %2;").arg(bgImage, textColor.name()));
+    } else {
+        m_plate->setStyleSheet(""); // 没有匹配到颜色，清除样式
+    }
+}
+
+void BasePage::setVehClass(const QString &vehClass)
+{
+    if (!m_vehClass)
+        return;
+    m_vehClass->setText(vehClass);
+}
+
+void BasePage::setVehStatus(const QString &vehStatus)
+{
+    if (!m_vehStatus)
+        return;
+    m_vehStatus->setText(vehStatus);
+}
+
+void BasePage::setSituation(const QString &situation)
+{
+    if (!m_situation)
+        return;
+    m_situation->setText(situation);
+    m_situation->setStyleSheet(QString("color: %1").arg(Color::WARN_TC));
 }
 
 void BasePage::setCurWeightInfoCount(uint curWeightInfoCount)
@@ -333,6 +329,20 @@ void BasePage::clearTradeItems()
     m_recentTradePanel->clearTrades();
 }
 
+void BasePage::setDeviceList(const QList<uint> &devList)
+{
+    if (!m_deviceIconPanel)
+        return;
+    m_deviceIconPanel->setDeviceList(devList);
+}
+
+void BasePage::updateDeviceStatus(EM_DeviceIcon::DeviceIcon dev, uint status)
+{
+    if (!m_deviceIconPanel)
+        return;
+    m_deviceIconPanel->changeDevStatus(dev, status);
+}
+
 QWidget *BasePage::initLaneStatusArea()
 {
     QWidget *laneStatusArea = new QWidget();
@@ -354,7 +364,7 @@ QWidget *BasePage::initLaneStatusArea()
     PageArea *infoBoardArea = new PageArea(laneStatusArea);
     infoBoardArea->setBorderRadius(8);
     infoBoardArea->setMinimumHeight(40);
-    infoBoardArea->setBackgroundColor(QColor(Color::INFOBOARD_WARN_BG));
+    infoBoardArea->setBackgroundColor(QColor(Color::WARN_BUTTON_BG));
 
     QHBoxLayout *tempHLayout1 = new QHBoxLayout(infoBoardArea);
     tempHLayout1->setContentsMargins(0, 0, 0, 0);
@@ -384,23 +394,23 @@ PageArea *BasePage::initLogBrowseArea()
     logArea->setBorderRadius(8);
     logArea->setMinimumHeight(64);
 
-    QPlainTextEdit *logBrowser = new QPlainTextEdit(logArea);
-    logBrowser->setObjectName("logBrowser");
-    logBrowser->setReadOnly(true);
-    logBrowser->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    logBrowser->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    QFont font = logBrowser->font();
+    m_logBrowser = new QPlainTextEdit(logArea);
+    m_logBrowser->setObjectName("logBrowser");
+    m_logBrowser->setReadOnly(true);
+    m_logBrowser->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_logBrowser->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    QFont font = m_logBrowser->font();
     font.setPixelSize(12);
-    logBrowser->setFont(font);
+    m_logBrowser->setFont(font);
 
-    logBrowser->setFrameShape(QFrame::NoFrame);
-    logBrowser->viewport()->setAutoFillBackground(false);
+    m_logBrowser->setFrameShape(QFrame::NoFrame);
+    m_logBrowser->viewport()->setAutoFillBackground(false);
 
-    logBrowser->setStyleSheet(QString("#logBrowser {background: transparent; border: none; color: %1;}").arg(Color::INFO_TC));
+    m_logBrowser->setStyleSheet(QString("#logBrowser {background: transparent; border: none; color: %1;}").arg(Color::WARN_TC));
 
     QVBoxLayout *logAreaLayout = new QVBoxLayout(logArea);
     logAreaLayout->setContentsMargins(5, 5, 5, 5);
-    logAreaLayout->addWidget(logBrowser);
+    logAreaLayout->addWidget(m_logBrowser);
 
     return logArea;
 }
@@ -419,7 +429,6 @@ PageArea *BasePage::initScrollTipArea()
     m_scrollTip->setStyleSheet(QString("color: %1;").arg(Color::BUTTON_TC));
     QFont font = m_scrollTip->font();
     font.setPixelSize(16);
-    font.setWeight(QFont::DemiBold);
     m_scrollTip->setFont(font);
 
     QHBoxLayout *scrollTipHLayout = new QHBoxLayout(scrollTipArea);
@@ -436,6 +445,7 @@ PageArea *BasePage::initWeightInfoArea()
     PageArea *weightInfoArea = new PageArea();
     weightInfoArea->setBorderRadius(8);
     weightInfoArea->setFixedHeight(120);
+    UiUtils::disableMouseEvents(weightInfoArea);
 
     // 当前车辆称重信息
     m_curWeightInfo = new QLabel(weightInfoArea);
@@ -446,7 +456,7 @@ PageArea *BasePage::initWeightInfoArea()
     m_curWeightInfo->setFont(curWeightInfoFont);
 
     // 称重降级提示
-    m_weightLow = new IconButton(ElaIconType::TriangleExclamation, 14, weightInfoArea);
+    m_weightLow = new IconButton(ElaIconType::TriangleExclamation, 14, QFont::DemiBold, weightInfoArea);
     m_weightLow->setColor(Color::WARN_TC);
     m_weightLow->setText("注意:称重降级已启用!!!");
     m_weightLow->hide();
@@ -478,9 +488,18 @@ PageArea *BasePage::initWeightInfoArea()
     return weightInfoArea;
 }
 
-QWidget *BasePage::createShiftInfoBlock(const QString &infoTitle, QLabel *numLabel, ushort width, ushort height, QWidget *parent)
+DevicePanel *BasePage::initDeviceArea()
 {
-    QWidget *infoWidget = new QWidget();
+    m_deviceIconPanel = new DevicePanel();
+    m_deviceIconPanel->setMinimumHeight(50);
+
+    return m_deviceIconPanel;
+}
+
+QWidget *BasePage::createShiftInfoBlock(const QString &infoTitle, ushort titleFontPx, QLabel *&numLabel, ushort labelFontPx, ushort width,
+                                        ushort height, QWidget *parent)
+{
+    QWidget *infoWidget = new QWidget(parent);
     infoWidget->setFixedSize(width, height);
 
     QLabel *title = new QLabel(infoTitle, infoWidget);
@@ -488,14 +507,14 @@ QWidget *BasePage::createShiftInfoBlock(const QString &infoTitle, QLabel *numLab
     title->setStyleSheet(QString("color: %1").arg(Color::INFO_TC));
     QFont titleFont = title->font();
     titleFont.setWeight(QFont::DemiBold);
-    titleFont.setPixelSize(16);
+    titleFont.setPixelSize(titleFontPx);
     title->setFont(titleFont);
 
-    numLabel = new QLabel(parent);
+    numLabel = new QLabel(infoWidget);
     numLabel->setAlignment(Qt::AlignCenter);
     QFont countFont = numLabel->font();
     countFont.setWeight(QFont::DemiBold);
-    countFont.setPixelSize(24);
+    countFont.setPixelSize(labelFontPx);
     numLabel->setFont(countFont);
     numLabel->setText("0");
 
@@ -644,82 +663,4 @@ void BasePage::createBottomWidget()
     bottomHLayout->addWidget(widget1);
     bottomHLayout->addStretch();
     bottomHLayout->addWidget(clock);
-}
-
-void BasePage::initLeftUi()
-{
-    // 抓拍显示区域
-    m_displayArea = initDisplayArea();
-    m_displayArea->setParent(this);
-
-    // 车道状态显示区域
-    m_laneStatusArea = initLaneStatusArea();
-    m_laneStatusArea->setParent(this);
-
-    QWidget *shiftAndLogArea = new QWidget(this);
-    shiftAndLogArea->setMinimumHeight(298);
-
-    // 工班信息显示区域
-    m_shiftInfoArea = initShiftInfoArea();
-    m_shiftInfoArea->setParent(shiftAndLogArea);
-
-    // 日志显示区域
-    m_logArea = initLogBrowseArea();
-    m_logArea->setParent(shiftAndLogArea);
-
-    QVBoxLayout *shiftAndLogVLayout = new QVBoxLayout(shiftAndLogArea);
-    shiftAndLogVLayout->setContentsMargins(0, 0, 0, 0);
-    shiftAndLogVLayout->setSpacing(8);
-    shiftAndLogVLayout->addWidget(m_shiftInfoArea);
-    shiftAndLogVLayout->addWidget(m_logArea, 1);
-
-    // 左侧主布局
-    m_leftWidget = new QWidget(this);
-    QVBoxLayout *leftVLayout = new QVBoxLayout(m_leftWidget);
-    leftVLayout->setContentsMargins(0, 0, 0, 0);
-    leftVLayout->setSpacing(8);
-
-    leftVLayout->addWidget(m_displayArea, 300);
-    leftVLayout->addWidget(m_laneStatusArea, 40);
-    leftVLayout->addWidget(shiftAndLogArea, 298);
-}
-
-void BasePage::initRightUi()
-{
-    // 滚动提示显示区域
-    m_scrollTipArea = initScrollTipArea();
-    m_scrollTipArea->setParent(this);
-
-    // 当前车辆与卡内信息显示区域
-    m_vehInfoArea = initVehInfoArea();
-    m_vehInfoArea->setParent(this);
-
-    // 交易提示区域
-    m_tradeHintArea = initTradeHintArea();
-    m_tradeHintArea->setParent(this);
-
-    // 称重信息显示区域
-    m_weightInfoArea = initWeightInfoArea();
-    m_weightInfoArea->setParent(this);
-
-    // 近期交易记录查看区域
-    m_recentTradePanel = initRecentTradeArea();
-    m_recentTradePanel->setParent(this);
-
-    // 设备图标显示区域
-    m_deviceArea = initDeviceArea();
-    m_deviceArea->setParent(this);
-
-    // 右侧主布局
-    m_rightWidget = new QWidget(this);
-    QVBoxLayout *rightVLayout = new QVBoxLayout(m_rightWidget);
-    rightVLayout->setContentsMargins(0, 0, 0, 0);
-    rightVLayout->setSpacing(8);
-
-    rightVLayout->addWidget(m_scrollTipArea, m_scrollTipArea->minimumHeight());
-    rightVLayout->addWidget(m_vehInfoArea, m_vehInfoArea->minimumHeight());
-    rightVLayout->addWidget(m_tradeHintArea, m_tradeHintArea->minimumHeight());
-    rightVLayout->addWidget(m_weightInfoArea);
-    rightVLayout->addWidget(m_recentTradePanel);
-    rightVLayout->addWidget(m_deviceArea, m_deviceArea->minimumHeight());
 }
