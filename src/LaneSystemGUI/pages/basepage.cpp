@@ -15,6 +15,7 @@
 
 #include <QDebug>
 #include <QHBoxLayout>
+#include <QScrollBar>
 #include <QTableView>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -50,8 +51,8 @@ void BasePage::initUi()
     QHBoxLayout *centralHlayout = new QHBoxLayout(m_centralWidget);
     centralHlayout->setContentsMargins(8, 8, 8, 8);
     centralHlayout->setSpacing(8);
-    centralHlayout->addWidget(m_leftWidget, 370);
-    centralHlayout->addWidget(m_rightWidget, 630);
+    centralHlayout->addWidget(m_leftWidget, 380);
+    centralHlayout->addWidget(m_rightWidget, 620);
 }
 
 void BasePage::setStationInfo(const QString &stationInfo)
@@ -130,9 +131,7 @@ void BasePage::setCapImage(const QImage &img)
         return;
 
     if (img.isNull()) {
-        QImage transparentImage(m_capImage->size(), QImage::Format_ARGB32);
-        transparentImage.fill(Qt::transparent);
-        m_capImage->setCardImage(transparentImage);
+        m_capImage->setCardImage(QImage(Path::CAP_AREA_BACKGROUND));
     } else {
         m_capImage->setCardImage(img);
     }
@@ -149,8 +148,8 @@ void BasePage::setScrollTip(const QString &tip)
 
 void BasePage::logAppend(EM_LogLevel::LogLevel logLevel, const QString &log)
 {
-    const int maxCount = 100;
-    const int trimCount = 50;
+    const int maxCount = 300;
+    const int trimCount = 100;
 
     // 维护日志缓存
     QString level;
@@ -182,9 +181,12 @@ void BasePage::logAppend(EM_LogLevel::LogLevel logLevel, const QString &log)
         QTextCharFormat format;
         format.setForeground(textColor);
         cursor.setCharFormat(format);
-        cursor.insertText(line);
-        if (i != m_logBuffer.size() - 1)
-            cursor.insertText("\n");
+
+        if (i != m_logBuffer.size() - 1) {
+            cursor.insertText(line + "\n");
+        } else {
+            cursor.insertText(line);
+        }
     }
 
     m_logBrowser->moveCursor(QTextCursor::End);
@@ -254,6 +256,24 @@ void BasePage::setSituation(const QString &situation)
         return;
     m_situation->setText(situation);
     m_situation->setStyleSheet(QString("color: %1").arg(Color::WARN_TC));
+}
+
+void BasePage::setTradeHint(const QString &tradeHint, const QString &color)
+{
+    if (!m_tradeHint)
+        return;
+
+    m_tradeHint->setStyleSheet(QString("color: %1;").arg(color));
+    m_tradeHint->setText(tradeHint);
+}
+
+void BasePage::setObuHint(const QString &obuHint, const QString &color)
+{
+    if (!m_obuHint)
+        return;
+
+    m_obuHint->setStyleSheet(QString("color: %1;").arg(color));
+    m_obuHint->setText(obuHint);
 }
 
 void BasePage::setCurWeightInfoCount(uint curWeightInfoCount)
@@ -399,6 +419,7 @@ PageArea *BasePage::initLogBrowseArea()
     m_logBrowser->setReadOnly(true);
     m_logBrowser->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_logBrowser->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_logBrowser->document()->setDocumentMargin(0);
     QFont font = m_logBrowser->font();
     font.setPixelSize(12);
     m_logBrowser->setFont(font);

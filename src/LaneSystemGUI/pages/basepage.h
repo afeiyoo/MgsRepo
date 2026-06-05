@@ -56,8 +56,8 @@ public:
     void setSituation(const QString &situation); // 特情
 
     // 交易提示区域API
-    virtual void setTradeHint(const QString &tradeHint, const QString &color = "#000000") = 0;
-    virtual void setObuHint(const QString &obuHint, const QString &color = "#0C4E94") = 0;
+    void setTradeHint(const QString &tradeHint, const QString &color = "#000000");
+    void setObuHint(const QString &obuHint, const QString &color = "#0C4E94");
 
     // 称重信息显示区域API
     void setCurWeightInfo(const QString &curWeightInfo, const QString &color = "#0C4E94");
@@ -148,7 +148,6 @@ protected:
     // 抓拍显示区域
     QWidget *m_displayArea = nullptr;
     ElaImageCard *m_capImage = nullptr;
-    // TODO prevImage属于出口专属，所以成员变量放入出口页面中
 
     // 车道状态显示区域
     QWidget *m_laneStatusArea = nullptr;

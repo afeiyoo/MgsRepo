@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     LOG_INFO().noquote() << "MgsToolsKit 启动:" << DataDealUtils::curDateTimeStr();
 
     MainWindow w;
-    w.initMtcIn();
+    w.initMtcOut();
     w.show();
 
     int result = a.exec();

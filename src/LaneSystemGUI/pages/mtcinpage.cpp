@@ -182,15 +182,6 @@ void MtcInPage::setCardStatus(const QString &cardStatus)
     m_cardStatus->setText(cardStatus);
 }
 
-void MtcInPage::setObuHint(const QString &obuHint, const QString &color)
-{
-    if (!m_obuHint)
-        return;
-
-    m_obuHint->setStyleSheet(QString("color: %1;").arg(color));
-    m_obuHint->setText(obuHint);
-}
-
 void MtcInPage::setRobotStatus1(bool isOk, ushort restCard)
 {
     if (!m_robotStatus1)
@@ -353,31 +344,32 @@ PageArea *MtcInPage::initShiftInfoArea()
     shiftInfoArea->setBorderRadius(8);
     shiftInfoArea->setMinimumHeight(156);
 
-    QWidget *widget1 = createShiftInfoBlock("总过车", 16, m_totalVehCnt, 18, 70, 70, shiftInfoArea);
-    QWidget *widget2 = createShiftInfoBlock("总发卡", 16, m_totalCardCnt, 18, 70, 70, shiftInfoArea);
-    QWidget *widget3 = createShiftInfoBlock("错标卡", 16, m_noFlagCardCnt, 18, 70, 70, shiftInfoArea);
-    QWidget *widget4 = createShiftInfoBlock("冲关车", 16, m_peccanyVehCnt, 18, 70, 70, shiftInfoArea);
-    QWidget *widget5 = createShiftInfoBlock("车队车", 16, m_fleetVehCnt, 18, 70, 70, shiftInfoArea);
-    QWidget *widget6 = createShiftInfoBlock("通行卡", 16, m_cpcCardCnt, 18, 70, 70, shiftInfoArea);
-    QWidget *widget7 = createShiftInfoBlock("闽通卡", 16, m_etcCardCnt, 18, 70, 70, shiftInfoArea);
-    QWidget *widget8 = createShiftInfoBlock("坏卡数", 16, m_badCardCnt, 18, 70, 70, shiftInfoArea);
-    QWidget *widget9 = createShiftInfoBlock("纸券数", 16, m_paperCardCnt, 18, 70, 70, shiftInfoArea);
-    QWidget *widget10 = createShiftInfoBlock("动免车", 16, m_holidayFreeVehCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget1 = createShiftInfoBlock("总过车", 15, m_totalVehCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget2 = createShiftInfoBlock("总发卡", 15, m_totalCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget3 = createShiftInfoBlock("错标卡", 15, m_noFlagCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget4 = createShiftInfoBlock("冲关车", 15, m_peccanyVehCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget5 = createShiftInfoBlock("车队车", 15, m_fleetVehCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget6 = createShiftInfoBlock("通行卡", 15, m_cpcCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget7 = createShiftInfoBlock("闽通卡", 15, m_etcCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget8 = createShiftInfoBlock("坏卡数", 15, m_badCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget9 = createShiftInfoBlock("纸券数", 15, m_paperCardCnt, 18, 70, 70, shiftInfoArea);
+    QWidget *widget10 = createShiftInfoBlock("动免车", 15, m_holidayFreeVehCnt, 18, 70, 70, shiftInfoArea);
 
     // 纸券信息区域
     m_paperInfoArea = new PageArea(shiftInfoArea);
     m_paperInfoArea->setBorderRadius(4);
     m_paperInfoArea->setFixedHeight(70);
     m_paperInfoArea->setIsUseBorder(true);
-    m_paperInfoArea->setBackgroundColor(QColor(Color::PAPER_AREA_BG));
+    m_paperInfoArea->setBackgroundColor(QColor(Color::INSIDE_AREA_BG));
 
-    QWidget *widget11 = createShiftInfoBlock("剩余券数", 16, m_restTicketCnt, 18, 90, 70, shiftInfoArea);
-    QWidget *widget12 = createShiftInfoBlock("起始券号", 16, m_startTicketNum, 18, 90, 70, shiftInfoArea);
-    QWidget *widget13 = createShiftInfoBlock("结束券号", 16, m_endTicketNum, 18, 90, 70, shiftInfoArea);
-    QWidget *widget14 = createShiftInfoBlock("当前券号", 16, m_curTicketNum, 18, 90, 70, shiftInfoArea);
+    QWidget *widget11 = createShiftInfoBlock("剩余券数", 15, m_restTicketCnt, 18, 85, 70, shiftInfoArea);
+    QWidget *widget12 = createShiftInfoBlock("起始券号", 15, m_startTicketNum, 18, 85, 70, shiftInfoArea);
+    QWidget *widget13 = createShiftInfoBlock("结束券号", 15, m_endTicketNum, 18, 85, 70, shiftInfoArea);
+    QWidget *widget14 = createShiftInfoBlock("当前券号", 15, m_curTicketNum, 18, 85, 70, shiftInfoArea);
 
     QHBoxLayout *paperInfoHLayout = new QHBoxLayout(m_paperInfoArea);
     paperInfoHLayout->setContentsMargins(0, 0, 0, 0);
+    paperInfoHLayout->setSpacing(0);
     paperInfoHLayout->addWidget(widget11);
     paperInfoHLayout->addWidget(widget12);
     paperInfoHLayout->addWidget(widget13);
@@ -401,15 +393,6 @@ PageArea *MtcInPage::initShiftInfoArea()
     return shiftInfoArea;
 }
 
-void MtcInPage::setTradeHint(const QString &tradeHint, const QString &color)
-{
-    if (!m_tradeHint)
-        return;
-
-    m_tradeHint->setStyleSheet(QString("color: %1;").arg(color));
-    m_tradeHint->setText(tradeHint);
-}
-
 PageArea *MtcInPage::initVehInfoArea()
 {
     PageArea *vehInfoArea = new PageArea();
@@ -428,7 +411,7 @@ PageArea *MtcInPage::initVehInfoArea()
     m_vehStatus = new QLabel(carInfoWidget);
     m_vehStatus->setMinimumWidth(133);
     m_situation = new QLabel(carInfoWidget);
-    m_situation->setMinimumWidth(245);
+    m_situation->setMinimumWidth(235);
 
     QList<QLabel *> carTexts = {m_plate, m_vehClass, m_vehStatus, m_situation};
     for (auto *t : carTexts) {
@@ -563,8 +546,8 @@ RecentTradePanel *MtcInPage::initRecentTradeArea()
     recentTradePanel->setMinimumHeight(96);
     QTableView *view = recentTradePanel->getRecentTradeView();
     view->setColumnWidth(0, 100);
-    view->setColumnWidth(1, 50);
-    view->setColumnWidth(2, 130);
+    view->setColumnWidth(1, 45);
+    view->setColumnWidth(2, 120);
     view->setColumnWidth(3, 80);
 
     return recentTradePanel;
@@ -596,7 +579,7 @@ QWidget *MtcInPage::initRobotStatusArea()
     QList<QPushButton *> robotStatusButtons = {m_robotStatus1, m_robotStatus2, m_robotStatus3, m_robotStatus4};
     for (auto *rcb : robotStatusButtons) {
         rcb->setFixedSize(45, 16);
-        rcb->setStyleSheet(QString("background-color: %1; color: %2; border: none; border-radius: 4px;").arg(Color::INFO_BUTTON_BG, Color::BUTTON_TC));
+        rcb->setStyleSheet(QString("background-color: %1; color: %2; border: none; border-radius: 4px;").arg(Color::WARN_BUTTON_BG, Color::BUTTON_TC));
         QFont font = rcb->font();
         font.setPixelSize(14);
         rcb->setFont(font);

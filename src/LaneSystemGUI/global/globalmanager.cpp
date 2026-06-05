@@ -43,5 +43,5 @@ void GlobalManager::init()
     sysFileAppender->setDatePattern(RollingFileAppender::DatePattern::DailyRollover);
     cuteLogger->registerAppender(sysFileAppender);
 
-    LOG_INFO().noquote() << "开始进行系统初始化......";
+    LOG_INFO().noquote() << "开始界面初始化......";
 }

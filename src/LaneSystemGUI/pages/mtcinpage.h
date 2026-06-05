@@ -37,10 +37,6 @@ public:
     void setEnStationName(const QString &enStationName); // 入口站名
     void setCardStatus(const QString &cardStatus);       // 卡状态
 
-    // 交易提示区域API
-    void setTradeHint(const QString &tradeHint, const QString &color = "#000000") override;
-    void setObuHint(const QString &obuHint, const QString &color = "#0C4E94") override;
-
     // 卡机状态区域API
     void setRobotStatus1(bool isOk, ushort restCard);
     void setRobotStatus2(bool isOk, ushort restCard);

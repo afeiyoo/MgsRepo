@@ -52,7 +52,8 @@ SOURCES += \
     pages/basepage.cpp \
     pages/mainwindow.cpp \
     main.cpp \
-    pages/mtcinpage.cpp
+    pages/mtcinpage.cpp \
+    pages/mtcoutpage.cpp
 
 HEADERS += \
     components/devicepanel.h \
@@ -68,7 +69,8 @@ HEADERS += \
     global/uidefs.h \
     pages/basepage.h \
     pages/mainwindow.h \
-    pages/mtcinpage.h
+    pages/mtcinpage.h \
+    pages/mtcoutpage.h
     lanesystemgui_global.h \
 
 # 引入第三方库

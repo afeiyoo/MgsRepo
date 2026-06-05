@@ -10,6 +10,6 @@ SUBDIRS +=  \
     # 3rdparty/QSimpleUpdater \
     # src/FullBlackListDealer \
     src/LaneSystemGUI \
-    # src/PadService \
+    src/PadService \
     # src/SmartLaneController \
     # src/MgsToolsKit
