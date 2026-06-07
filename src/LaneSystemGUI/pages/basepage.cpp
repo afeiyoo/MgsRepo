@@ -49,7 +49,7 @@ void BasePage::initUi()
     initRightUi();
 
     QHBoxLayout *centralHlayout = new QHBoxLayout(m_centralWidget);
-    centralHlayout->setContentsMargins(8, 8, 8, 8);
+    centralHlayout->setContentsMargins(8, 8, 8, 5);
     centralHlayout->setSpacing(8);
     centralHlayout->addWidget(m_leftWidget, 380);
     centralHlayout->addWidget(m_rightWidget, 620);
@@ -412,7 +412,7 @@ PageArea *BasePage::initLogBrowseArea()
 {
     PageArea *logArea = new PageArea();
     logArea->setBorderRadius(8);
-    logArea->setMinimumHeight(64);
+    logArea->setMinimumHeight(70);
 
     m_logBrowser = new QPlainTextEdit(logArea);
     m_logBrowser->setObjectName("logBrowser");
@@ -625,7 +625,7 @@ void BasePage::addCentralWidget(QWidget *w)
 void BasePage::createBottomWidget()
 {
     m_bottomWidget = new QWidget(this);
-    m_bottomWidget->setFixedHeight(48);
+    m_bottomWidget->setFixedHeight(45);
     m_bottomWidget->setObjectName("bottomWidget");
     m_bottomWidget->setStyleSheet(QString("#bottomWidget { background-color: %1; }").arg(Color::MAIN_BG));
     UiUtils::disableMouseEvents(m_bottomWidget);
@@ -665,7 +665,7 @@ void BasePage::createBottomWidget()
 
     // 状态区（时钟）
     QLabel *clock = new QLabel(m_bottomWidget);
-    clock->setFixedWidth(215);
+    clock->setFixedWidth(225);
     clock->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     clock->setStyleSheet(QString("color: %1").arg(Color::INFO_TC));
     clock->setWordWrap(false);
@@ -680,7 +680,7 @@ void BasePage::createBottomWidget()
     timer->start(1000); // 每秒刷新
 
     QHBoxLayout *bottomHLayout = new QHBoxLayout(m_bottomWidget);
-    bottomHLayout->setContentsMargins(15, 0, 15, 8);
+    bottomHLayout->setContentsMargins(15, 0, 15, 5);
     bottomHLayout->addWidget(widget1);
     bottomHLayout->addStretch();
     bottomHLayout->addWidget(clock);

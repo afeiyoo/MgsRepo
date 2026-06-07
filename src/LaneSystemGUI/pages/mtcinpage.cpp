@@ -249,7 +249,7 @@ void MtcInPage::initLeftUi()
     m_laneStatusArea->setParent(this);
 
     QWidget *shiftAndLogArea = new QWidget(this);
-    shiftAndLogArea->setMinimumHeight(298);
+    shiftAndLogArea->setMinimumHeight(304);
 
     // 工班信息显示区域
     m_shiftInfoArea = initShiftInfoArea();
@@ -543,7 +543,7 @@ RecentTradePanel *MtcInPage::initRecentTradeArea()
     // 交易记录表格
     QStringList header = {"车牌", "车型", "入口时间", "卡类型", "卡号"};
     RecentTradePanel *recentTradePanel = new RecentTradePanel(header);
-    recentTradePanel->setMinimumHeight(96);
+    recentTradePanel->setMinimumHeight(102);
     QTableView *view = recentTradePanel->getRecentTradeView();
     view->setColumnWidth(0, 100);
     view->setColumnWidth(1, 45);

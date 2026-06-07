@@ -284,7 +284,7 @@ void MtcOutPage::initLeftUi()
     m_laneStatusArea->setParent(this);
 
     QWidget *shiftAndLogArea = new QWidget(this);
-    shiftAndLogArea->setMinimumHeight(298);
+    shiftAndLogArea->setMinimumHeight(304);
 
     // 工班信息显示区域
     m_shiftInfoArea = initShiftInfoArea();
@@ -518,7 +518,7 @@ PageArea *MtcOutPage::initTradeHintArea()
 {
     PageArea *tradeHintArea = new PageArea();
     tradeHintArea->setBorderRadius(8);
-    tradeHintArea->setMinimumHeight(125);
+    tradeHintArea->setMinimumHeight(131);
 
     m_hintButtonArea = new QWidget(tradeHintArea);
     QVBoxLayout *hintButtonAreaLayout = new QVBoxLayout(m_hintButtonArea);
@@ -623,15 +623,15 @@ void MtcOutPage::initSptShiftInfoArea(PageArea *parent)
 {
     QWidget *normInfoWidget = new QWidget();
 
-    QWidget *widget1 = createShiftInfoBlock("起始票据", 13, m_startTicketNum, 14, 75, 42, parent);
+    QWidget *widget1 = createShiftInfoBlock("起始票据", 13, m_startTicketNum, 14, 80, 42, parent);
     QWidget *widget2 = createShiftInfoBlock("正常票数", 13, m_normalTicketCnt, 14, 65, 42, parent);
-    QWidget *widget3 = createShiftInfoBlock("当前票据", 13, m_curTicketNum, 14, 75, 42, parent);
+    QWidget *widget3 = createShiftInfoBlock("当前票据", 13, m_curTicketNum, 14, 80, 42, parent);
     QWidget *widget4 = createShiftInfoBlock("废票张数", 13, m_scrapTicketCnt, 14, 65, 42, parent);
-    QWidget *widget5 = createShiftInfoBlock("剩余票据", 13, m_restTicketCnt, 14, 75, 42, parent);
+    QWidget *widget5 = createShiftInfoBlock("剩余票据", 13, m_restTicketCnt, 14, 80, 42, parent);
     QWidget *widget6 = createShiftInfoBlock("车辆计数", 13, m_totalVehCnt, 14, 65, 42, parent);
-    QWidget *widget7 = createShiftInfoBlock("回收卡数", 13, m_recycleCardCnt, 14, 75, 42, parent);
+    QWidget *widget7 = createShiftInfoBlock("回收卡数", 13, m_recycleCardCnt, 14, 80, 42, parent);
     QWidget *widget8 = createShiftInfoBlock("闽通卡数", 13, m_etcCardCnt, 14, 65, 42, parent);
-    QWidget *widget9 = createShiftInfoBlock("车队车", 13, m_fleetVehCnt, 14, 75, 42, parent);
+    QWidget *widget9 = createShiftInfoBlock("车队车", 13, m_fleetVehCnt, 14, 80, 42, parent);
     QWidget *widget10 = createShiftInfoBlock("第三方", 13, m_thirdPayCnt, 14, 65, 42, parent);
 
     QGridLayout *tempGLayout = new QGridLayout(normInfoWidget);
@@ -659,12 +659,12 @@ void MtcOutPage::initSptShiftInfoArea(PageArea *parent)
                              .arg(Color::INSIDE_AREA_BG, "#D9DEE5", Color::CONFIRM_BUTTON_BG, Color::BUTTON_TC));
     }
 
-    QWidget *widget11 = createShiftInfoBlock("起始票据", 13, m_upStartTicketNum, 14, 76, 42, m_upStationInfoArea);
-    QWidget *widget12 = createShiftInfoBlock("回收卡数", 13, m_upRecycleCardCnt, 14, 67, 42, m_upStationInfoArea);
-    QWidget *widget13 = createShiftInfoBlock("剩余票据", 13, m_upRestTicketCnt, 14, 67, 42, m_upStationInfoArea);
-    QWidget *widget14 = createShiftInfoBlock("当前票据", 13, m_upCurTicketNum, 14, 76, 42, m_upStationInfoArea);
-    QWidget *widget15 = createShiftInfoBlock("作废票数", 13, m_upScrapTicketCnt, 14, 67, 42, m_upStationInfoArea);
-    QWidget *widget16 = createShiftInfoBlock("写卡错误", 13, m_upWriteErrCnt, 14, 67, 42, m_upStationInfoArea);
+    QWidget *widget11 = createShiftInfoBlock("起始票据", 13, m_upStartTicketNum, 14, 80, 42, m_upStationInfoArea);
+    QWidget *widget12 = createShiftInfoBlock("回收卡数", 13, m_upRecycleCardCnt, 14, 65, 42, m_upStationInfoArea);
+    QWidget *widget13 = createShiftInfoBlock("剩余票据", 13, m_upRestTicketCnt, 14, 65, 42, m_upStationInfoArea);
+    QWidget *widget14 = createShiftInfoBlock("当前票据", 13, m_upCurTicketNum, 14, 80, 42, m_upStationInfoArea);
+    QWidget *widget15 = createShiftInfoBlock("作废票数", 13, m_upScrapTicketCnt, 14, 65, 42, m_upStationInfoArea);
+    QWidget *widget16 = createShiftInfoBlock("写卡错误", 13, m_upWriteErrCnt, 14, 65, 42, m_upStationInfoArea);
 
     QGridLayout *upStationGLayout = new QGridLayout(m_upStationInfoArea);
     upStationGLayout->setContentsMargins(0, 10, 0, 6);
@@ -676,12 +676,12 @@ void MtcOutPage::initSptShiftInfoArea(PageArea *parent)
     upStationGLayout->addWidget(widget15, 1, 1);
     upStationGLayout->addWidget(widget16, 1, 2);
 
-    QWidget *widget17 = createShiftInfoBlock("起始票据", 13, m_downStartTicketNum, 14, 76, 42, m_downStationInfoArea);
-    QWidget *widget18 = createShiftInfoBlock("回收卡数", 13, m_downRecycleCardCnt, 14, 67, 42, m_downStationInfoArea);
-    QWidget *widget19 = createShiftInfoBlock("剩余票据", 13, m_downRestTicketCnt, 14, 67, 42, m_downStationInfoArea);
-    QWidget *widget20 = createShiftInfoBlock("当前票据", 13, m_downCurTicketNum, 14, 76, 42, m_downStationInfoArea);
-    QWidget *widget21 = createShiftInfoBlock("作废票数", 13, m_downScrapTicketCnt, 14, 67, 42, m_downStationInfoArea);
-    QWidget *widget22 = createShiftInfoBlock("写卡错误", 13, m_downWriteErrCnt, 14, 67, 42, m_downStationInfoArea);
+    QWidget *widget17 = createShiftInfoBlock("起始票据", 13, m_downStartTicketNum, 14, 80, 42, m_downStationInfoArea);
+    QWidget *widget18 = createShiftInfoBlock("回收卡数", 13, m_downRecycleCardCnt, 14, 65, 42, m_downStationInfoArea);
+    QWidget *widget19 = createShiftInfoBlock("剩余票据", 13, m_downRestTicketCnt, 14, 65, 42, m_downStationInfoArea);
+    QWidget *widget20 = createShiftInfoBlock("当前票据", 13, m_downCurTicketNum, 14, 80, 42, m_downStationInfoArea);
+    QWidget *widget21 = createShiftInfoBlock("作废票数", 13, m_downScrapTicketCnt, 14, 65, 42, m_downStationInfoArea);
+    QWidget *widget22 = createShiftInfoBlock("写卡错误", 13, m_downWriteErrCnt, 14, 65, 42, m_downStationInfoArea);
 
     QGridLayout *downStationGLayout = new QGridLayout(m_downStationInfoArea);
     downStationGLayout->setContentsMargins(0, 10, 0, 6);
