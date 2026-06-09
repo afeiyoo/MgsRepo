@@ -2,6 +2,7 @@
 
 #include "Logger.h"
 #include "global/uiconst.h"
+#include "pages/etcpage.h"
 #include "pages/mtcinpage.h"
 #include "pages/mtcoutpage.h"
 
@@ -248,4 +249,58 @@ void MainWindow::initMtcOut()
 
     m_mainPageOut->setFocusPolicy(Qt::StrongFocus);
     m_mainPageOut->setFocus();
+}
+
+void MainWindow::initEtc()
+{
+    m_mainPageEtc = new EtcPage(this);
+
+    addPageNode("主页面", m_mainPageEtc, ElaIconType::House);
+
+    m_mainPageEtc->initUi();
+
+    m_mainPageEtc->setStationInfo("福州西(6701)(港口站)");
+    m_mainPageEtc->setLaneID(12);
+    m_mainPageEtc->setUserInfo("测试员(3501911)");
+    m_mainPageEtc->setShiftInfo("2025-12-25晚班");
+    m_mainPageEtc->setModeText("ETC入口");
+
+    m_mainPageEtc->setVirtualGantryInfo("福州西B向门架(34090.H)");
+    m_mainPageEtc->setAppVer("v1.0.1");
+    m_mainPageEtc->setFeeRateVer("1908");
+    m_mainPageEtc->setFullBlackVer("20250801");
+    m_mainPageEtc->setPartBlackVer("202508111211");
+
+    m_mainPageEtc->logAppend(EM_LogLevel::INFO, "界面初始化....");
+    m_mainPageEtc->logAppend(EM_LogLevel::INFO, "数据库连接初始化完成1...");
+    m_mainPageEtc->logAppend(EM_LogLevel::INFO, "界面初始化....");
+    m_mainPageEtc->logAppend(EM_LogLevel::INFO, "数据库连接初始化完成2...");
+    m_mainPageEtc->logAppend(EM_LogLevel::INFO, "界面初始化....");
+    m_mainPageEtc->logAppend(EM_LogLevel::INFO, "数据库连接初始化完成3...");
+    m_mainPageEtc->logAppend(EM_LogLevel::INFO, "界面初始化....");
+    m_mainPageEtc->logAppend(EM_LogLevel::INFO, "数据库连接初始化完成4...");
+
+    m_mainPageEtc->setScrollTip("欢迎使用福建省高速公路收费软件（如遇到软件问题请致电福建省高速公路信息科技有限公司）");
+
+    m_mainPageEtc->setPlate("拼闽B8L7222");
+    m_mainPageEtc->setVehClass("货四");
+    m_mainPageEtc->setVehStatus("抢险救灾车");
+    m_mainPageEtc->setSituation("无电子标签");
+
+    m_mainPageEtc->setCardType("CPC卡");
+    m_mainPageEtc->setTradeTime("16:55:20");
+    m_mainPageEtc->setEnStationName("莆田西站");
+    m_mainPageEtc->setProvince("福建");
+    m_mainPageEtc->setToll("入口");
+    m_mainPageEtc->setBalance("1234");
+
+    m_mainPageEtc->appendTradeItem({"闽A12345", "货一", "12:00:04", "祥谦", "CPC卡", "入口", "35012042230602103792"});
+    m_mainPageEtc->setTradeHint("等待过车");
+
+    m_mainPageEtc->setDeviceList({EM_DeviceIcon::WEIGHT, EM_DeviceIcon::FIRST_COIL, EM_DeviceIcon::CELLING_LAMP, EM_DeviceIcon::CAP_COIL,
+                                  EM_DeviceIcon::CAPTURE, EM_DeviceIcon::RAILLING_COIL, EM_DeviceIcon::PASSING_LAMP, EM_DeviceIcon::RAILING_MACHINE,
+                                  EM_DeviceIcon::RSU});
+
+    m_mainPageEtc->setFocusPolicy(Qt::StrongFocus);
+    m_mainPageEtc->setFocus();
 }

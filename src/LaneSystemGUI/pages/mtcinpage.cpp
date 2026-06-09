@@ -3,7 +3,6 @@
 #include <QHBoxLayout>
 #include <QTableView>
 
-#include "ElaWidgetTools/ElaImageCard.h"
 #include "components/devicepanel.h"
 #include "components/pagearea.h"
 #include "components/recenttradepanel.h"
@@ -321,23 +320,6 @@ void MtcInPage::initRightUi()
     rightVLayout->addWidget(m_deviceIconPanel, m_deviceIconPanel->minimumHeight());
 }
 
-QWidget *MtcInPage::initDisplayArea()
-{
-    QWidget *displayArea = new QWidget();
-    displayArea->setMinimumHeight(300);
-
-    m_capImage = new ElaImageCard(displayArea);
-    m_capImage->setBorderRadius(8);
-    m_capImage->setIsPreserveAspectCrop(false);
-    m_capImage->setCardImage(QImage(Path::CAP_AREA_BACKGROUND));
-
-    QGridLayout *displayAreaLayout = new QGridLayout(displayArea);
-    displayAreaLayout->setContentsMargins(0, 0, 0, 0);
-    displayAreaLayout->addWidget(m_capImage, 0, 0);
-
-    return displayArea;
-}
-
 PageArea *MtcInPage::initShiftInfoArea()
 {
     PageArea *shiftInfoArea = new PageArea();
@@ -505,37 +487,6 @@ PageArea *MtcInPage::initVehInfoArea()
     vehInfoAreaLayout->addWidget(cardInfoWidget);
 
     return vehInfoArea;
-}
-
-PageArea *MtcInPage::initTradeHintArea()
-{
-    PageArea *tradeHintArea = new PageArea();
-    tradeHintArea->setBorderRadius(8);
-    tradeHintArea->setMinimumHeight(135);
-
-    m_tradeHint = new QLabel(tradeHintArea);
-    m_tradeHint->setWordWrap(true);
-    QFont tradeHintfont = m_tradeHint->font();
-    tradeHintfont.setPixelSize(30);
-    tradeHintfont.setBold(true);
-    m_tradeHint->setFont(tradeHintfont);
-
-    m_obuHint = new QLabel(tradeHintArea);
-    m_obuHint->setStyleSheet(QString("color: %1;").arg(Color::INFO_TC));
-    m_obuHint->setWordWrap(true);
-    QFont obuHintFont = m_obuHint->font();
-    obuHintFont.setPixelSize(14);
-    m_obuHint->setFont(obuHintFont);
-
-    QVBoxLayout *tradeHintAreaLayout = new QVBoxLayout(tradeHintArea);
-    tradeHintAreaLayout->setContentsMargins(8, 8, 8, 8);
-    tradeHintAreaLayout->setSpacing(5);
-    tradeHintAreaLayout->addStretch();
-    tradeHintAreaLayout->addWidget(m_tradeHint);
-    tradeHintAreaLayout->addStretch();
-    tradeHintAreaLayout->addWidget(m_obuHint);
-
-    return tradeHintArea;
 }
 
 RecentTradePanel *MtcInPage::initRecentTradeArea()

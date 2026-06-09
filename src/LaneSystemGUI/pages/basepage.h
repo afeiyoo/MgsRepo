@@ -81,11 +81,11 @@ protected:
     virtual void initLeftUi() = 0;
     virtual void initRightUi() = 0;
 
-    // 抓拍显示区域初始化（由各子类各自实现）
-    virtual QWidget *initDisplayArea() = 0;
+    // 抓拍显示区域初始化（混合出口车道重写）
+    virtual QWidget *initDisplayArea();
 
-    // 车道状态显示区域初始化
-    QWidget *initLaneStatusArea();
+    // 车道状态显示区域初始化（ETC车道重写）
+    virtual QWidget *initLaneStatusArea();
 
     // 工班信息显示区域初始化（由子类各自实现）
     virtual PageArea *initShiftInfoArea() = 0;
@@ -99,8 +99,8 @@ protected:
     // 车辆及卡内信息区域初始化（由子类各自实现）
     virtual PageArea *initVehInfoArea() = 0;
 
-    // 交易提示信息区域初始化（由子类各自实现）
-    virtual PageArea *initTradeHintArea() = 0;
+    // 交易提示信息区域初始化（混合出口车道重写）
+    virtual PageArea *initTradeHintArea();
 
     // 称重信息区域初始化
     PageArea *initWeightInfoArea();

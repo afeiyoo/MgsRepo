@@ -47,10 +47,8 @@ protected:
     void initLeftUi() override;
     void initRightUi() override;
 
-    QWidget *initDisplayArea() override;
     PageArea *initShiftInfoArea() override;
     PageArea *initVehInfoArea() override;
-    PageArea *initTradeHintArea() override;
     RecentTradePanel *initRecentTradeArea() override;
     QWidget *initRobotStatusArea();
 

@@ -50,6 +50,7 @@ SOURCES += \
     global/globalmanager.cpp \
     global/signalmanager.cpp \
     pages/basepage.cpp \
+    pages/etcpage.cpp \
     pages/mainwindow.cpp \
     main.cpp \
     pages/mtcinpage.cpp \
@@ -68,6 +69,7 @@ HEADERS += \
     global/uiconst.h \
     global/uidefs.h \
     pages/basepage.h \
+    pages/etcpage.h \
     pages/mainwindow.h \
     pages/mtcinpage.h \
     pages/mtcoutpage.h

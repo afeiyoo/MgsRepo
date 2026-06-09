@@ -31,14 +31,14 @@ int main(int argc, char *argv[])
 
     QObject::connect(&a, &QCoreApplication::aboutToQuit, [=]() { LOG_INFO().noquote() << "MgsToolsKit 退出:" << DataDealUtils::curDateTimeStr(); });
 
-    LOG_INFO().noquote() << "MgsToolsKit 启动:" << DataDealUtils::curDateTimeStr();
+    LOG_INFO().noquote() << "LaneSystemGUI 启动:" << DataDealUtils::curDateTimeStr();
 
     MainWindow w;
-    w.initMtcOut();
-    w.show();
+    w.initEtc();
+    w.showMaximized();
 
     int result = a.exec();
     if (result)
-        LOG_WARNING().noquote() << "MgsToolsKit 运行错误，错误码: " << result;
+        LOG_WARNING().noquote() << "LaneSystemGUI 运行错误，错误码: " << result;
     return result;
 }

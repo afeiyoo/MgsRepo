@@ -567,7 +567,7 @@ RecentTradePanel *MtcOutPage::initRecentTradeArea()
     view->setColumnWidth(0, 100);
     view->setColumnWidth(1, 45);
     view->setColumnWidth(2, 120);
-    view->setColumnWidth(3, 140);
+    view->setColumnWidth(3, 150);
 
     return recentTradePanel;
 }
