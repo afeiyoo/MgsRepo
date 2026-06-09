@@ -4,32 +4,22 @@ QT *= core gui network
 
 TARGET = LaneSystemGUI
 
-TEMPLATE = app
+TEMPLATE = lib
+CONFIG += shared dll
+TARGET = $$qtLibraryTargetName($$TARGET)
 
 DEFINES += USE_ELAWIDGETTOOLS
 
-contains(TEMPLATE, lib) {
-    message("Build Dynamic Library")
-
-    CONFIG += shared dll
-    TARGET = $$qtLibraryTarget($$TARGET)
+shared|dll {
     DEFINES += LANESYSTEMGUI_DYNAMIC
-
-    win32 {
-        DESTDIR = $$MGS_LIBRARY_PATH/win
-    } else {
-        DESTDIR = $$MGS_LIBRARY_PATH/linux
-    }
 } else {
-    message("Build Application")
-
     DEFINES += LANESYSTEMGUI_STATIC
+}
 
-    win32 {
-        DESTDIR = $$MGS_BIN_PATH/win/$$TARGET
-    } else {
-        DESTDIR = $$MGS_BIN_PATH/linux/$$TARGET
-    }
+win32 {
+    DESTDIR = $$MGS_LIBRARY_PATH/win
+} else {
+    DESTDIR = $$MGS_LIBRARY_PATH/linux
 }
 
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
@@ -49,10 +39,10 @@ SOURCES += \
     delegate/weightinfodelegate.cpp \
     global/globalmanager.cpp \
     global/signalmanager.cpp \
+    lanesystemgui.cpp \
     pages/basepage.cpp \
     pages/etcpage.cpp \
     pages/mainwindow.cpp \
-    main.cpp \
     pages/mtcinpage.cpp \
     pages/mtcoutpage.cpp
 
@@ -68,12 +58,13 @@ HEADERS += \
     global/signalmanager.h \
     global/uiconst.h \
     global/uidefs.h \
+    lanesystemgui.h \
+    lanesystemgui_global.h \
     pages/basepage.h \
     pages/etcpage.h \
     pages/mainwindow.h \
     pages/mtcinpage.h \
     pages/mtcoutpage.h
-    lanesystemgui_global.h \
 
 # 引入第三方库
 unix:!macx|win32: LIBS += \
