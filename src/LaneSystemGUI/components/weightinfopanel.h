@@ -1,8 +1,9 @@
 #pragma once
 
-#include "global/uidefs.h"
 #include <QAbstractListModel>
 #include <QWidget>
+
+#include "lanesystemgui_global.h"
 
 class WeightInfoModel : public QAbstractListModel
 {

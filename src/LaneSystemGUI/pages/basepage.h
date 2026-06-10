@@ -1,12 +1,11 @@
 #pragma once
 
-#include "global/uidefs.h"
-#include "utils/enums.h"
-
 #include <QLabel>
 #include <QPlainTextEdit>
 #include <QSplitter>
 #include <QWidget>
+
+#include "lanesystemgui.h"
 
 class ElaPushButton;
 class ElaImageCard;
@@ -47,7 +46,7 @@ public:
     void setScrollTip(const QString &tip);
 
     // 日志显示区域API
-    void logAppend(EM_LogLevel::LogLevel logLevel, const QString &log);
+    void logAppend(LaneSystemGUI::EM_LogLevel logLevel, const QString &log);
 
     // 当前车辆与卡内信息显示区域API
     void setPlate(const QString &plate);         // 抓拍车牌
@@ -75,7 +74,7 @@ public:
 
     // 设备图标显示区域API
     void setDeviceList(const QList<uint> &devList);
-    void updateDeviceStatus(EM_DeviceIcon::DeviceIcon dev, uint status);
+    void updateDeviceStatus(LaneSystemGUI::EM_DeviceIcon dev, uint status);
 
 protected:
     virtual void initLeftUi() = 0;

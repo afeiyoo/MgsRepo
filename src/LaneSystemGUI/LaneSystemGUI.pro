@@ -57,7 +57,6 @@ HEADERS += \
     global/globalmanager.h \
     global/signalmanager.h \
     global/uiconst.h \
-    global/uidefs.h \
     lanesystemgui.h \
     lanesystemgui_global.h \
     pages/basepage.h \

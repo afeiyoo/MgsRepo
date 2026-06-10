@@ -1,13 +1,12 @@
 #pragma once
 
-#include "lanesystemgui_global.h"
-
 #include "ElaWidgetTools/ElaWindow.h"
 
+class EtcPage;
 class MtcInPage;
 class MtcOutPage;
-class EtcPage;
-class LANESYSTEMGUI_EXPORT MainWindow : public ElaWindow
+
+class MainWindow : public ElaWindow
 {
     Q_OBJECT
 public:
@@ -15,14 +14,15 @@ public:
     ~MainWindow() override;
 
     void initMtcIn();
-
-    void initMtcOut();
-
+    void initMtcOut(bool isSptInfoShow = false);
     void initEtc();
 
+    MtcInPage *mtcInPage() const;
+    MtcOutPage *mtcOutPage() const;
+    EtcPage *etcPage() const;
+
 private:
-    // 主页面
-    MtcInPage *m_mainPageIn = nullptr;   // 混合入口
-    MtcOutPage *m_mainPageOut = nullptr; // 混合出口
-    EtcPage *m_mainPageEtc = nullptr;    // ETC车道
+    MtcInPage *m_mainPageIn = nullptr;
+    MtcOutPage *m_mainPageOut = nullptr;
+    EtcPage *m_mainPageEtc = nullptr;
 };

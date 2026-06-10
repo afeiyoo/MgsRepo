@@ -11,6 +11,7 @@ win32 {
     DESTDIR = $$MGS_BIN_PATH/linux/$$TARGET
 }
 
+include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 
 SOURCES += \

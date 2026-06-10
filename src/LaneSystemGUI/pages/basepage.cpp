@@ -146,18 +146,18 @@ void BasePage::setScrollTip(const QString &tip)
     m_scrollTip->setScrollText(tip);
 }
 
-void BasePage::logAppend(EM_LogLevel::LogLevel logLevel, const QString &log)
+void BasePage::logAppend(LaneSystemGUI::EM_LogLevel logLevel, const QString &log)
 {
     const int maxCount = 300;
     const int trimCount = 100;
 
     // 维护日志缓存
     QString level;
-    if (logLevel == EM_LogLevel::INFO) {
+    if (logLevel == LaneSystemGUI::INFO) {
         level = "INFO";
-    } else if (logLevel == EM_LogLevel::WARN) {
+    } else if (logLevel == LaneSystemGUI::WARN) {
         level = "WARN";
-    } else if (logLevel == EM_LogLevel::ERROR) {
+    } else if (logLevel == LaneSystemGUI::ERROR) {
         level = "ERROR";
     } else {
         level = "DEBUG";
@@ -356,7 +356,7 @@ void BasePage::setDeviceList(const QList<uint> &devList)
     m_deviceIconPanel->setDeviceList(devList);
 }
 
-void BasePage::updateDeviceStatus(EM_DeviceIcon::DeviceIcon dev, uint status)
+void BasePage::updateDeviceStatus(LaneSystemGUI::EM_DeviceIcon dev, uint status)
 {
     if (!m_deviceIconPanel)
         return;
