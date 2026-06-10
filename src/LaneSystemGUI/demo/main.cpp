@@ -294,7 +294,7 @@ int main(int argc, char *argv[])
     LaneSystemGUI gui;
     gui.initFront(a);
 
-    auto *mtcout = gui.createMtcOutWindow(true);
+    auto *mtcout = gui.createMtcOutWindow(true, true);
     initMtcOut(mtcout);
 
     int result = a.exec();

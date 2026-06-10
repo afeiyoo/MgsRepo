@@ -91,5 +91,6 @@
         <file>static/images/white_plate.png</file>
         <file>static/images/yellow_plate.png</file>
         <file>static/images/message.png</file>
+        <file>static/font/HarmonyOS_Sans_SC_Regular.ttf</file>
     </qresource>
 </RCC>

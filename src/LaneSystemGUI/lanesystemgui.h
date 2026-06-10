@@ -63,13 +63,13 @@ public:
     void initFront(QApplication &app);
 
     // 混合入口界面操作句柄获取
-    MtcInPageController *createMtcInWindow(QObject *parent = nullptr);
+    MtcInPageController *createMtcInWindow(bool isMaxShow, QObject *parent = nullptr);
 
     // 混合出口界面操作句柄获取
-    MtcOutPageController *createMtcOutWindow(bool isSptShow, QObject *parent = nullptr);
+    MtcOutPageController *createMtcOutWindow(bool isMaxShow, bool isSptShow, QObject *parent = nullptr);
 
     // ETC界面操作句柄获取
-    EtcPageController *createEtcWindow(QObject *parent = nullptr);
+    EtcPageController *createEtcWindow(bool isMaxShow, QObject *parent = nullptr);
 
 private:
     MainWindow *m_mainWindow = nullptr;

@@ -3,12 +3,14 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QFont>
+#include <QFontDatabase>
 #include <QImage>
 #include <QWidget>
 
 #include "ElaApplication.h"
 #include "Logger.h"
 #include "global/globalmanager.h"
+#include "global/uiconst.h"
 #include "pages/basepage.h"
 #include "pages/etcpage.h"
 #include "pages/mainwindow.h"
@@ -17,6 +19,22 @@
 #include "utils/datadealutils.h"
 
 using namespace Utils;
+
+static QFont resolveAppFont()
+{
+    static const QString kFont = Path::DISPLAY_FONT;
+
+    int fontId = QFontDatabase::addApplicationFont(kFont);
+
+    if (fontId >= 0) {
+        QStringList families = QFontDatabase::applicationFontFamilies(fontId);
+
+        if (!families.isEmpty())
+            return QFont(families.first());
+    }
+
+    return QFont(QStringLiteral("Sans Serif"));
+}
 
 PageController::PageController(BasePage *page, QObject *parent)
     : QObject{parent}
@@ -686,45 +704,57 @@ void LaneSystemGUI::initFront(QApplication &app)
     eApp->init();
     GM_INSTANCE->init();
 
-    app.setFont(QFont("Microsoft YaHei UI"));
+    app.setFont(resolveAppFont());
 
     QObject::connect(&app, &QCoreApplication::aboutToQuit, []() { LOG_INFO().noquote() << "LaneSystemGUI 退出:" << DataDealUtils::curDateTimeStr(); });
 
     LOG_INFO().noquote() << "LaneSystemGUI 启动:" << DataDealUtils::curDateTimeStr();
 }
 
-MtcInPageController *LaneSystemGUI::createMtcInWindow(QObject *parent)
+MtcInPageController *LaneSystemGUI::createMtcInWindow(bool isMaxShow, QObject *parent)
 {
     if (m_mainWindow)
         delete m_mainWindow;
 
     m_mainWindow = new MainWindow();
     m_mainWindow->initMtcIn();
-    m_mainWindow->show();
+    if (isMaxShow) {
+        m_mainWindow->showMaximized();
+    } else {
+        m_mainWindow->showNormal();
+    }
 
     return new MtcInPageController(m_mainWindow->mtcInPage(), parent);
 }
 
-MtcOutPageController *LaneSystemGUI::createMtcOutWindow(bool isSptShow, QObject *parent)
+MtcOutPageController *LaneSystemGUI::createMtcOutWindow(bool isMaxShow, bool isSptShow, QObject *parent)
 {
     if (m_mainWindow)
         delete m_mainWindow;
 
     m_mainWindow = new MainWindow();
     m_mainWindow->initMtcOut(isSptShow);
-    m_mainWindow->show();
+    if (isMaxShow) {
+        m_mainWindow->showMaximized();
+    } else {
+        m_mainWindow->showNormal();
+    }
 
     return new MtcOutPageController(m_mainWindow->mtcOutPage(), parent);
 }
 
-EtcPageController *LaneSystemGUI::createEtcWindow(QObject *parent)
+EtcPageController *LaneSystemGUI::createEtcWindow(bool isMaxShow, QObject *parent)
 {
     if (m_mainWindow)
         delete m_mainWindow;
 
     m_mainWindow = new MainWindow();
     m_mainWindow->initEtc();
-    m_mainWindow->show();
+    if (isMaxShow) {
+        m_mainWindow->showMaximized();
+    } else {
+        m_mainWindow->showNormal();
+    }
 
     return new EtcPageController(m_mainWindow->etcPage(), parent);
 }

@@ -7,6 +7,7 @@ const int MAX_SAVE_DAY = 90;
 } // namespace Log
 
 namespace Path {
+const char DISPLAY_FONT[] = ":/static/font/HarmonyOS_Sans_SC_Regular.ttf";
 const char APP_BIG_ICON[] = ":/static/images/banner.png";
 const char CAP_AREA_BACKGROUND[] = ":/static/images/cap_background.png";
 const char WHITE_PLATE[] = ":/static/images/white_plate.png";
