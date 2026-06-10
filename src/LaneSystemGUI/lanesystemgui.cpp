@@ -234,6 +234,12 @@ void PageController::updateDeviceStatus(LaneSystemGUI::EM_DeviceIcon dev, uint s
         m_page->updateDeviceStatus(dev, status);
 }
 
+void PageController::showAuthDialog(const QString &id, const QString &name)
+{
+    if (m_page)
+        m_page->showAuthDialog(id, name);
+}
+
 EtcPageController::EtcPageController(EtcPage *page, QObject *parent)
     : PageController(page, parent)
 {}

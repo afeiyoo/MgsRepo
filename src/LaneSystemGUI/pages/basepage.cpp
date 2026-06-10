@@ -39,6 +39,10 @@ BasePage::BasePage(QWidget *parent)
     m_centralWidget->setObjectName("mainWidget");
     m_centralWidget->setStyleSheet(QString("#mainWidget { background-color: %1; }").arg(Color::MAIN_BG));
     addCentralWidget(m_centralWidget);
+
+    // 登录窗口初始化
+    m_authDlg = new AuthDialog(this);
+    m_authDlg->hide();
 }
 
 BasePage::~BasePage() {}
@@ -361,6 +365,16 @@ void BasePage::updateDeviceStatus(LaneSystemGUI::EM_DeviceIcon dev, uint status)
     if (!m_deviceIconPanel)
         return;
     m_deviceIconPanel->changeDevStatus(dev, status);
+}
+
+void BasePage::showAuthDialog(const QString &id, const QString &name)
+{
+    if (!m_authDlg || m_authDlg->isVisible())
+        return;
+
+    m_authDlg->show();
+    m_authDlg->setID(id);
+    m_authDlg->setName(name);
 }
 
 QWidget *BasePage::initDisplayArea()

@@ -114,6 +114,8 @@ public:
     void setDeviceList(const QList<uint> &devList);
     void updateDeviceStatus(LaneSystemGUI::EM_DeviceIcon dev, uint status);
 
+    void showAuthDialog(const QString &id, const QString &name);
+
 protected:
     BasePage *page() const;
 

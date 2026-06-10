@@ -29,6 +29,7 @@ const char CONFIRM_BUTTON_BG[] = "#007BFF";  // 确认按钮背景色
 const char WARN_BUTTON_BG[] = "#FC3C3C";     // 警告背景色
 const char INFO_BUTTON_BG[] = "#00BB65";     // 提示背景色
 const char WEIGHTINFO_ITEM_BG[] = "#FFFFFF"; // 称重信息背景色
+const char DIALOG_BG[] = "#EBEDF3";          // 对话框背景色
 
 const char STATUS_TC[] = "#00BB65"; // 状态字体色
 const char INFO_TC[] = "#0C4E94";   // 提示字体色

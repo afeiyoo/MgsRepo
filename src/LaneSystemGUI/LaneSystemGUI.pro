@@ -37,6 +37,7 @@ SOURCES += \
     components/scrolltext.cpp \
     components/weightinfopanel.cpp \
     delegate/weightinfodelegate.cpp \
+    dialogs/authdialog.cpp \
     global/globalmanager.cpp \
     global/signalmanager.cpp \
     lanesystemgui.cpp \
@@ -54,6 +55,7 @@ HEADERS += \
     components/scrolltext.h \
     components/weightinfopanel.h \
     delegate/weightinfodelegate.h \
+    dialogs/authdialog.h \
     global/globalmanager.h \
     global/signalmanager.h \
     global/uiconst.h \

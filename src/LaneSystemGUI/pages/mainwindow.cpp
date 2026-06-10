@@ -1,7 +1,5 @@
 #include "mainwindow.h"
 
-#include "Logger.h"
-#include "global/uiconst.h"
 #include "pages/etcpage.h"
 #include "pages/mtcinpage.h"
 #include "pages/mtcoutpage.h"

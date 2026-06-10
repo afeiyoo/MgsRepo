@@ -23,10 +23,8 @@ public:
     // 为控件widget应用阴影效果
     static void applyShadow(QWidget *widget);
 
-#if defined(USE_ELAWIDGETTOOLS)
-    // 返回提示控件
-    static QHBoxLayout *createTipWidget(const QString &tip);
-#endif
+    // 返回提示栏
+    static QWidget *createTipWidget(const QString &info, int infoPx = 13, QWidget *parent = nullptr);
 
     // 将控件移动到屏幕中央
     static void moveToCenter(QWidget *widget);

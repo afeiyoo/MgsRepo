@@ -5,6 +5,7 @@
 #include <QSplitter>
 #include <QWidget>
 
+#include "dialogs/authdialog.h"
 #include "lanesystemgui.h"
 
 class ElaPushButton;
@@ -75,6 +76,9 @@ public:
     // 设备图标显示区域API
     void setDeviceList(const QList<uint> &devList);
     void updateDeviceStatus(LaneSystemGUI::EM_DeviceIcon dev, uint status);
+
+    // 窗口API
+    void showAuthDialog(const QString &id, const QString &name);
 
 protected:
     virtual void initLeftUi() = 0;
@@ -189,4 +193,7 @@ protected:
 
     // 设备显示区域
     DevicePanel *m_deviceIconPanel = nullptr;
+
+    // 窗口
+    AuthDialog *m_authDlg = nullptr;
 };
