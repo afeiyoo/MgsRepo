@@ -56,6 +56,9 @@ public:
     // 界面显示日志等级
     enum EM_LogLevel { DEBUG = 1, INFO, WARN, ERROR };
 
+    // 支付类型
+    enum EM_PayMethod { ALI, WECHAT, THRIDPAY, ELECTRIC, CASH };
+
     explicit LaneSystemGUI(QObject *parent = nullptr);
     ~LaneSystemGUI() override;
 
@@ -82,26 +85,41 @@ public:
     explicit PageController(BasePage *page, QObject *parent = nullptr);
     ~PageController() override;
 
+    // 顶部信息栏API
     void setStationInfo(const QString &stationInfo);
     void setUserInfo(const QString &userInfo);
     void setLaneID(uint laneID);
     void setShiftInfo(const QString &shiftInfo);
     void setModeText(const QString &mode);
+
+    // 底部状态栏API
     void setFullBlackVer(const QString &ver);
     void setPartBlackVer(const QString &ver);
     void setVirtualGantryInfo(const QString &info);
     void setAppVer(const QString &ver);
     void setFeeRateVer(const QString &ver);
+
+    // 抓拍显示区域API
     void setCapImage(const QImage &img);
+
+    // 滚动提示区域API
     void setScrollTip(const QString &tip);
+
+    // 日志显示区域API
     void logAppend(LaneSystemGUI::EM_LogLevel logLevel, const QString &log);
+
+    // 当前车辆与卡内信息显示区域API
     void setPlate(const QString &plate);
     void setVehClass(const QString &vehClass);
     void setVehStatus(const QString &vehStatus);
     void setSituation(const QString &situation);
-    void setTradeHint(const QString &tradeHint, const QString &color = "#000000");
-    void setObuHint(const QString &obuHint, const QString &color = "#0C4E94");
-    void setCurWeightInfo(const QString &curWeightInfo, const QString &color = "#0C4E94");
+
+    // 交易提示区域API
+    void setTradeHint(const QString &tradeHint, bool isWarn = false);
+    void setObuHint(const QString &obuHint, bool isWarn = false);
+
+    // 称重信息显示区域API
+    void setCurWeightInfo(const QString &curWeightInfo, bool isWarn = false);
     void setCurWeightStatus(uint status);
     void setCurWeightInfoCount(uint curWeightInfoCount);
     void appendWeightInfoItem(const ST_WeightInfoItem &item);
@@ -109,11 +127,16 @@ public:
     void refreshWeightInfoItem(uint index, const ST_WeightInfoItem &item);
     void clearWeightInfoItem();
     void setWeightLow(bool isLow);
+
+    // 近期交易记录查看区域API
     void appendTradeItem(const QStringList &trade);
     void clearTradeItems();
+
+    // 设备图标显示区域API
     void setDeviceList(const QList<uint> &devList);
     void updateDeviceStatus(LaneSystemGUI::EM_DeviceIcon dev, uint status);
 
+    // 窗口API
     void showAuthDialog(const QString &id, const QString &name);
 
 signals:
@@ -132,6 +155,7 @@ class LANESYSTEMGUI_EXPORT EtcPageController : public PageController
 public:
     explicit EtcPageController(EtcPage *page, QObject *parent = nullptr);
 
+    // 工班信息显示区域API
     void setTotalVehCnt(int cnt);
     void setNormalVehCnt(int cnt);
     void setFreeVehCnt(int cnt);
@@ -141,6 +165,8 @@ public:
     void setHolidayFreeVehCnt(int cnt);
     void setPeccanyVehCnt(int cnt);
     void setLastShiftTotalVehCnt(int cnt);
+
+    // 当前车辆与卡内信息显示区域API
     void setCardType(const QString &cardType);
     void setProvince(const QString &province);
     void setBalance(const QString &balance);
@@ -155,6 +181,7 @@ class LANESYSTEMGUI_EXPORT MtcInPageController : public PageController
 public:
     explicit MtcInPageController(MtcInPage *page, QObject *parent = nullptr);
 
+    // 工班信息显示区域API
     void setTotalVehCnt(uint cnt);
     void setTotalCardCnt(uint cnt);
     void setNoFlagCardCnt(uint cnt);
@@ -169,12 +196,16 @@ public:
     void setStartTicketNum(uint num);
     void setEndTicketNum(uint num);
     void setCurTicketNum(uint num);
+
+    // 当前车辆与卡内信息显示区域API
     void setCardType(const QString &cardType);
     void setCardNum(const QString &cardNum);
     void setBalance(const QString &balance);
     void setEnTime(const QString &enTime);
     void setEnStationName(const QString &enStationName);
     void setCardStatus(const QString &cardStatus);
+
+    // 卡机状态显示区域API
     void setRobotStatus1(bool isOk, ushort restCard);
     void setRobotStatus2(bool isOk, ushort restCard);
     void setRobotStatus3(bool isOk, ushort restCard);
@@ -187,7 +218,10 @@ class LANESYSTEMGUI_EXPORT MtcOutPageController : public PageController
 public:
     explicit MtcOutPageController(MtcOutPage *page, QObject *parent = nullptr);
 
+    // 抓拍显示区域API
     void setPrevImage(const QImage &img);
+
+    // 工班信息显示区域API
     void enableSptShiftInfoShow(bool isSptShiftInfo);
     void setStartTicketNum(int num);
     void setCurTicketNum(int num);
@@ -211,6 +245,8 @@ public:
     void setDownRecycleCardCnt(int cnt);
     void setDownScrapTicketCnt(int cnt);
     void setDownWriteErrCnt(int cnt);
+
+    // 当前车辆与卡内信息显示区域API
     void setCardType(const QString &cardType);
     void setCardNum(const QString &cardNum);
     void setEnTime(const QString &enTime);
@@ -219,7 +255,7 @@ public:
     void setEnPlate(const QString &plate);
     void setLabel1(const QString &info);
     void setSplitProvincesInfo(const QString &info);
-    void setTradeHint(const QString &tradeHint, const QString &color = "#000000");
-    void setObuHint(const QString &obuHint, const QString &color = "#0C4E94");
-    void appendHintButton(const QString &hint, const QString &fontColor = "#ffffff", const QString &bgColor = "#08c134");
+
+    // 交易提示区域API
+    void appendHintButton(const QString &hint, LaneSystemGUI::EM_PayMethod method);
 };

@@ -153,22 +153,37 @@ void PageController::setSituation(const QString &situation)
         m_page->setSituation(situation);
 }
 
-void PageController::setTradeHint(const QString &tradeHint, const QString &color)
+void PageController::setTradeHint(const QString &tradeHint, bool isWarn)
 {
-    if (m_page)
-        m_page->setTradeHint(tradeHint, color);
+    if (!m_page)
+        return;
+    if (!isWarn) {
+        m_page->setTradeHint(tradeHint);
+    } else {
+        m_page->setTradeHint(tradeHint, Color::WARN_TC);
+    }
 }
 
-void PageController::setObuHint(const QString &obuHint, const QString &color)
+void PageController::setObuHint(const QString &obuHint, bool isWarn)
 {
-    if (m_page)
-        m_page->setObuHint(obuHint, color);
+    if (!m_page)
+        return;
+    if (!isWarn) {
+        m_page->setObuHint(obuHint);
+    } else {
+        m_page->setObuHint(obuHint, Color::WARN_TC);
+    }
 }
 
-void PageController::setCurWeightInfo(const QString &curWeightInfo, const QString &color)
+void PageController::setCurWeightInfo(const QString &curWeightInfo, bool isWarn)
 {
-    if (m_page)
-        m_page->setCurWeightInfo(curWeightInfo, color);
+    if (!m_page)
+        return;
+    if (!isWarn) {
+        m_page->setCurWeightInfo(curWeightInfo);
+    } else {
+        m_page->setCurWeightInfo(curWeightInfo, Color::WARN_TC);
+    }
 }
 
 void PageController::setCurWeightStatus(uint status)
@@ -681,22 +696,21 @@ void MtcOutPageController::setSplitProvincesInfo(const QString &info)
         p->setSplitProvincesInfo(info);
 }
 
-void MtcOutPageController::setTradeHint(const QString &tradeHint, const QString &color)
+void MtcOutPageController::appendHintButton(const QString &hint, LaneSystemGUI::EM_PayMethod method)
 {
-    if (auto *p = qobject_cast<MtcOutPage *>(page()))
-        p->setTradeHint(tradeHint, color);
-}
-
-void MtcOutPageController::setObuHint(const QString &obuHint, const QString &color)
-{
-    if (auto *p = qobject_cast<MtcOutPage *>(page()))
-        p->setObuHint(obuHint, color);
-}
-
-void MtcOutPageController::appendHintButton(const QString &hint, const QString &fontColor, const QString &bgColor)
-{
-    if (auto *p = qobject_cast<MtcOutPage *>(page()))
-        p->appendHintButton(hint, fontColor, bgColor);
+    if (auto *p = qobject_cast<MtcOutPage *>(page())) {
+        if (method == LaneSystemGUI::ALI) { // 支付宝
+            p->appendHintButton(hint, "#2b66e1");
+        } else if (method == LaneSystemGUI::WECHAT) { // 微信
+            p->appendHintButton(hint, "#489748");
+        } else if (method == LaneSystemGUI::THRIDPAY) { // 第三方
+            p->appendHintButton(hint, "#4890a9");
+        } else if (method == LaneSystemGUI::CASH) { // 现金
+            p->appendHintButton(hint, "#333ee7");
+        } else { // 电子
+            p->appendHintButton(hint, "#d5552a");
+        }
+    }
 }
 
 LaneSystemGUI::LaneSystemGUI(QObject *parent)

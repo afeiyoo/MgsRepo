@@ -51,7 +51,7 @@ public:
     void setSplitProvincesInfo(const QString &info);     // 分省信息
 
     // 交易提示区域API
-    void appendHintButton(const QString &hint, const QString &fontColor = "#ffffff", const QString &bgColor = "#08c134");
+    void appendHintButton(const QString &hint, const QString &bgColor = "#08c134");
 
 protected:
     void initLeftUi() override;

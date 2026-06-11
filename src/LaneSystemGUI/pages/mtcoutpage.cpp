@@ -231,7 +231,7 @@ void MtcOutPage::setSplitProvincesInfo(const QString &info)
     m_splitProvincesInfo->setText(info);
 }
 
-void MtcOutPage::appendHintButton(const QString &hint, const QString &fontColor, const QString &bgColor)
+void MtcOutPage::appendHintButton(const QString &hint, const QString &bgColor)
 {
     if (!m_hintButtonArea->layout())
         return;
@@ -239,7 +239,7 @@ void MtcOutPage::appendHintButton(const QString &hint, const QString &fontColor,
     QPushButton *hintBtn = new QPushButton();
     hintBtn->setAttribute(Qt::WA_TransparentForMouseEvents, true);
     hintBtn->setFixedSize(80, 20);
-    hintBtn->setStyleSheet(QString("background-color: %1; color: %2; border-radius: 5px;").arg(bgColor).arg(fontColor));
+    hintBtn->setStyleSheet(QString("background-color: %1; color: white; border-radius: 5px;").arg(bgColor));
     QFont font = hintBtn->font();
     font.setPixelSize(13);
     font.setWeight(QFont::DemiBold);
