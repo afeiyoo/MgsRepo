@@ -9,6 +9,8 @@
 #include "components/recenttradepanel.h"
 #include "components/scrolltext.h"
 #include "components/weightinfopanel.h"
+#include "global/globalmanager.h"
+#include "global/signalmanager.h"
 #include "global/uiconst.h"
 #include "utils/datadealutils.h"
 #include "utils/uiutils.h"
@@ -608,6 +610,24 @@ QWidget *BasePage::createShiftInfoBlock(const QString &infoTitle, ushort titleFo
     blockVLayout->addWidget(numLabel);
 
     return infoWidget;
+}
+
+void BasePage::keyPressEvent(QKeyEvent *event)
+{
+    int key = event->key();
+    if (key == Qt::Key_NumLock)
+        return;
+
+    QDateTime now = DataDealUtils::curDateTime();
+
+    // 同一按键，连续触发不响应
+    if (m_lastKeyPressTime.isValid() && m_lastKeyPressTime.msecsTo(now) < 200 && m_lastKey == key)
+        return;
+
+    m_lastKeyPressTime = now;
+    m_lastKey = key;
+
+    emit GM_SIG->sigKeyPress(key);
 }
 
 void BasePage::createTopWidget()

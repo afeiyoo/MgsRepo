@@ -10,6 +10,7 @@
 #include "ElaApplication.h"
 #include "Logger.h"
 #include "global/globalmanager.h"
+#include "global/signalmanager.h"
 #include "global/uiconst.h"
 #include "pages/basepage.h"
 #include "pages/etcpage.h"
@@ -39,7 +40,9 @@ static QFont resolveAppFont()
 PageController::PageController(BasePage *page, QObject *parent)
     : QObject{parent}
     , m_page(page)
-{}
+{
+    connect(GM_SIG, &SignalManager::sigKeyPress, this, &PageController::sigKeyPress);
+}
 
 PageController::~PageController() {}
 

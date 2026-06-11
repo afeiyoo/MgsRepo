@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QDateTime>
 #include <QLabel>
 #include <QPlainTextEdit>
 #include <QSplitter>
@@ -118,6 +119,9 @@ protected:
     QWidget *createShiftInfoBlock(const QString &infoTitle, ushort titleFontPx, QLabel *&numLabel, ushort labelFontPx, ushort width, ushort height,
                                   QWidget *parent);
 
+    // 重写按键事件
+    void keyPressEvent(QKeyEvent *event) override;
+
 private:
     // 创建顶部信息栏
     void createTopWidget();
@@ -196,4 +200,8 @@ protected:
 
     // 窗口
     AuthDialog *m_authDlg = nullptr;
+
+    // other变量
+    QDateTime m_lastKeyPressTime;
+    int m_lastKey;
 };

@@ -294,8 +294,19 @@ int main(int argc, char *argv[])
     LaneSystemGUI gui;
     gui.initFront(a);
 
-    auto *mtcout = gui.createMtcOutWindow(true, true);
+    auto *mtcout = gui.createMtcOutWindow(false, true);
     initMtcOut(mtcout);
+
+    QObject::connect(mtcout, &MtcOutPageController::sigKeyPress, [&](int key) {
+        switch (key) {
+        case Qt::Key_I:
+            mtcout->showAuthDialog("", "");
+            break;
+        case Qt::Key_X:
+            a.exit(0);
+            break;
+        }
+    });
 
     int result = a.exec();
     if (result)

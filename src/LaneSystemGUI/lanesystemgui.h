@@ -116,6 +116,9 @@ public:
 
     void showAuthDialog(const QString &id, const QString &name);
 
+signals:
+    void sigKeyPress(int key); // 按键信号
+
 protected:
     BasePage *page() const;
 
