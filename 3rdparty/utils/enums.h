@@ -556,11 +556,6 @@ enum WarnType {
 M_ENUM_CREATE(WarnType)
 M_END_ENUM_CREATE(EM_WarnType)
 
-M_BEGIN_ENUM_CREATE(EM_LogLevel)
-enum LogLevel { DEBUG = 1, INFO, WARN, ERROR };
-M_ENUM_CREATE(LogLevel)
-M_END_ENUM_CREATE(EM_LogLevel)
-
 M_BEGIN_ENUM_CREATE(EM_CardRobotMsgType)
 enum CardRobotMsgType {
     MSG_CMD_TYPE_0 = '0', //正回应
@@ -640,35 +635,6 @@ enum MIBizStatus {
 };
 M_ENUM_CREATE(MIBizStatus)
 M_END_ENUM_CREATE(EM_MIBizStatus)
-
-// 设备图标
-M_BEGIN_ENUM_CREATE(EM_DeviceIcon)
-enum DeviceIcon {
-    CAPTURE = 1,
-    CELLING_LAMP,
-    FIRST_COIL,
-    SECOND_COIL,
-    THIRD_COIL,
-    FOURTH_COIL,
-    CAP_COIL,
-    RAILLING_COIL,
-    PASSING_LAMP,
-    RAILING_MACHINE,
-    RSU,
-    WEIGHT
-};
-M_ENUM_CREATE(DeviceIcon)
-M_END_ENUM_CREATE(EM_DeviceIcon)
-
-// 设备图标状态
-M_BEGIN_ENUM_CREATE(EM_DeviceIconStatus)
-enum DeviceIconStatus {
-    FAIL = 1,     //设备异常
-    NORMAL_FALSE, //设备正常，且设备状态false
-    NORMAL_TRUE   //设备正常，且设备状态true
-};
-M_ENUM_CREATE(DeviceIconStatus)
-M_END_ENUM_CREATE(EM_DeviceIconStatus)
 
 // 车道模式
 M_BEGIN_ENUM_CREATE(EM_LaneMode)

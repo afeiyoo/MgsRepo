@@ -1,8 +1,8 @@
 #pragma once
 
 #include "global/defs.h"
+#include "utils/configutils.h"
 #include "utils/fileutils.h"
-#include "utils/iniutils.h"
 #include <QObject>
 
 class FileName;
@@ -21,5 +21,5 @@ public:
     ST_LogConfig m_logConfig;
 
 private:
-    Utils::IniUtils *m_ini = nullptr;
+    Utils::ConfigUtils *m_confUtil = nullptr;
 };

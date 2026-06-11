@@ -1,9 +1,5 @@
 #include "uiutils.h"
 
-#if defined(USE_ELAWIDGETTOOLS)
-    #include "ElaWidgetTools/ElaText.h"
-#endif
-
 #include "utils/fileutils.h"
 
 #include <QDateTime>
@@ -29,7 +25,7 @@ UiUtils::UiUtils(QObject *parent)
 
 UiUtils::~UiUtils() {}
 
-void UiUtils::addLine(QBoxLayout *layout, Qt::Orientation orientation /*= Qt::Vertical*/, int thickness /*= 3*/, QString color /*= #cdcdcd*/)
+void UiUtils::addLine(QBoxLayout *layout, int thickness /*= 3*/, int height /*= 10*/, QString color /*= #cdcdcd*/)
 {
     if (!layout)
         return;
@@ -43,13 +39,9 @@ void UiUtils::addLine(QBoxLayout *layout, Qt::Orientation orientation /*= Qt::Ve
     line->setStyleSheet(style);
 
     // 设置粗细和大小策略
-    if (orientation == Qt::Vertical) {
-        line->setFixedWidth(thickness);
-        line->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
-    } else {
-        line->setFixedHeight(thickness);
-        line->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    }
+    line->setFixedWidth(thickness);
+    line->setFixedHeight(height);
+    line->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     layout->addWidget(line);
 }
@@ -67,28 +59,22 @@ void UiUtils::applyShadow(QWidget *widget)
     widget->setGraphicsEffect(shadow);
 }
 
-#if defined(USE_ELAWIDGETTOOLS)
-QHBoxLayout *UiUtils::createTipWidget(const QString &tip)
+QWidget *UiUtils::createTipWidget(const QString &info, int infoPx, QWidget *parent)
 {
-    ElaText *tipIcon = new ElaText();
-    tipIcon->setElaIcon(ElaIconType::MessageExclamation);
-    tipIcon->setTextStyle(ElaTextType::Caption);
-    tipIcon->setFixedWidth(15);
+    QWidget *tipWidget = new QWidget(parent);
 
-    ElaText *tipInfo = new ElaText();
-    tipInfo->setTextStyle(ElaTextType::Caption);
-    tipInfo->setIsWrapAnywhere(true);
-    tipInfo->setText(tip);
+    QLabel *tip = new QLabel(info, tipWidget);
+    tip->setWordWrap(true);
+    QFont font = tip->font();
+    font.setPixelSize(infoPx);
+    tip->setFont(font);
 
-    QHBoxLayout *layout = new QHBoxLayout();
+    QHBoxLayout *layout = new QHBoxLayout(tipWidget);
     layout->setContentsMargins(2, 2, 2, 2);
-    layout->setSpacing(5);
-    layout->addWidget(tipIcon);
-    layout->addWidget(tipInfo, 1);
+    layout->addWidget(tip);
 
-    return layout;
+    return tipWidget;
 }
-#endif
 
 void UiUtils::moveToCenter(QWidget *widget)
 {

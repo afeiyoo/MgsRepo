@@ -2,8 +2,8 @@
 
 #include <QHBoxLayout>
 
+#include "ElaActionCommander.h"
 #include "ElaContentDialog.h"
-#include "ElaNavigationRouter.h"
 #include "ElaStatusBar.h"
 #include "ElaText.h"
 #include "ElaToolButton.h"
@@ -25,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 拦截默认关闭事件
     m_closeDialog = new ElaContentDialog(this);
-    connect(m_closeDialog, &ElaContentDialog::rightButtonClicked, this, &MainWindow::closeWindow);
+    connect(m_closeDialog, &ElaContentDialog::rightButtonClicked, this, &MainWindow::close);
     connect(m_closeDialog, &ElaContentDialog::middleButtonClicked, this, [=]() {
         m_closeDialog->close();
         showMinimized();
@@ -62,27 +62,30 @@ void MainWindow::initWindow()
     ElaToolButton *leftButton = new ElaToolButton(this);
     leftButton->setElaIcon(ElaIconType::AngleLeft);
     leftButton->setEnabled(false);
-    connect(leftButton, &ElaToolButton::clicked, this, [=]() { ElaNavigationRouter::getInstance()->navigationRouteBack(); });
+    connect(leftButton, &ElaToolButton::clicked, this, [=]() { ElaActionCommander::getInstance()->undoCommand("MgsToolsKitAction"); });
     ElaToolButton *rightButton = new ElaToolButton(this);
     rightButton->setElaIcon(ElaIconType::AngleRight);
     rightButton->setEnabled(false);
-    connect(rightButton, &ElaToolButton::clicked, this, [=]() { ElaNavigationRouter::getInstance()->navigationRouteForward(); });
-    connect(ElaNavigationRouter::getInstance(), &ElaNavigationRouter::navigationRouterStateChanged, this,
-            [=](ElaNavigationRouterType::RouteMode routeMode) {
-                switch (routeMode) {
-                case ElaNavigationRouterType::BackValid: {
+    connect(rightButton, &ElaToolButton::clicked, this, [=]() { ElaActionCommander::getInstance()->redoCommand("MgsToolsKitAction"); });
+    connect(ElaActionCommander::getInstance(), &ElaActionCommander::commanderStateChanged, this,
+            [=](const QString &domainName, ElaActionCommanderType::CommanderState state) {
+                if (domainName != "MgsToolsKitAction") {
+                    return;
+                }
+                switch (state) {
+                case ElaActionCommanderType::UndoValid: {
                     leftButton->setEnabled(true);
                     break;
                 }
-                case ElaNavigationRouterType::BackInvalid: {
+                case ElaActionCommanderType::UndoInvalid: {
                     leftButton->setEnabled(false);
                     break;
                 }
-                case ElaNavigationRouterType::ForwardValid: {
+                case ElaActionCommanderType::RedoValid: {
                     rightButton->setEnabled(true);
                     break;
                 }
-                case ElaNavigationRouterType::ForwardInvalid: {
+                case ElaActionCommanderType::RedoInvalid: {
                     rightButton->setEnabled(false);
                     break;
                 }
