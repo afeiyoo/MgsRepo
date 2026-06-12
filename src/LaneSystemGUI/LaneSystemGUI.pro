@@ -80,5 +80,11 @@ unix {
 }
 !isEmpty(target.path): INSTALLS += target
 
+# 引用头文件导出
+PUBLIC_HEADERS = \
+    $$PWD/lanesystemgui.h \
+    $$PWD/lanesystemgui_global.h
+copyHeadersToInclude($$TARGET, PUBLIC_HEADERS)
+
 RESOURCES += \
     resource.qrc
