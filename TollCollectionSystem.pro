@@ -16,7 +16,7 @@ SUBDIRS += \
     src/LaneSystemMaster
 
 LaneSystemGUI.file = src/LaneSystemGUI/LaneSystemGUI.pro
-LaneSystemGUIDemo.file = src/LaneSystemGUI/demo/LaneSystemGUIDemo.pro
+LaneSystemGUIDemo.file = src/LaneSystemGUIDemo/LaneSystemGUIDemo.pro
 MgsToolsKit.file = src/MgsToolsKit/MgsToolsKit.pro
 SmartLaneController.file = src/SmartLaneController/SmartLaneController.pro
 PadService.file = src/PadService/PadService.pro

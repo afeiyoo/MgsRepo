@@ -1,4 +1,4 @@
-include($$PWD/../../../Public.pri)
+include($$PWD/../../Public.pri)
 
 QT *= core gui network
 
@@ -18,11 +18,7 @@ SOURCES += \
     main.cpp
 
 INCLUDEPATH += \
-    $$PWD/.. \
-    $$PWD/../components \
-    $$PWD/../delegate \
-    $$PWD/../global \
-    $$PWD/../pages
+    $$MGS_INCLUDE_PATH/LaneSystemGUI
 
 win32: LIBS += \
     -L$$MGS_LIBRARY_PATH/win \
