@@ -8,8 +8,6 @@ TEMPLATE = lib
 CONFIG += shared dll
 TARGET = $$qtLibraryTargetName($$TARGET)
 
-DEFINES += USE_ELAWIDGETTOOLS
-
 shared|dll {
     DEFINES += LANESYSTEMGUI_DYNAMIC
 } else {
