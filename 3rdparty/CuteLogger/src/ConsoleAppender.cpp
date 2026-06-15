@@ -66,7 +66,8 @@ void ConsoleAppender::append(const QDateTime &timeStamp,
                              const QString &category,
                              const QString &message)
 {
-    if ((!m_onlyPrintSetLevel && logLevel >= detailsLevel()) || (m_onlyPrintSetLevel && logLevel == detailsLevel()))
-        std::cerr << qPrintable(
-            formattedString(timeStamp, logLevel, file, line, function, category, message));
+    if ((!m_onlyPrintSetLevel && logLevel >= detailsLevel()) || (m_onlyPrintSetLevel && logLevel == detailsLevel())) {
+        const QByteArray text = formattedString(timeStamp, logLevel, file, line, function, category, message).toLocal8Bit();
+        std::cerr.write(text.constData(), text.size());
+    }
 }
