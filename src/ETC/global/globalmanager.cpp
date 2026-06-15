@@ -4,9 +4,9 @@
 #include "RollingFileAppender.h"
 #include "dao/configs/config.h"
 #include "dao/configs/configini.h"
-#include "dao/dbs/dataservice.h"
 #include "dao/dbs/dataservicedameng.h"
 #include "dao/dbs/dataservicemysql.h"
+#include "middle/gateway.h"
 #include "utils/fileutils.h"
 
 using namespace Utils;
@@ -17,6 +17,7 @@ GlobalManager::GlobalManager(QObject *parent)
     : QObject{parent}
 {
     m_conf = new ConfigIni(this);
+    m_gate = new GateWay(this);
 }
 
 GlobalManager::~GlobalManager() {}

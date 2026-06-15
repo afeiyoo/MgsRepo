@@ -13,7 +13,7 @@ SUBDIRS += \
     # MgsToolsKit \
     # SmartLaneController \
     # PadService \
-    # LaneSystemMaster \
+    LaneSystemMaster \
     ETC
 
 LaneSystemGUI.file = src/LaneSystemGUI/LaneSystemGUI.pro

@@ -51,6 +51,7 @@ HEADERS += \
     dao/dbs/dataservicemysql.h \
     etc.h \
     etc_global.h \
+    global/apis.h \
     global/baseexception.h \
     global/const.h \
     global/errcode.h \

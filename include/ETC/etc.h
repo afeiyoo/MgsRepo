@@ -12,4 +12,7 @@ public:
     ~ETC() override;
 
     int init(int argc, char *argv[]);
+
+public slots:
+    void onKeyPress(int key);
 };

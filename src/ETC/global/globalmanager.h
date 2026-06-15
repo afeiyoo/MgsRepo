@@ -6,6 +6,7 @@
 
 class Config;
 class DataService;
+class GateWay;
 class GlobalManager : public QObject
 {
     Q_OBJECT
@@ -21,4 +22,5 @@ public:
 public:
     Config *m_conf = nullptr;    // 全局配置
     DataService *m_ds = nullptr; // 数据库操作类
+    GateWay *m_gate = nullptr;   // 软件网关
 };

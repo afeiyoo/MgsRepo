@@ -17,4 +17,12 @@ void LaneSystemMaster::createMtcIn() {}
 
 void LaneSystemMaster::createMtcOut() {}
 
-void LaneSystemMaster::createEtc() {}
+void LaneSystemMaster::createEtc(int argc, char *argv[])
+{
+    m_etcPageCtrl = m_gui.createEtcWindow(false, this);
+    m_etcBizCtrl = new ETC(this);
+    if (m_etcBizCtrl->init(argc, argv) < 0)
+        return exit(-1);
+
+    connect(m_etcPageCtrl, &EtcPageController::sigKeyPress, m_etcBizCtrl, &ETC::onKeyPress);
+}

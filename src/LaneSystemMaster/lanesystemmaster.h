@@ -2,6 +2,7 @@
 
 #include <QObject>
 
+#include "etc.h"
 #include "lanesystemgui.h"
 
 class QApplication;
@@ -17,11 +18,14 @@ public:
 
     void createMtcIn();
     void createMtcOut();
-    void createEtc();
+    void createEtc(int argc, char *argv[]);
 
 private:
     LaneSystemGUI m_gui;
     MtcInPageController *m_mtcinPageCtrl = nullptr;
     MtcOutPageController *m_mtcoutPageCtrl = nullptr;
+
+    // ETC车道
     EtcPageController *m_etcPageCtrl = nullptr;
+    ETC *m_etcBizCtrl = nullptr;
 };

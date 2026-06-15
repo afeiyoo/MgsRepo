@@ -1,6 +1,7 @@
 #include "gateway.h"
 
 #include "Logger.h"
+#include "global/apis.h"
 #include "global/baseexception.h"
 #include "global/errcode.h"
 
@@ -24,4 +25,20 @@ void GateWay::send(int api, const QJsonValue &value)
     });
 }
 
-void GateWay::dispatch(int api, const QJsonValue &value) {}
+void GateWay::dispatch(int api, const QJsonValue &value)
+{
+    switch (api) {
+    case API::LOGIN: {
+        apiLogin(value);
+    } break;
+    default: {
+    } break;
+    }
+}
+
+void GateWay::apiLogin(const QJsonValue &value)
+{
+    // 执行登录 biz
+
+    LOG_INFO().noquote() << "登录了 哈哈哈哈";
+}
