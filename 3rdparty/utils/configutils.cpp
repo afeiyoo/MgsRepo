@@ -23,6 +23,9 @@ QVariant ConfigUtils::getValue(const QString &key, const QVariant &defaultValue)
     QReadLocker locker(&m_lock); // 读加锁，允许多线程同时读
     if (m_format == ConfigFormat::INI) {
         QSettings set(m_filename, QSettings::IniFormat);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        set.setIniCodec("UTF-8");
+#endif
         return set.value(key, defaultValue);
     } else if (m_format == ConfigFormat::JSON) {
         return getJsonValue(key, defaultValue);
@@ -35,6 +38,9 @@ void ConfigUtils::setValue(const QString &key, const QVariant &value)
     QWriteLocker locker(&m_lock); // 写加锁，同一时间只能一个线程写
     if (m_format == ConfigFormat::INI) {
         QSettings set(m_filename, QSettings::IniFormat);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        set.setIniCodec("UTF-8");
+#endif
         set.setValue(key, value);
         set.sync();
         backup(); // 写完顺手备个份
@@ -62,6 +68,10 @@ void ConfigUtils::checkBackup()
 
 void ConfigUtils::backup()
 {
+    if (m_filename.isEmpty()) {
+        return;
+    }
+
     QFile::remove(m_filename + ".bak");
     QFile::copy(m_filename, m_filename + ".bak");
 }
