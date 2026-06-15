@@ -9,10 +9,10 @@ SUBDIRS += \
     # QJson \
     # QSimpleUpdater \
     LaneSystemGUI \
-    LaneSystemGUIDemo \
+    # LaneSystemGUIDemo \
     # MgsToolsKit \
     # SmartLaneController \
-    PadService \
+    # PadService \
     LaneSystemMaster \
     ETC
 
@@ -30,3 +30,4 @@ LaneSystemMaster.file = src/LaneSystemMaster/LaneSystemMaster.pro
 ETC.file = src/ETC/ETC.pro
 
 LaneSystemGUIDemo.depends = LaneSystemGUI
+ETC.depends = LaneSystemGUI

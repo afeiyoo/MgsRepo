@@ -1,4 +1,9 @@
 #include <QApplication>
+#include <QGuiApplication>
+
+#include "etc.h"
+#include "lanesystemmaster.h"
+#include <QDebug>
 
 int main(int argc, char *argv[])
 {
@@ -15,5 +20,13 @@ int main(int argc, char *argv[])
 #endif
     QApplication a(argc, argv);
 
-    return QCoreApplication::exec();
+    // LaneSystemMaster master;
+    // master.init(a);
+
+    ETC e;
+    int ret = e.init(argc, argv);
+    if (ret < 0)
+        return ret;
+
+    return a.exec();
 }

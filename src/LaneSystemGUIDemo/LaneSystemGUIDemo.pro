@@ -17,15 +17,10 @@ include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 SOURCES += \
     main.cpp
 
-INCLUDEPATH += \
-    $$MGS_INCLUDE_PATH/LaneSystemGUI
+# 引入动态库
+win32:CONFIG(release, debug|release): LIBS += -L$$MGS_LIBRARY_PATH/win/ -l$$qtLibraryTargetName(LaneSystemGUI)
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$MGS_LIBRARY_PATH/win/ -l$$qtLibraryTargetName(LaneSystemGUId)
+else:unix:!macx: LIBS += -L$$MGS_LIBRARY_PATH/linux/ -l$$qtLibraryTargetName(LaneSystemGUI)
 
-win32: LIBS += \
-    -L$$MGS_LIBRARY_PATH/win \
-    -l$$qtLibraryTargetName(LaneSystemGUI)
-
-unix:!macx {
-    LIBS += \
-        -L$$MGS_LIBRARY_PATH/linux \
-        -l$$qtLibraryTargetName(LaneSystemGUI)
-}
+INCLUDEPATH += $$MGS_INCLUDE_PATH/LaneSystemGUI
+DEPENDPATH += $$MGS_INCLUDE_PATH/LaneSystemGUI

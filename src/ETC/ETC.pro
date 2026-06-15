@@ -1,6 +1,6 @@
 include($$PWD/../../Public.pri)
 
-QT *= core network
+QT *= core network concurrent
 QT -= gui
 
 TARGET = ETC
@@ -29,16 +29,41 @@ include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    dao/configs/config.cpp \
+    dao/configs/configini.cpp \
+    dao/configs/configjson.cpp \
     etc.cpp \
-    global/globalmanager.cpp
+    global/baseexception.cpp \
+    middle/gateway.cpp \
+    global/globalmanager.cpp \
+    middle/signalctrl.cpp
 
 HEADERS += \
+    dao/configs/config.h \
+    dao/configs/configini.h \
+    dao/configs/configjson.h \
     etc.h \
     etc_global.h \
-    global/globalmanager.h
+    global/baseexception.h \
+    global/const.h \
+    global/errcode.h \
+    global/etcenums.h \
+    middle/gateway.h \
+    global/globalmanager.h \
+    middle/signalctrl.h
 
 # Default rules for deployment.
 unix {
     target.path = /usr/lib
 }
 !isEmpty(target.path): INSTALLS += target
+
+# 引用头文件导出
+PUBLIC_HEADERS = \
+    $$PWD/etc.h \
+    $$PWD/etc_global.h
+copyHeadersToInclude($$TARGET, PUBLIC_HEADERS)
+
+RESOURCES += \
+    resource.qrc
+
