@@ -8,12 +8,12 @@ SUBDIRS += \
     # Jcon \
     # QJson \
     # QSimpleUpdater \
-    LaneSystemGUI \
+    # LaneSystemGUI \
     # LaneSystemGUIDemo \
     # MgsToolsKit \
     # SmartLaneController \
     # PadService \
-    LaneSystemMaster \
+    # LaneSystemMaster \
     ETC
 
 LaneSystemGUI.file = src/LaneSystemGUI/LaneSystemGUI.pro

@@ -21,6 +21,7 @@ win32 {
     DESTDIR = $$MGS_LIBRARY_PATH/linux
 }
 
+include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 
@@ -32,6 +33,9 @@ SOURCES += \
     dao/configs/config.cpp \
     dao/configs/configini.cpp \
     dao/configs/configjson.cpp \
+    dao/dbs/dataservice.cpp \
+    dao/dbs/dataservicedameng.cpp \
+    dao/dbs/dataservicemysql.cpp \
     etc.cpp \
     global/baseexception.cpp \
     middle/gateway.cpp \
@@ -42,6 +46,9 @@ HEADERS += \
     dao/configs/config.h \
     dao/configs/configini.h \
     dao/configs/configjson.h \
+    dao/dbs/dataservice.h \
+    dao/dbs/dataservicedameng.h \
+    dao/dbs/dataservicemysql.h \
     etc.h \
     etc_global.h \
     global/baseexception.h \
