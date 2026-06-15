@@ -1,1 +1,5 @@
-<RCC/>
+<RCC>
+    <qresource prefix="/">
+        <file>static/config/Keyboard_0.json</file>
+    </qresource>
+</RCC>

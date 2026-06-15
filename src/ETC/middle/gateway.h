@@ -14,4 +14,5 @@ public:
 private:
     void dispatch(int api, const QJsonValue &value);
     void apiLogin(const QJsonValue &value);
+    void apiKeyPress(const QJsonValue &value);
 };

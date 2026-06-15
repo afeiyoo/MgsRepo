@@ -36,4 +36,5 @@ void ConfigJson::load(const Utils::FileName &confPath)
     m_stationID = m_confUtil->getValue("BaseInfo/stationid", "").toString();
     m_laneID = m_confUtil->getValue("BaseInfo/laneid", "").toInt();
     m_laneType = m_confUtil->getValue("BaseInfo/lanetype", "").toInt();
+    m_isTest = m_confUtil->getValue("BaseInfo/istest", "0").toInt();
 }

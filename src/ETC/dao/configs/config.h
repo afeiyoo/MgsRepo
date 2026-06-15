@@ -31,6 +31,7 @@ public:
     QString m_stationID;   // 站代码
     uint m_laneID;         // 车道号
     uint m_laneType;       // 车道类型
+    int m_isTest;       // 是否测试版
 
     // 数据库配置
     uint m_dbType;        // 类型

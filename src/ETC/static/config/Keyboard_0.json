@@ -1,0 +1,78 @@
+{
+    "Key_F1": {
+	"Name": "KeyCapTest",
+	"Desc": "抓拍测试"
+    },
+    "Key_F7": {
+	"Name": "KeyLoginOrLogOut",
+	"Desc": "上下班"
+    },
+    "Key_F8": {
+	"Name": "KeyHoliday",
+	"Desc": "节假日模式"
+    },
+    "Key_F10": {
+	"Name": "KeyMaintain",
+	"Desc": "维护"
+    },
+    "Key_F11": {
+	"Name": "KeyRecords",
+	"Desc": "班次过车流水查看"
+    },
+    "Key_F12": {
+	"Name": "KeyInfoboard",
+	"Desc": "情报板内容选择"
+    },
+    "Key_X": {
+	"Name": "KeyCancel",
+	"Desc": "取消"
+    },
+    "Key_Escape": {
+	"Name": "KeyEscape",
+	"Desc": "退出"
+    },
+    "Key_I": {
+	"Name": "KeyLogin",
+	"Desc": "上班"
+    },
+    "Key_U": {
+	"Name": "KeyLogout",
+	"Desc": "下班"
+    },
+    "Key_G": {
+	"Name": "KeyLogout",
+	"Desc": "闭道"
+    },
+    "Key_C": {
+	"Name": "KeyVD1",
+	"Desc": "线圈1模拟"
+    },
+    "Key_V": {
+	"Name": "KeyVD2",
+	"Desc": "线圈2模拟"
+    },
+    "Key_B": {
+	"Name": "KeyVD3",
+	"Desc": "线圈3模拟"
+    },
+    "Key_N": {
+	"Name": "KeyVD4",
+	"Desc": "线圈4模拟"
+    },
+    "Key_H": {
+	"Name": "KeyVD5",
+	"Desc": "线圈5模拟"
+    },
+    "Key_J": {
+	"Name": "KeyVD6",
+	"Desc": "线圈6模拟"
+    },
+    "Key_M": {
+	"Name": "KeyVD7",
+	"Desc": "抓拍线圈模拟"
+    },
+    "Key_L": {
+	"Name": "KeyVD8",
+	"Desc": "落杆线圈模拟"
+    }
+}

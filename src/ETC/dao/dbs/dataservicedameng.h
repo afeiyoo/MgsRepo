@@ -9,7 +9,7 @@ public:
     explicit DataServiceDameng(QObject *parent = nullptr);
     ~DataServiceDameng() override;
 
-    void init(const QString &host, int port, const QString &userName, const QString &passWord, const QString &dbName) override;
+    bool init(const QString &host, int port, const QString &userName, const QString &passWord, const QString &dbName) override;
 
 signals:
 };

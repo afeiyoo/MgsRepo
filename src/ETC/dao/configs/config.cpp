@@ -23,10 +23,11 @@ QString Config::dump() const
 {
     QString content;
 
-    content += QStringLiteral("[BaseInfo] stationName: %1, stationID: %2, laneID: %3, laneType: %4\n")
+    content += QStringLiteral("[BaseInfo] stationName: %1, stationID: %2, laneID: %3, laneType: %4, isTest: %5\n")
                    .arg(m_stationName, m_stationID)
                    .arg(m_laneID)
-                   .arg(m_laneType);
+                   .arg(m_laneType)
+                   .arg(m_isTest);
 
     content += QStringLiteral("[LaneDB] dbType: %1, dbHost: %2, dbPort: %3, dbName: %4, dbUser: %5, dbPassword: %6\n")
                    .arg(m_dbType)

@@ -22,6 +22,7 @@ win32 {
 }
 
 include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
+include($$THIRD_PARTY_LIBRARY_PATH/NlohmannJson/NlohmannJson.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 
@@ -30,6 +31,8 @@ include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    biz/bizhandler.cpp \
+    biz/environment.cpp \
     dao/configs/config.cpp \
     dao/configs/configini.cpp \
     dao/configs/configjson.cpp \
@@ -43,6 +46,8 @@ SOURCES += \
     middle/signalctrl.cpp
 
 HEADERS += \
+    biz/bizhandler.h \
+    biz/environment.h \
     dao/configs/config.h \
     dao/configs/configini.h \
     dao/configs/configjson.h \

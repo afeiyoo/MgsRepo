@@ -10,8 +10,9 @@ DataServiceDameng::DataServiceDameng(QObject *parent)
 
 DataServiceDameng::~DataServiceDameng() {}
 
-void DataServiceDameng::init(const QString &host, int port, const QString &userName, const QString &passWord, const QString &dbName)
+bool DataServiceDameng::init(const QString &host, int port, const QString &userName, const QString &passWord, const QString &dbName)
 {
     SqlFactory::DBSetting setting("QODBC", host, port, userName, passWord, dbName);
     m_dbFactory = SqlFactory::getInstance()->config(setting, "biz");
+    return testConnection("biz", "SELECT 1 FROM DUAL");
 }

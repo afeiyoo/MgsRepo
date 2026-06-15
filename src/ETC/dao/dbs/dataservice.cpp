@@ -1,6 +1,8 @@
 #include "dataservice.h"
 
 #include <QSqlDatabase>
+#include <QSqlError>
+#include <QSqlQuery>
 
 #include "EasyQtSql.h"
 #include "Logger.h"
@@ -14,6 +16,34 @@ DataService::DataService(QObject *parent)
 {}
 
 DataService::~DataService() {}
+
+bool DataService::testConnection(const QString &connectionName, const QString &testSql) const
+{
+    if (!m_dbFactory) {
+        LOG_CERROR("db").noquote() << "数据库连接初始化失败: SqlFactory为空";
+        return false;
+    }
+
+    QSqlDatabase sdb = m_dbFactory->getDatabase(connectionName);
+    if (!sdb.isValid()) {
+        LOG_CERROR("db").noquote() << "数据库连接初始化失败: 无效的数据库连接";
+        return false;
+    }
+
+    if (!sdb.isOpen()) {
+        LOG_CERROR("db").noquote() << "数据库连接初始化失败:" << sdb.lastError().text();
+        return false;
+    }
+
+    QSqlQuery query(sdb);
+    if (!query.exec(testSql)) {
+        LOG_CERROR("db").noquote() << "数据库连接探测失败:" << query.lastError().text() << "\t" << testSql;
+        return false;
+    }
+
+    LOG_CINFO("db").noquote() << "数据库连接初始化成功:" << testSql;
+    return true;
+}
 
 QString DataService::getStationIP(const QString &stationID) const
 {
