@@ -31,7 +31,6 @@ public:
     QString m_stationID;   // 站代码
     uint m_laneID;         // 车道号
     uint m_laneType;       // 车道类型
-    int m_isTest;       // 是否测试版
 
     // 数据库配置
     uint m_dbType;        // 类型
@@ -47,4 +46,9 @@ public:
     QString m_redisDBName;   // 数据库名
     QString m_redisUser;     // 用户名
     QString m_redisPassword; // 密码
+
+    // 测试配置
+    int m_isTest;            // 是否测试版
+    QString m_testPlate;     // 测试车牌
+    QString m_testImagePath; // 测试车辆图片
 };

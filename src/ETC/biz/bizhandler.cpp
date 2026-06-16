@@ -29,7 +29,6 @@ bool BizHandler::isInShifted()
 void BizHandler::quitSystemRequest()
 {
     if (m_env->m_isInShifted) {
-        emit GM_INSTANCE->m_sigCtrl->sigSetTradeHint("请先下班后退出系统");
         return;
     }
     QJsonObject params;
