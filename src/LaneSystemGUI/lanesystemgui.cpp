@@ -42,6 +42,7 @@ PageController::PageController(BasePage *page, QObject *parent)
     , m_page(page)
 {
     connect(GM_SIG, &SignalManager::sigKeyPress, this, &PageController::sigKeyPress);
+    connect(GM_SIG, &SignalManager::sigShowFormResp, this, &PageController::sigShowFormResp);
 }
 
 PageController::~PageController() {}
@@ -256,6 +257,18 @@ void PageController::showAuthDialog(const QString &id, const QString &name)
 {
     if (m_page)
         m_page->showAuthDialog(id, name);
+}
+
+void PageController::showInfoDialog(const QString &title, const QStringList &strs, bool switchLine)
+{
+    if (m_page)
+        m_page->showInfoDialog(title, strs, switchLine);
+}
+
+void PageController::setApi(int newApi)
+{
+    if (m_page)
+        m_page->setApi(newApi);
 }
 
 EtcPageController::EtcPageController(EtcPage *page, QObject *parent)

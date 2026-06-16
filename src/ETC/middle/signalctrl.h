@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QMessageBox>
 #include <QObject>
 
 class SignalCtrl : public QObject
@@ -50,9 +51,6 @@ signals:
     void sigSetDeviceList(const QList<uint> &devList);
     void sigUpdateDeviceStatus(uint dev, uint status);
 
-    // 窗口API
-    void sigShowAuthDialog(const QString &id, const QString &name);
-
     // 工班信息显示区域API
     void sigSetTotalVehCnt(int cnt);
     void sigSetNormalVehCnt(int cnt);
@@ -71,4 +69,7 @@ signals:
     void sigSetTradeTime(const QString &time);
     void sigSetEnStationName(const QString &enStationName);
     void sigSetToll(const QString &toll);
+
+    // 窗口API
+    void sigShowFormRequest(int formType, int api, const QJsonValue &values);
 };

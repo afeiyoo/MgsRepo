@@ -2,6 +2,7 @@
 
 #include <QImage>
 #include <QList>
+#include <QMessageBox>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -138,9 +139,13 @@ public:
 
     // 窗口API
     void showAuthDialog(const QString &id, const QString &name);
+    void showInfoDialog(const QString &title, const QStringList &strs, bool switchLine = true);
+
+    void setApi(int newApi);
 
 signals:
-    void sigKeyPress(int key); // 按键信号
+    void sigKeyPress(int key);                               // 按键信号
+    void sigShowFormResp(int api, const QJsonValue &values); // 弹窗信息返回
 
 protected:
     BasePage *page() const;

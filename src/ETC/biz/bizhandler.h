@@ -13,7 +13,8 @@ public:
     // 返回当前是否上班
     bool isInShifted();
 
-    void quitSystem();
+    void quitSystemRequest();
+    void quitSystemQuery();
 
 private:
     Environment *m_env = nullptr;

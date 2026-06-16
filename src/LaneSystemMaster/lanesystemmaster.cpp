@@ -1,6 +1,9 @@
 #include "lanesystemmaster.h"
 
 #include <QApplication>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonValue>
 
 LaneSystemMaster::LaneSystemMaster(QObject *parent)
     : QObject{parent}
@@ -25,6 +28,7 @@ void LaneSystemMaster::createEtc(int argc, char *argv[])
         return exit(-1);
 
     connect(m_etcPageCtrl, &EtcPageController::sigKeyPress, m_etcBizCtrl, &ETC::onKeyPress);
+    connect(m_etcPageCtrl, &EtcPageController::sigShowFormResp, m_etcBizCtrl, &ETC::onShowFormResp);
 
     connect(m_etcBizCtrl, &ETC::sigSetStationInfo, m_etcPageCtrl, [=](const QString &stationInfo) { m_etcPageCtrl->setStationInfo(stationInfo); });
     connect(m_etcBizCtrl, &ETC::sigSetUserInfo, m_etcPageCtrl, [=](const QString &userInfo) { m_etcPageCtrl->setUserInfo(userInfo); });
@@ -78,6 +82,20 @@ void LaneSystemMaster::createEtc(int argc, char *argv[])
             [=](const QString &enStationName) { m_etcPageCtrl->setEnStationName(enStationName); });
     connect(m_etcBizCtrl, &ETC::sigSetToll, m_etcPageCtrl, [=](const QString &toll) { m_etcPageCtrl->setToll(toll); });
 
-    connect(m_etcBizCtrl, &ETC::sigShowAuthDialog, m_etcPageCtrl,
-            [=](const QString &id, const QString &name) { m_etcPageCtrl->showAuthDialog(id, name); });
+    connect(m_etcBizCtrl, &ETC::sigShowFormRequest, m_etcPageCtrl, [=](int formType, int api, const QJsonValue &values) {
+        if (formType == 1) {
+            m_etcPageCtrl->setApi(api);
+            QString title = values["title"].toString();
+
+            QStringList strs;
+            QJsonArray arr = values["strs"].toArray();
+
+            for (const QJsonValue &v : arr) {
+                strs << v.toString();
+            }
+            bool switchLine = values["switchLine"].toBool();
+
+            m_etcPageCtrl->showInfoDialog(title, strs, switchLine);
+        }
+    });
 }

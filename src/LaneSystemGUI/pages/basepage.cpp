@@ -15,8 +15,8 @@
 #include "utils/datadealutils.h"
 #include "utils/uiutils.h"
 
-#include <QDebug>
 #include <QHBoxLayout>
+#include <QJsonObject>
 #include <QScrollBar>
 #include <QTableView>
 #include <QTimer>
@@ -377,6 +377,22 @@ void BasePage::showAuthDialog(const QString &id, const QString &name)
     m_authDlg->show();
     m_authDlg->setID(id);
     m_authDlg->setName(name);
+}
+
+void BasePage::showInfoDialog(const QString &title, const QStringList &strs, bool switchLine)
+{
+    QString message;
+    for (const auto &s : strs) {
+        QString line = s;
+        line.replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;");
+        message += line + "<br/>";
+    }
+    auto btn = UiUtils::showMessageBoxInfo(title, message, QMessageBox::Yes | QMessageBox::Cancel, switchLine);
+
+    QJsonObject params;
+    params["res"] = btn == QMessageBox::Yes;
+
+    emit GM_INSTANCE->m_signalMan->sigShowFormResp(m_api, params);
 }
 
 QWidget *BasePage::initDisplayArea()
@@ -766,4 +782,9 @@ void BasePage::createBottomWidget()
     bottomHLayout->addWidget(widget1);
     bottomHLayout->addStretch();
     bottomHLayout->addWidget(clock);
+}
+
+void BasePage::setApi(int newApi)
+{
+    m_api = newApi;
 }

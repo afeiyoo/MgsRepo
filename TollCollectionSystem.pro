@@ -8,11 +8,11 @@ SUBDIRS += \
     # Jcon \
     # QJson \
     # QSimpleUpdater \
-    # LaneSystemGUI \
+    LaneSystemGUI \
     # LaneSystemGUIDemo \
     # MgsToolsKit \
     # SmartLaneController \
-    PadService \
+    # PadService \
     LaneSystemMaster \
     ETC
 

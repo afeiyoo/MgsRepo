@@ -2,6 +2,7 @@
 
 #include <QDateTime>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QSplitter>
 #include <QWidget>
@@ -80,6 +81,9 @@ public:
 
     // 窗口API
     void showAuthDialog(const QString &id, const QString &name);
+    void showInfoDialog(const QString &title, const QStringList &strs, bool switchLine = true);
+
+    void setApi(int newApi);
 
 protected:
     virtual void initLeftUi() = 0;
@@ -204,4 +208,5 @@ protected:
     // other变量
     QDateTime m_lastKeyPressTime;
     int m_lastKey;
+    int m_api;
 };
