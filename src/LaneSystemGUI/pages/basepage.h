@@ -7,8 +7,8 @@
 #include <QSplitter>
 #include <QWidget>
 
+#include "IPageController.h"
 #include "dialogs/authdialog.h"
-#include "lanesystemgui.h"
 
 class ElaPushButton;
 class ElaImageCard;
@@ -49,7 +49,7 @@ public:
     void setScrollTip(const QString &tip);
 
     // 日志显示区域API
-    void logAppend(LaneSystemGUI::EM_LogLevel logLevel, const QString &log);
+    void logAppend(IPageController::EM_LogLevel logLevel, const QString &log);
 
     // 当前车辆与卡内信息显示区域API
     void setPlate(const QString &plate);         // 抓拍车牌
@@ -77,7 +77,7 @@ public:
 
     // 设备图标显示区域API
     void setDeviceList(const QList<uint> &devList);
-    void updateDeviceStatus(LaneSystemGUI::EM_DeviceIcon dev, uint status);
+    void updateDeviceStatus(IPageController::EM_DeviceIcon dev, uint status);
 
     // 窗口API
     void showAuthDialog(const QString &id, const QString &name);

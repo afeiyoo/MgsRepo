@@ -5,6 +5,7 @@
 
 #include "etc_global.h"
 
+class IEtcPageController;
 class ETC_EXPORT ETC : public QObject
 {
     Q_OBJECT
@@ -13,6 +14,7 @@ public:
     ~ETC() override;
 
     int init(int argc, char *argv[]);
+    void bindUi(IEtcPageController *ui);
 
 public slots:
     void onKeyPress(int key);                                               // 前端按键响应
@@ -21,4 +23,7 @@ public slots:
 signals:
     // 窗口API
     void sigShowDialogRequest(const QString &dialog, const QJsonValue &values);
+
+private:
+    IEtcPageController *m_ui = nullptr;
 };

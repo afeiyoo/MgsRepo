@@ -24,7 +24,7 @@ win32 {
 include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
-include($$PWD/../Models/Models.pri)
+include($$PWD/../LaneShares/Models/Models.pri)
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -70,6 +70,11 @@ unix {
     target.path = /usr/lib
 }
 !isEmpty(target.path): INSTALLS += target
+
+INCLUDEPATH += \
+    $$MGS_INCLUDE_PATH/LaneSystemGUI
+DEPENDPATH += \
+    $$MGS_INCLUDE_PATH/LaneSystemGUI
 
 # 引用头文件导出
 PUBLIC_HEADERS = \

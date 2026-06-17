@@ -22,7 +22,7 @@ win32 {
 
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
-include($$PWD/../Models/Models.pri)
+include($$PWD/../LaneShares/Models/Models.pri)
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -47,6 +47,7 @@ SOURCES += \
     pages/mtcoutpage.cpp
 
 HEADERS += \
+    IPageController.h \
     components/devicepanel.h \
     components/iconbutton.h \
     components/pagearea.h \
@@ -82,7 +83,8 @@ unix {
 # 引用头文件导出
 PUBLIC_HEADERS = \
     $$PWD/lanesystemgui.h \
-    $$PWD/lanesystemgui_global.h
+    $$PWD/lanesystemgui_global.h \
+    $$PWD/IPageController.h
 copyHeadersToInclude($$TARGET, PUBLIC_HEADERS)
 
 RESOURCES += \

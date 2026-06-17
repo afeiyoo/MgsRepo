@@ -3,6 +3,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 
+#include "IPageController.h"
 #include "Logger.h"
 #include "global/apis.h"
 #include "global/globalmanager.h"
@@ -32,11 +33,17 @@ int ETC::init(int argc, char *argv[])
     return ret;
 }
 
+void ETC::bindUi(IEtcPageController *ui)
+{
+    m_ui = ui;
+}
+
 void ETC::onKeyPress(int key)
 {
     LOG_INFO().noquote() << "按键:" << BizUtils::getKeyDescByCode(GM_INSTANCE->m_keyBoard, key);
     switch (key) {
     case Qt::Key_F1: { // 抓拍测试
+        m_ui->setTradeHint("你好");
     } break;
     case Qt::Key_F7: { // 上下班
     } break;

@@ -22,7 +22,7 @@ SOURCES += \
 HEADERS += \
     lanesystemmaster.h
 
-include($$PWD/../Models/Models.pri)
+include($$PWD/../LaneShares/Models/Models.pri)
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
