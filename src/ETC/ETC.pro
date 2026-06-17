@@ -22,9 +22,9 @@ win32 {
 }
 
 include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
-include($$THIRD_PARTY_LIBRARY_PATH/NlohmannJson/NlohmannJson.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
+include($$PWD/../Models/Models.pri)
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.

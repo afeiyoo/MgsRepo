@@ -42,7 +42,7 @@ PageController::PageController(BasePage *page, QObject *parent)
     , m_page(page)
 {
     connect(GM_SIG, &SignalManager::sigKeyPress, this, &PageController::sigKeyPress);
-    connect(GM_SIG, &SignalManager::sigShowFormResp, this, &PageController::sigShowFormResp);
+    connect(GM_SIG, &SignalManager::sigShowDialogResp, this, &PageController::sigShowDialogResp);
 }
 
 PageController::~PageController() {}

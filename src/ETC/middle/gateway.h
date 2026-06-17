@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QObject>
 
 class GateWay : public QObject
@@ -9,11 +11,10 @@ public:
     explicit GateWay(QObject *parent = nullptr);
     ~GateWay() override;
 
-    void send(int api, const QJsonValue &value);
+    void send(int api, const QJsonValue &values);
 
 private:
-    void dispatch(int api, const QJsonValue &value);
-    void apiLogin(const QJsonValue &value);
+    void apiLogin(const QJsonValue &values);
     void apiSystemQuitRequest();
-    void apiSystemQuitQuery(const QJsonValue &value);
+    void apiSystemQuitQuery(const QJsonValue &values);
 };

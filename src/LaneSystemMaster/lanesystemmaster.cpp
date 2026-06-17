@@ -5,6 +5,9 @@
 #include <QJsonObject>
 #include <QJsonValue>
 
+#include "json/dialogparams.h"
+#include "json/infodialogparams.h"
+
 LaneSystemMaster::LaneSystemMaster(QObject *parent)
     : QObject{parent}
 {}
@@ -29,22 +32,18 @@ void LaneSystemMaster::createEtc(int argc, char *argv[])
 
     // 前端 => 后端
     connect(m_etcPageCtrl, &EtcPageController::sigKeyPress, m_etcBizCtrl, &ETC::onKeyPress);
-    connect(m_etcPageCtrl, &EtcPageController::sigShowFormResp, m_etcBizCtrl, &ETC::onShowFormResp);
+    connect(m_etcPageCtrl, &EtcPageController::sigShowDialogResp, m_etcBizCtrl, &ETC::onShowDialogResp);
 
     // 前端 <= 后端
-    connect(m_etcBizCtrl, &ETC::sigShowFormRequest, m_etcPageCtrl, [=](int formType, int api, const QJsonValue &values) {
-        if (formType == 1) {
-            m_etcPageCtrl->setApi(api);
-            QString title = values["title"].toString();
+    connect(m_etcBizCtrl, &ETC::sigShowDialogRequest, m_etcPageCtrl, [=](const QString &dialog, const QJsonValue &values) {
+        if (dialog == "infoDialog") {
+            auto resp = DialogParams<InfoDialogRequest>::fromJson(values);
 
-            QStringList strs;
-            QJsonArray arr = values["strs"].toArray();
+            m_etcPageCtrl->setApi(resp.api);
 
-            for (const QJsonValue &v : arr) {
-                strs << v.toString();
-            }
-            bool switchLine = values["switchLine"].toBool();
-
+            QString title = resp.data.title;
+            QStringList strs = resp.data.strs;
+            bool switchLine = resp.data.switchLine;
             m_etcPageCtrl->showInfoDialog(title, strs, switchLine);
         }
     });

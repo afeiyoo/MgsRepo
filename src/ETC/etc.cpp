@@ -9,6 +9,8 @@
 #include "middle/gateway.h"
 #include "middle/signalctrl.h"
 #include "utils/bizutils.h"
+#include "json/dialogparams.h"
+#include "json/infodialogparams.h"
 
 using namespace Utils;
 
@@ -25,7 +27,7 @@ int ETC::init(int argc, char *argv[])
         return ret;
     }
 
-    connect(GM_INSTANCE->m_sigCtrl, &SignalCtrl::sigShowFormRequest, this, &ETC::sigShowFormRequest);
+    connect(GM_INSTANCE->m_sigCtrl, &SignalCtrl::sigShowDialogRequest, this, &ETC::sigShowDialogRequest);
 
     return ret;
 }
@@ -76,7 +78,10 @@ void ETC::onKeyPress(int key)
     }
 }
 
-void ETC::onShowFormResp(int api, const QJsonValue &values)
+void ETC::onShowDialogResp(const QString &dialog, const QJsonValue &values)
 {
-    GM_INSTANCE->m_gate->send(api, values);
+    if (dialog == "infoDialog") {
+        auto resp = DialogParams<InfoDialogResponse>::fromJson(values);
+        GM_INSTANCE->m_gate->send(resp.api, resp.data.toJson());
+    }
 }

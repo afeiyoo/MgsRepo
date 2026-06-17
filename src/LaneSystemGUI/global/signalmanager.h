@@ -18,5 +18,5 @@ signals:
     void sigKeyPress(int key);
 
     // 信息对话框返回
-    void sigShowFormResp(int api, const QJsonValue &values);
+    void sigShowDialogResp(const QString &dialog, const QJsonValue &values);
 };

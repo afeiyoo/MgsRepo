@@ -6,6 +6,7 @@
 #include "global/baseexception.h"
 #include "global/errcode.h"
 #include "global/globalmanager.h"
+#include "json/infodialogparams.h"
 
 #include <QtConcurrent>
 
@@ -15,11 +16,24 @@ GateWay::GateWay(QObject *parent)
 
 GateWay::~GateWay() {}
 
-void GateWay::send(int api, const QJsonValue &value)
+void GateWay::send(int api, const QJsonValue &values)
 {
     QtConcurrent::run([=]() {
         try {
-            this->dispatch(api, value);
+            LOG_DEBUG().noquote() << "API:" << api << "Json:" << values.toObject();
+            switch (api) {
+            case API::LOGIN: {
+                apiLogin(values);
+            } break;
+            case API::SYSTEM_QUIT::REQUEST: {
+                apiSystemQuitRequest();
+            } break;
+            case API::SYSTEM_QUIT::QUERY: {
+                apiSystemQuitQuery(values);
+            } break;
+            default: {
+            } break;
+            }
         } catch (...) {
             BaseException e(EC_100000, QString::fromLocal8Bit("未知错误"));
             LOG_ERROR().noquote() << e.msg();
@@ -27,25 +41,7 @@ void GateWay::send(int api, const QJsonValue &value)
     });
 }
 
-void GateWay::dispatch(int api, const QJsonValue &value)
-{
-    LOG_INFO().noquote() << "API:" << api << "Value:" << value;
-    switch (api) {
-    case API::LOGIN: {
-        apiLogin(value);
-    } break;
-    case API::SYSTEM_QUIT::REQUEST: {
-        apiSystemQuitRequest();
-    } break;
-    case API::SYSTEM_QUIT::QUERY: {
-        apiSystemQuitQuery(value);
-    } break;
-    default: {
-    } break;
-    }
-}
-
-void GateWay::apiLogin(const QJsonValue &value)
+void GateWay::apiLogin(const QJsonValue &values)
 {
     // 执行登录 biz
 
@@ -57,10 +53,9 @@ void GateWay::apiSystemQuitRequest()
     GM_INSTANCE->m_bizHandler->quitSystemRequest();
 }
 
-void GateWay::apiSystemQuitQuery(const QJsonValue &value)
+void GateWay::apiSystemQuitQuery(const QJsonValue &values)
 {
-    bool res = value["res"].toBool();
-    if (res) {
+    InfoDialogResponse resp = InfoDialogResponse::fromJson(values.toObject());
+    if (resp.yes)
         GM_INSTANCE->m_bizHandler->quitSystemQuery();
-    }
 }

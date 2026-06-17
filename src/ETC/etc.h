@@ -15,10 +15,10 @@ public:
     int init(int argc, char *argv[]);
 
 public slots:
-    void onKeyPress(int key);                               // 前端按键响应
-    void onShowFormResp(int api, const QJsonValue &values); // 前端弹窗响应
+    void onKeyPress(int key);                                               // 前端按键响应
+    void onShowDialogResp(const QString &dialog, const QJsonValue &values); // 前端弹窗响应
 
 signals:
     // 窗口API
-    void sigShowFormRequest(int formType, int api, const QJsonValue &values);
+    void sigShowDialogRequest(const QString &dialog, const QJsonValue &values);
 };

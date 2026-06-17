@@ -10,6 +10,8 @@
 #include "global/globalmanager.h"
 #include "middle/signalctrl.h"
 #include "utils/datadealutils.h"
+#include "json/dialogparams.h"
+#include "json/infodialogparams.h"
 
 using namespace Utils;
 
@@ -31,12 +33,14 @@ void BizHandler::quitSystemRequest()
     if (m_env->m_isInShifted) {
         return;
     }
-    QJsonObject params;
-    params["title"] = "请确认是否退出系统";
-    params["strs"] = QJsonArray{"按【确认】键退出，按【返回】键取消"};
-    params["switchLine"] = true;
 
-    emit GM_INSTANCE->m_sigCtrl->sigShowFormRequest(1, API::SYSTEM_QUIT::QUERY, params);
+    DialogParams<InfoDialogRequest> params;
+    params.api = API::SYSTEM_QUIT::QUERY;
+    params.data.title = "请确认是否退出系统";
+    params.data.strs = QStringList({"按【确认】键退出，按【返回】键取消"});
+    params.data.switchLine = true;
+
+    emit GM_INSTANCE->m_sigCtrl->sigShowDialogRequest("infoDialog", params.toJsonObj());
 }
 
 void BizHandler::quitSystemQuery()

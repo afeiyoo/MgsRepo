@@ -1,5 +1,9 @@
 #include "globalmanager.h"
 
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+
 #include "ConsoleAppender.h"
 #include "NlohmannJson/nlojson.hpp"
 #include "RollingFileAppender.h"
@@ -23,13 +27,15 @@ QVariantMap fetchKeyboard(const QString &path)
     FileReader reader;
     QByteArray keyboardJson = reader.fetchQrc(path);
 
-    bool ok = false;
-    NloJson nloJson;
-    QVariantMap resMap = nloJson.parse(keyboardJson, &ok).toMap();
-    if (!ok) {
+    QJsonParseError error;
+    QJsonDocument doc = QJsonDocument::fromJson(keyboardJson, &error);
+
+    if (error.error != QJsonParseError::NoError || !doc.isObject())
         return QVariantMap();
-    }
-    return resMap;
+
+    QJsonObject root = doc.object();
+
+    return root.toVariantMap();
 }
 } // namespace
 

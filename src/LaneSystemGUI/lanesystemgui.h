@@ -144,8 +144,8 @@ public:
     void setApi(int newApi);
 
 signals:
-    void sigKeyPress(int key);                               // 按键信号
-    void sigShowFormResp(int api, const QJsonValue &values); // 弹窗信息返回
+    void sigKeyPress(int key);                                               // 按键信号
+    void sigShowDialogResp(const QString &dialog, const QJsonValue &values); // 弹窗信息返回
 
 protected:
     BasePage *page() const;

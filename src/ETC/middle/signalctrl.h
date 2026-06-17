@@ -14,5 +14,5 @@ signals:
     void sigShowUpdateRequest(int uiType, const QJsonValue &values);
 
     // 窗口API
-    void sigShowFormRequest(int formType, int api, const QJsonValue &values);
+    void sigShowDialogRequest(const QString &dialog, const QJsonValue &values);
 };
