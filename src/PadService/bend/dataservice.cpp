@@ -449,7 +449,8 @@ bool DataService::getSpecialCardExist(const T_SpecialCards &specialCard, QUrl ur
 
     QVariantList records;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << "返回特情卡 %1 记录存在查询结果: " << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -468,7 +469,7 @@ bool DataService::getSpecialCardExist(const T_SpecialCards &specialCard, QUrl ur
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
 
-    if(records.isEmpty()){
+    if (records.isEmpty()) {
         throw BaseException(1, QString("响应失败: 特请卡记录查询为空"));
     }
 
@@ -506,7 +507,8 @@ bool DataService::insertSpecialCard(const T_SpecialCards &specialCard, QUrl url)
 
     bool isSuccessful = false;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << QString("插入特情卡 %1 信息结果返回: ").arg(specialCard.CardID) << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -632,7 +634,8 @@ QVariantMap DataService::getTicketUseInfo(int laneId, const QString &ticketNum, 
 
     QVariantList records;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << "相关票据信息查询结果: " << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -651,7 +654,7 @@ QVariantMap DataService::getTicketUseInfo(int laneId, const QString &ticketNum, 
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
 
-    if(records.isEmpty()) {
+    if (records.isEmpty()) {
         throw BaseException(1, QString("响应失败: 未查询到相关票据信息"));
     }
 
@@ -678,7 +681,8 @@ bool DataService::updateTicketUseInfo(int dataId, int newSeqNum, QUrl url)
 
     bool isSuccessful = false;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << QString("更新 DataID %1 的票据段信息返回结果: ").arg(newSeqNum) << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -727,7 +731,8 @@ QVariantList DataService::getDurationOutTrades(const QString &vehPlate, const QS
 
     QVariantList records;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << "返回相关流水 TradeId 查询结果: " << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -775,7 +780,8 @@ QVariantList DataService::getTicketUseScrapInfos(const QStringList &tradeIds, QU
 
     QVariantList records;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << "返回相关废票 scrapTickets 信息查询结果: " << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -819,7 +825,8 @@ QVariantList DataService::getDiscardTickets(const QStringList &tradeIds, QUrl ur
 
     QVariantList records;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << "返回相关弃票 discardTickets 信息查询结果: " << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -860,7 +867,8 @@ int DataService::getOutShiftSettleCount(const QString &stationId, const QString 
 
     QVariantList records;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << "返回相关班次信息条数查询结果: " << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -879,7 +887,7 @@ int DataService::getOutShiftSettleCount(const QString &stationId, const QString 
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
 
-    if(records.isEmpty()) {
+    if (records.isEmpty()) {
         throw BaseException(1, QString("响应失败: 未查询到相关班次信息"));
     }
 
@@ -915,7 +923,8 @@ bool DataService::insertOutShiftSettle(const QString &dataId, const QString &shi
 
     bool isSuccessful = false;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << "插入工班信息返回结果: " << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -959,7 +968,8 @@ bool DataService::insertTicketReviewPic(const T_DiscardTicketReview &review, QUr
 
     bool isSuccessful = false;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << QString("插入交易号 %1 的稽核图片返回结果: ").arg(review.TradeID) << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -997,7 +1007,8 @@ QVariantList DataService::getTicketReviewPic(const QString &stationId, const QSt
 
     QVariantList records;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << QString("返回交易号 %1 的稽核审核图片查询结果: ").arg(tradeID) << result.left(1024);
         QVariant parsed = nloJson.parse(result);
@@ -1041,7 +1052,8 @@ QVariantList DataService::getExGreenPassTrades(const QString &startTime, const Q
 
     QVariantList records;
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (ok) {
         LOG_INFO().noquote() << QString("返回本站绿通流水 %1~%2 查询结果: ").arg(startTime, stopTime) << result.left(1024);
         QVariant parsed = nloJson.parse(result);

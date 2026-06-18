@@ -47,6 +47,7 @@ void Config::loadConfig(const Utils::FileName &configPath)
     m_baseConfig.cloudPayKey = m_confUtil->getValue("BaseEnv/cloudPayKey", "51c56b886b5be869567dd389b3e5d1d6").toString();
     m_baseConfig.billQueryUrl = m_confUtil->getValue("BaseEnv/billQueryUrl", "http://35.16.1.75:18080/SPTWebService/api/trade/pay/billquery")
                                     .toString();
+    m_baseConfig.eInvoiceUrl = m_confUtil->getValue("BaseEnv/eInvoiceUrl", "http://192.168.75.128:12345/api/einvoice/queryTrade").toString();
     m_baseConfig.refundUrl = m_confUtil->getValue("BaseEnv/refundUrl", "http://35.16.1.75:18080/SPTWebService/api/trade/pay/Refund").toString();
     m_baseConfig.remoteAPIUrl = m_confUtil->getValue("BaseEnv/remoteAPIUrl", "http://10.35.2.136:6099/api/common").toString();
 }
