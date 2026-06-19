@@ -5,13 +5,13 @@
 #include <QJsonParseError>
 
 #include "ConsoleAppender.h"
-#include "NlohmannJson/nlojson.hpp"
 #include "RollingFileAppender.h"
-#include "biz/bizhandler.h"
+#include "bend/bizhandler.h"
 #include "dao/configs/config.h"
 #include "dao/configs/configini.h"
 #include "dao/dbs/dataservicedameng.h"
 #include "dao/dbs/dataservicemysql.h"
+#include "fend/pagehandler.h"
 #include "global/const.h"
 #include "middle/gateway.h"
 #include "middle/signalctrl.h"
@@ -43,9 +43,10 @@ GlobalManager::GlobalManager(QObject *parent)
     : QObject{parent}
 {
     m_conf = new ConfigIni(this);
-    m_gate = new GateWay(this);
-    m_bizHandler = new BizHandler(this);
     m_sigCtrl = new SignalCtrl(this);
+    m_gate = new GateWay(this);
+    m_pageHandler = new PageHandler(this);
+    m_bizHandler = new BizHandler(this);
 }
 
 GlobalManager::~GlobalManager() {}
@@ -55,7 +56,7 @@ GlobalManager *GlobalManager::instance()
     return ins();
 }
 
-int GlobalManager::init(int argc, char *argv[])
+int GlobalManager::init(IEtcPageController *ui)
 {
     // 日志初始化
     ConsoleAppender *consoleAppender = new ConsoleAppender();
@@ -79,6 +80,8 @@ int GlobalManager::init(int argc, char *argv[])
     dbAppender->setFlushOnWrite(true);
     dbAppender->setDatePattern(RollingFileAppender::DatePattern::DailyRollover);
     cuteLogger->registerCategoryAppender("db", dbAppender);
+
+    m_pageHandler->init(ui);
 
     // 配置初始化
     LOG_INFO().noquote() << "ETC模块开始加载配置......";

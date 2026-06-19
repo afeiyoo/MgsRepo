@@ -18,7 +18,7 @@ public:
 
     void createMtcIn();
     void createMtcOut();
-    void createEtc(int argc, char *argv[]);
+    void createEtc();
 
 private:
     LaneSystemGUI m_gui;

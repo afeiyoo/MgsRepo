@@ -1,12 +1,11 @@
 #include "gateway.h"
 
 #include "Logger.h"
-#include "biz/bizhandler.h"
+#include "bend/bizhandler.h"
 #include "global/apis.h"
 #include "global/baseexception.h"
 #include "global/errcode.h"
 #include "global/globalmanager.h"
-#include "json/infodialogparams.h"
 
 #include <QtConcurrent>
 
@@ -30,6 +29,8 @@ void GateWay::send(int api, const QJsonValue &values)
             } break;
             case API::SYSTEM_QUIT::QUERY: {
                 apiSystemQuitQuery(values);
+            } break;
+            case API::TEST_CAP::REQUEST: {
             } break;
             default: {
             } break;
@@ -55,7 +56,7 @@ void GateWay::apiSystemQuitRequest()
 
 void GateWay::apiSystemQuitQuery(const QJsonValue &values)
 {
-    InfoDialogResponse resp = InfoDialogResponse::fromJson(values.toObject());
-    if (resp.yes)
+    bool yes = values["yes"].toBool();
+    if (yes)
         GM_INSTANCE->m_bizHandler->quitSystemQuery();
 }

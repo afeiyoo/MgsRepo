@@ -16,7 +16,8 @@
 #include "pages/mtcinpage.h"
 #include "pages/mtcoutpage.h"
 
-static QFont resolveAppFont()
+namespace {
+QFont resolveAppFont()
 {
     static const QString kFont = Path::DISPLAY_FONT;
 
@@ -31,6 +32,7 @@ static QFont resolveAppFont()
 
     return QFont(QStringLiteral("Sans Serif"));
 }
+} // namespace
 
 LaneSystemGUI::LaneSystemGUI(QObject *parent)
     : QObject{parent}
@@ -47,6 +49,11 @@ void LaneSystemGUI::initFront(QApplication &app)
     GM_INSTANCE->init();
 
     app.setFont(resolveAppFont());
+}
+
+SignalManager *LaneSystemGUI::uiSignalMan() const
+{
+    return GM_INSTANCE->m_signalMan;
 }
 
 MtcInPageController *LaneSystemGUI::createMtcInWindow(bool isMaxShow, QObject *parent)
@@ -100,9 +107,7 @@ EtcPageController *LaneSystemGUI::createEtcWindow(bool isMaxShow, QObject *paren
 EtcPageController::EtcPageController(EtcPage *page, QObject *parent)
     : QObject{parent}
     , m_page{page}
-{
-    connect(GM_SIG, &SignalManager::sigKeyPress, this, &EtcPageController::sigKeyPress);
-}
+{}
 
 EtcPageController::~EtcPageController() {}
 
@@ -909,12 +914,6 @@ void MtcOutPageController::setPrevImage(const QImage &img)
 {
     if (m_page)
         m_page->setPrevImage(img);
-}
-
-void MtcOutPageController::enableSptShiftInfoShow(bool isSptShiftInfo)
-{
-    if (m_page)
-        m_page->enableSptShiftInfoShow(isSptShiftInfo);
 }
 
 void MtcOutPageController::setStartTicketNum(int num)

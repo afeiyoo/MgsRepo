@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     LaneSystemMaster master;
     master.init(a);
 
-    master.createEtc(argc, argv);
+    master.createEtc();
 
     return a.exec();
 }

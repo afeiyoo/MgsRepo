@@ -8,15 +8,15 @@
 // 界面称重信息结构体
 struct ST_WeightInfoItem
 {
-    int index = 0;
+    int index = 0; // 队列号
     QString plate;
     uint axisType = 0;
     uint axisNum = 0;
     qreal tollWeight = 0.0;
-    uint status = 0;
+    uint status = 0; // 0-等待中 1-已交易
     bool isManual = false;
     qreal limitWeight = 0.0;
-    bool allowPass = false;
+    bool allowPass = false; // 是否允许过车
     qreal exceedRate = 0.0;
 };
 
@@ -51,6 +51,7 @@ public:
 
 public:
     IPageController() = default;
+    virtual ~IPageController() = default;
 
     // 顶部信息栏API
     virtual void setStationInfo(const QString &stationInfo) = 0;
@@ -105,6 +106,7 @@ class IEtcPageController : public IPageController
 {
 public:
     IEtcPageController() = default;
+    ~IEtcPageController() override = default;
 
     // 当前车辆与卡内信息显示区域API
     virtual void setCardType(const QString &cardType) = 0;
@@ -131,6 +133,7 @@ class IMtcInPageController : public IPageController
 {
 public:
     IMtcInPageController() = default;
+    ~IMtcInPageController() override = default;
 
     // 当前车辆与卡内信息显示区域API
     virtual void setCardType(const QString &cardType) = 0;
@@ -181,11 +184,13 @@ public:
     enum EM_PayMethod { ALI, WECHAT, THRIDPAY, ELECTRIC, CASH };
 
 public:
+    IMtcOutPageController() = default;
+    ~IMtcOutPageController() override = default;
+
     // 抓拍显示区域API
     virtual void setPrevImage(const QImage &img) = 0;
 
     // 工班信息显示区域API
-    virtual void enableSptShiftInfoShow(bool isSptShiftInfo) = 0;
     virtual void setStartTicketNum(int num) = 0;
     virtual void setCurTicketNum(int num) = 0;
     virtual void setNormalTicketCnt(int cnt) = 0;

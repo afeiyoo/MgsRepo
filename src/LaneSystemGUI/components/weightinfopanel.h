@@ -3,7 +3,7 @@
 #include <QAbstractListModel>
 #include <QWidget>
 
-#include "lanesystemgui_global.h"
+#include "IPageController.h"
 
 class WeightInfoModel : public QAbstractListModel
 {

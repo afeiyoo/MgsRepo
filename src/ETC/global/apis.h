@@ -9,4 +9,8 @@ static const int REQUEST = 3; // 请求退出
 static const int QUERY = 4;   // 退出询问
 } // namespace SYSTEM_QUIT
 
+namespace TEST_CAP {
+static const int REQUEST = 5;
+}
+
 } // namespace API

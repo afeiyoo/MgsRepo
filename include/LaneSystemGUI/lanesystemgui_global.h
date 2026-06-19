@@ -1,7 +1,5 @@
 #pragma once
 
-#include "IPageController.h"
-
 #include <QtCore/qglobal.h>
 
 #if defined(Q_OS_WIN)

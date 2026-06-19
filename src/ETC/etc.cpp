@@ -5,13 +5,11 @@
 
 #include "IPageController.h"
 #include "Logger.h"
+#include "fend/pagehandler.h"
 #include "global/apis.h"
 #include "global/globalmanager.h"
 #include "middle/gateway.h"
-#include "middle/signalctrl.h"
 #include "utils/bizutils.h"
-#include "json/dialogparams.h"
-#include "json/infodialogparams.h"
 
 using namespace Utils;
 
@@ -21,21 +19,14 @@ ETC::ETC(QObject *parent)
 
 ETC::~ETC() {}
 
-int ETC::init(int argc, char *argv[])
+int ETC::init(IEtcPageController *ui)
 {
-    int ret = GM_INSTANCE->init(argc, argv);
+    int ret = GM_INSTANCE->init(ui);
     if (ret < 0 || !GM_INSTANCE->m_sigCtrl) {
         return ret;
     }
 
-    connect(GM_INSTANCE->m_sigCtrl, &SignalCtrl::sigShowDialogRequest, this, &ETC::sigShowDialogRequest);
-
     return ret;
-}
-
-void ETC::bindUi(IEtcPageController *ui)
-{
-    m_ui = ui;
 }
 
 void ETC::onKeyPress(int key)
@@ -43,7 +34,7 @@ void ETC::onKeyPress(int key)
     LOG_INFO().noquote() << "按键:" << BizUtils::getKeyDescByCode(GM_INSTANCE->m_keyBoard, key);
     switch (key) {
     case Qt::Key_F1: { // 抓拍测试
-        m_ui->setTradeHint("你好");
+        GM_INSTANCE->m_gate->send(API::TEST_CAP::REQUEST, QJsonObject());
     } break;
     case Qt::Key_F7: { // 上下班
     } break;
@@ -85,10 +76,7 @@ void ETC::onKeyPress(int key)
     }
 }
 
-void ETC::onShowDialogResp(const QString &dialog, const QJsonValue &values)
+void ETC::onDialogResp(int api, const QJsonValue &values)
 {
-    if (dialog == "infoDialog") {
-        auto resp = DialogParams<InfoDialogResponse>::fromJson(values);
-        GM_INSTANCE->m_gate->send(resp.api, resp.data.toJson());
-    }
+    GM_INSTANCE->m_gate->send(api, values);
 }

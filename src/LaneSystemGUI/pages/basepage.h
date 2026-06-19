@@ -8,7 +8,6 @@
 #include <QWidget>
 
 #include "IPageController.h"
-#include "dialogs/authdialog.h"
 
 class ElaPushButton;
 class ElaImageCard;
@@ -18,6 +17,7 @@ class IconButton;
 class WeightInfoPanel;
 class RecentTradePanel;
 class DevicePanel;
+class AuthDialog;
 class BasePage : public QWidget
 {
     Q_OBJECT

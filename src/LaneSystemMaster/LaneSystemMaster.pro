@@ -22,8 +22,6 @@ SOURCES += \
 HEADERS += \
     lanesystemmaster.h
 
-include($$PWD/../LaneShares/Models/Models.pri)
-
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

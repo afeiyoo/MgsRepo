@@ -11,8 +11,9 @@ public:
 
 signals:
     // 界面更新API
-    void sigShowUpdateRequest(int uiType, const QJsonValue &values);
+    void sigUpdateTradeHint(const QString &info, bool isWarn = false);
+    void sigUpdateHelpHint(const QString &info);
 
     // 窗口API
-    void sigShowDialogRequest(const QString &dialog, const QJsonValue &values);
+    void sigShowInfoDialog(int api, const QString &title, const QStringList &strs, bool switchLine = true);
 };

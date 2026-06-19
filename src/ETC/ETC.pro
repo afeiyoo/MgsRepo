@@ -24,15 +24,14 @@ win32 {
 include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
-include($$PWD/../LaneShares/Models/Models.pri)
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    biz/bizhandler.cpp \
-    biz/environment.cpp \
+    bend/bizhandler.cpp \
+    bend/environment.cpp \
     dao/configs/config.cpp \
     dao/configs/configini.cpp \
     dao/configs/configjson.cpp \
@@ -40,14 +39,15 @@ SOURCES += \
     dao/dbs/dataservicedameng.cpp \
     dao/dbs/dataservicemysql.cpp \
     etc.cpp \
+    fend/pagehandler.cpp \
     global/baseexception.cpp \
     middle/gateway.cpp \
     global/globalmanager.cpp \
     middle/signalctrl.cpp
 
 HEADERS += \
-    biz/bizhandler.h \
-    biz/environment.h \
+    bend/bizhandler.h \
+    bend/environment.h \
     dao/configs/config.h \
     dao/configs/configini.h \
     dao/configs/configjson.h \
@@ -56,6 +56,7 @@ HEADERS += \
     dao/dbs/dataservicemysql.h \
     etc.h \
     etc_global.h \
+    fend/pagehandler.h \
     global/apis.h \
     global/baseexception.h \
     global/const.h \

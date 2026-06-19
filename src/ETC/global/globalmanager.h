@@ -11,6 +11,8 @@ class GateWay;
 class Environment;
 class BizHandler;
 class SignalCtrl;
+class PageHandler;
+class IEtcPageController;
 class GlobalManager : public QObject
 {
     Q_OBJECT
@@ -21,13 +23,14 @@ public:
     static GlobalManager *instance();
 
     // 全局初始化
-    int init(int argc, char *argv[]);
+    int init(IEtcPageController *ui);
 
 public:
-    Config *m_conf = nullptr;           // 全局配置
-    DataService *m_ds = nullptr;        // 数据库操作类
-    GateWay *m_gate = nullptr;          // 软件网关
-    QVariantMap m_keyBoard;             // 车道键盘表
-    BizHandler *m_bizHandler = nullptr; // 业务处理类
-    SignalCtrl *m_sigCtrl = nullptr;    // 消息中心
+    Config *m_conf = nullptr;             // 全局配置
+    DataService *m_ds = nullptr;          // 数据库操作类
+    GateWay *m_gate = nullptr;            // 软件网关
+    QVariantMap m_keyBoard;               // 车道键盘表
+    BizHandler *m_bizHandler = nullptr;   // 业务处理类
+    SignalCtrl *m_sigCtrl = nullptr;      // 消息中心
+    PageHandler *m_pageHandler = nullptr; // 界面控制
 };

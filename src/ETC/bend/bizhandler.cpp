@@ -10,8 +10,6 @@
 #include "global/globalmanager.h"
 #include "middle/signalctrl.h"
 #include "utils/datadealutils.h"
-#include "json/dialogparams.h"
-#include "json/infodialogparams.h"
 
 using namespace Utils;
 
@@ -31,16 +29,12 @@ bool BizHandler::isInShifted()
 void BizHandler::quitSystemRequest()
 {
     if (m_env->m_isInShifted) {
+        emit GM_INSTANCE->m_sigCtrl->sigUpdateTradeHint("当前正在上班，无法退出系统");
+        emit GM_INSTANCE->m_sigCtrl->sigUpdateHelpHint("请按【F7】操作下班");
         return;
     }
 
-    DialogParams<InfoDialogRequest> params;
-    params.api = API::SYSTEM_QUIT::QUERY;
-    params.data.title = "请确认是否退出系统";
-    params.data.strs = QStringList({"按【确认】键退出，按【返回】键取消"});
-    params.data.switchLine = true;
-
-    emit GM_INSTANCE->m_sigCtrl->sigShowDialogRequest("infoDialog", params.toJsonObj());
+    emit GM_INSTANCE->m_sigCtrl->sigShowInfoDialog(API::SYSTEM_QUIT::QUERY, "请确认是否退出系统?", {"按【确认】键退出，按【返回】键取消"});
 }
 
 void BizHandler::quitSystemQuery()

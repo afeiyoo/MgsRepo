@@ -9,13 +9,12 @@
 #include "components/recenttradepanel.h"
 #include "components/scrolltext.h"
 #include "components/weightinfopanel.h"
+#include "dialogs/authdialog.h"
 #include "global/globalmanager.h"
 #include "global/signalmanager.h"
 #include "global/uiconst.h"
 #include "utils/datadealutils.h"
 #include "utils/uiutils.h"
-#include "json/dialogparams.h"
-#include "json/infodialogparams.h"
 
 #include <QHBoxLayout>
 #include <QJsonObject>
@@ -391,11 +390,9 @@ void BasePage::showInfoDialog(const QString &title, const QStringList &strs, boo
     }
     auto btn = UiUtils::showMessageBoxInfo(title, message, QMessageBox::Yes | QMessageBox::Cancel, switchLine);
 
-    DialogParams<InfoDialogResponse> params;
-    params.api = m_api;
-    params.data.yes = (btn == QMessageBox::Yes);
-
-    emit GM_INSTANCE->m_signalMan->sigShowDialogResp("infoDialog", params.toJsonObj());
+    QJsonObject obj;
+    obj["yes"] = btn == QMessageBox::Yes;
+    emit GM_SIG->sigDialogResp(m_api, obj);
 }
 
 QWidget *BasePage::initDisplayArea()
