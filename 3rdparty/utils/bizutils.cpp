@@ -15,6 +15,33 @@ BizUtils::BizUtils(QObject *parent)
 
 Utils::BizUtils::~BizUtils() {}
 
+QString BizUtils::getPlateWithColor(int color, const QString &plate)
+{
+    QString newPlate = correctVehplate(plate);
+
+    if (newPlate == QString("整牌拒识"))
+        return newPlate;
+
+    // 如果前两个是中文字符，则默认包含颜色，直接返回，否则进行拼接
+    int chineseCnt = DataDealUtils::getChineseCountFromString(newPlate, 2);
+    if (chineseCnt > 1)
+        return newPlate;
+
+    // NOTE: 因为“黑”，与黑龙江的简称“黑”相同（并且黑色牌照必定包含中文）
+    QStringList colors = {"蓝", "黄", "白", "绿", "拼", "渐", "临"};
+    for (const QString &c : colors) {
+        if (newPlate.startsWith(c))
+            return newPlate;
+    }
+
+    const QString plateColor = getColorFormColorCode(color);
+    if (plateColor.isEmpty())
+        return QString("整牌拒识");
+
+    QString fullPlate = plateColor + newPlate;
+    return fullPlate;
+}
+
 QString BizUtils::getPlateNoColor(const QString &fullPlate)
 {
     int pos = -1;
@@ -40,42 +67,45 @@ QString BizUtils::getPlateNoColor(const QString &fullPlate)
 
 QString BizUtils::correctVehplate(const QString &plate)
 {
-    if (plate.isEmpty() || plate.contains("无车牌") || plate.contains("整牌拒识"))
+    QString newPlate = DataDealUtils::trimmed(plate, 0);
+
+    if (newPlate.isEmpty() || newPlate.contains("无车牌") || newPlate.contains("整牌拒识"))
         return QString("整牌拒识");
 
-    return plate;
+    return newPlate;
 }
 
 int BizUtils::getColorCodeFromPlate(const QString &fullPlate)
 {
     if (fullPlate.isEmpty())
-        return EM_PlateColor::Unknown;
+        return 9;
     if (DataDealUtils::getChineseCountFromString(fullPlate, 4) <= 1) {
         QString prefix = fullPlate.left(2);
-        if (prefix.contains(QStringLiteral("白")))
-            return EM_PlateColor::White;
-        else
-            return EM_PlateColor::Unknown;
+        if (prefix.contains(QStringLiteral("白"))) {
+            return 3;
+        } else {
+            return 9;
+        }
     }
     QString checkData = fullPlate.mid(0, 1);
     if (checkData.contains(QStringLiteral("蓝")))
-        return EM_PlateColor::Blue;
+        return 0;
     else if (checkData.contains(QStringLiteral("黄")))
-        return EM_PlateColor::Yellow;
+        return 1;
     else if (checkData.contains(QStringLiteral("黑")))
-        return EM_PlateColor::Black;
+        return 2;
     else if (checkData.contains(QStringLiteral("白")))
-        return EM_PlateColor::White;
+        return 3;
     else if (checkData.contains(QStringLiteral("绿")))
-        return EM_PlateColor::Green;
+        return 4;
     else if (checkData.contains(QStringLiteral("拼")))
-        return EM_PlateColor::Plain;
+        return 5;
     else if (checkData.contains(QStringLiteral("渐")))
-        return EM_PlateColor::Gradient;
+        return 6;
     else if (checkData.contains(QStringLiteral("临")))
-        return EM_PlateColor::Temporty;
+        return 7;
     else
-        return EM_PlateColor::Unknown;
+        return 9;
 }
 
 QString BizUtils::getColorFormColorCode(int colorCode)

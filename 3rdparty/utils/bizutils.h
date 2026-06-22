@@ -15,6 +15,9 @@ public:
     /*******************************************************/
     /****                   项目业务相关                 ****/
     /*******************************************************/
+    // 获取带颜色的车牌
+    static QString getPlateWithColor(int color, const QString &plate);
+
     // 获取不带颜色的车牌
     static QString getPlateNoColor(const QString &fullPlate);
 

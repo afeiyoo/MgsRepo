@@ -6,6 +6,30 @@
 #include <QVariant>
 
 //==============================================================================
+// 设备数据
+//==============================================================================
+// 抓拍数据
+struct ST_CapVehInfo
+{
+    QByteArray chHWYIP; //抓拍IP
+    QByteArray chPlate; //车牌
+    int nColor = 0;     //颜色
+    QByteArray chSpecialImage;
+    int nSpecialLen = 0;
+    QByteArray chFullImage;
+    int nFullLen = 0;
+    QByteArray chPlateImage;
+    int nPlateLen = 0;
+    QByteArray chTwoImage;
+    int nTwoLen = 0;
+    uint cameraTime = 0;      //Unix
+    uchar chVehicleColor;     //车身颜色
+    uchar chVehicleClass = 0; //车型
+    QByteArray reserve;       //备用
+};
+Q_DECLARE_METATYPE(ST_CapVehInfo)
+
+//==============================================================================
 // 软件配置
 //==============================================================================
 namespace ConfigDef {
@@ -2140,25 +2164,6 @@ public:
 // 设备数据
 //==============================================================================
 namespace DevData {
-// 抓拍信息
-struct ST_CapVehInfo
-{
-    QByteArray chHWYIP; //抓拍IP
-    QByteArray chPlate; //车牌
-    int nColor = 0;     //颜色
-    QByteArray chSpecialImage;
-    int nSpecialLen = 0;
-    QByteArray chFullImage;
-    int nFullLen = 0;
-    QByteArray chPlateImage;
-    int nPlateLen = 0;
-    QByteArray chTwoImage;
-    int nTwoLen = 0;
-    uint cameraTime = 0;      //Unix
-    uchar chVehicleColor;     //车身颜色
-    uchar chVehicleClass = 0; //车型
-    QByteArray reserve;       //备用
-};
 
 // 小黄人车型信息
 struct ST_VehRecoTypeInfo
@@ -2469,7 +2474,6 @@ public:
 Q_DECLARE_METATYPE(DevData::ST_VehicleWeightInfo)
 Q_DECLARE_METATYPE(DevData::ST_WeightInfo)
 Q_DECLARE_METATYPE(DevData::ST_IOVdStatus)
-Q_DECLARE_METATYPE(DevData::ST_CapVehInfo)
 Q_DECLARE_METATYPE(DevData::ST_VehRecoHeartInfo)
 Q_DECLARE_METATYPE(DevData::ST_VehRecoImageInfo)
 Q_DECLARE_METATYPE(DevData::ST_VehRecoTypeInfo)
