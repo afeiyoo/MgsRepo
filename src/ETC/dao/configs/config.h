@@ -19,6 +19,8 @@ public:
     QString dump() const;
 
 protected:
+    void readConfig();
+
     Utils::ConfigUtils *m_confUtil = nullptr; // 配置读取工具
 
 public:
@@ -31,6 +33,7 @@ public:
     QString m_stationID;   // 站代码
     uint m_laneID;         // 车道号
     uint m_laneType;       // 车道类型
+    QString m_psdFlagID;   // 承载门架编号
 
     // 数据库配置
     uint m_dbType;        // 类型
@@ -48,7 +51,11 @@ public:
     QString m_redisPassword; // 密码
 
     // 测试配置
-    int m_isTest;            // 是否测试版
+    bool m_isTest;           // 是否测试版
     QString m_testPlate;     // 测试车牌
     QString m_testImagePath; // 测试车辆图片
+
+    // 车道个性化配置
+    bool m_isEnableCompareVehplate; // 是否启用车牌比对
+    QString m_savePicPath;          // 保存抓拍图片路径
 };

@@ -61,7 +61,7 @@ HEADERS += \
     global/baseexception.h \
     global/const.h \
     global/errcode.h \
-    global/etcenums.h \
+    global/etcdefs.h \
     middle/gateway.h \
     global/globalmanager.h \
     middle/signalctrl.h

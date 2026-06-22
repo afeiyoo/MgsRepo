@@ -2,6 +2,8 @@
 
 #include <QObject>
 
+class ST_CapVehInfo;
+class ST_TradeInfo;
 class Environment;
 class BizHandler : public QObject
 {
@@ -15,6 +17,13 @@ public:
 
     void quitSystemRequest();
     void quitSystemQuery();
+
+public slots:
+    // 抓拍数据解析槽
+    void onCaptureInfo(const ST_CapVehInfo &info);
+
+private:
+    ST_TradeInfo getTradeInfo(const QString &plate, bool useFirst = true);
 
 private:
     Environment *m_env = nullptr;

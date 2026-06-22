@@ -15,3 +15,11 @@ private: \
     ;
 
 #define E_ENUM_CREATE(CLASS) Q_ENUM(CLASS)
+
+struct ST_TradeInfo
+{
+    QString tradeID;  // 交易号
+    QString vehPlate; // 车牌
+    uint vehClass;    // 车型
+    qint64 updateTime;
+};

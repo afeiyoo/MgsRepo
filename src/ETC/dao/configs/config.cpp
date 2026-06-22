@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include "utils/configutils.h"
+#include "utils/fileutils.h"
 #include "utils/stdafx.h"
 
 using namespace Utils;
@@ -46,4 +47,41 @@ QString Config::dump() const
     content += QStringLiteral("[Test] isTest: %1, plate: %2, imagePath: %3").arg(m_isTest).arg(m_testPlate).arg(m_testImagePath);
 
     return content;
+}
+
+void Config::readConfig()
+{
+    if (!m_confUtil)
+        return;
+
+    // 数据库配置加载
+    m_dbType = m_confUtil->getValue("LaneDB/dbtype", 1).toUInt();
+    m_dbHost = m_confUtil->getValue("LaneDB/dbhost", "127.0.0.1").toString();
+    m_dbPort = m_confUtil->getValue("LaneDB/dbport", 3306).toUInt();
+    m_dbName = m_confUtil->getValue("LaneDB/dbname", "tolllanedb").toString();
+    m_dbUser = m_confUtil->getValue("LaneDB/dbuser", "tlman").toString();
+    m_dbPassword = m_confUtil->getValue("LaneDB/dbpasswd", "ds18fjeit").toString();
+
+    // Redis配置加载
+    m_redisHost = m_confUtil->getValue("RedisDB/dbhost", "").toString();
+    m_redisPort = m_confUtil->getValue("RedisDB/dbport", 6379).toUInt();
+    m_redisDBName = m_confUtil->getValue("RedisDB/dbname", "0").toString();
+    m_redisUser = m_confUtil->getValue("RedisDB/dbuser", "test").toString();
+    m_redisPassword = m_confUtil->getValue("RedisDB/dbpasswd", "Mgskj@202101").toString();
+
+    // 测试配置加载
+    m_isTest = m_confUtil->getValue("Test/istest", false).toBool();
+    m_testPlate = m_confUtil->getValue("Test/plate", "").toString();
+    m_testImagePath = m_confUtil->getValue("Test/imgpath", "").toString();
+
+    // 车道基础配置加载
+    m_stationName = m_confUtil->getValue("BaseInfo/stationname", "").toString();
+    m_stationID = m_confUtil->getValue("BaseInfo/stationid", "").toString();
+    m_laneID = m_confUtil->getValue("BaseInfo/laneid", 0).toUInt();
+    m_laneType = m_confUtil->getValue("BaseInfo/lanetype", 1).toUInt();
+    m_psdFlagID = m_confUtil->getValue("BaseInfo/psdflagid", "").toString();
+
+    // 车道个性化配置
+    m_isEnableCompareVehplate = m_confUtil->getValue("SpecialConf/isenablecomparevehplate", false).toBool();
+    m_savePicPath = m_confUtil->getValue("SpecialConf/savepicpath", FileUtils::curApplicationDirPath() + "/upload").toString();
 }

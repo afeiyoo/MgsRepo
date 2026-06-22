@@ -10,6 +10,7 @@
 #include "global/globalmanager.h"
 #include "middle/gateway.h"
 #include "utils/bizutils.h"
+#include "utils/datadealutils.h"
 
 using namespace Utils;
 

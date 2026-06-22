@@ -12,7 +12,7 @@ SUBDIRS += \
     # LaneSystemGUIDemo \
     # MgsToolsKit \
     # SmartLaneController \
-    # PadService \
+    PadService \
     ETC \
     LaneSystemMaster
 

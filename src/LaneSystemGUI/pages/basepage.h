@@ -2,9 +2,7 @@
 
 #include <QDateTime>
 #include <QLabel>
-#include <QMessageBox>
 #include <QPlainTextEdit>
-#include <QSplitter>
 #include <QWidget>
 
 #include "IPageController.h"

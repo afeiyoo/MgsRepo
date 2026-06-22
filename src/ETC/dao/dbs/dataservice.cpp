@@ -95,3 +95,15 @@ bool DataService::isHolidayFreeVehClass(uint vehClass, bool checkVehClass) const
         return false;
     }
 }
+
+void DataService::saveLaneCapRecord(const QString &vehPlate, const QString &stationdID, int vehClass) {}
+
+void DataService::saveFFCapRecord(const QString &captureID, const QString &vehPlate)
+{
+
+}
+
+void DataService::saveFFShiftStat()
+{
+
+}
