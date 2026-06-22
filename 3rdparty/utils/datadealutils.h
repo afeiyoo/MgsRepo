@@ -56,10 +56,10 @@ public:
 
     //获取当前时间的unix时间戳
     static uint curUnixDateTime();
+
     /*******************************************************/
     /****                   内容输出相关                 ****/
     /*******************************************************/
-
     // 数字转字符串，并在左侧补0，可指定数字最小宽度
     static QString padValue(quint32 value, int width = -1);
 
@@ -134,13 +134,6 @@ public:
     // 3-移除首尾空格,中间空格保留1个
     static QString trimmed(const QString &text, short type);
 
-    // 获取字符串中的中文个数
-    static int getChineseCountFromString(const QString &data, int checkLen);
-
-    // 生成指定范围(0~doundary)的随机数
-    // Qt5.10前的版本，在获取随机数前需要先调用 qsrand(seed), 生成随机数种子
-    static int getRandomNum(quint32 boundary);
-
     // 将字符串转换成指定编码 1. 转GBK编码 2. 转UTF8编码
     static QByteArray encodeString(const QString &text, int coding);
 
@@ -149,6 +142,19 @@ public:
 
     //输出：str + delimiter + substr内容
     static void appendStrWithSubStr(QString &str, const QString &subStr, const QString &delimiter);
+
+    /*******************************************************/
+    /****                数据统计相关                    ****/
+    /*******************************************************/
+    // 获取字符串中的中文个数
+    static int getChineseCountFromString(const QString &data, int checkLen);
+
+    // 生成指定范围(0~doundary)的随机数
+    // Qt5.10前的版本，在获取随机数前需要先调用 qsrand(seed), 生成随机数种子
+    static int getRandomNum(quint32 boundary);
+
+    // 计算两个字符串之间的相似度
+    static int calcStrMatchScore(const QString &fullStr, const QString &partStr);
 
     /*******************************************************/
     /****                   SQL 相关                    ****/
@@ -161,6 +167,9 @@ public:
 
     // 输出完整的SQL语句（不含占位符）
     static QString fullExecutedQuery(const QSqlQuery &query);
+
+private:
+    static QString formatSqlValue(const QVariant &val);
 };
 
 } // namespace Utils

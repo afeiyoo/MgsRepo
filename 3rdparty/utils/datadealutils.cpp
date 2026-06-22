@@ -853,19 +853,15 @@ QString DataDealUtils::trimmed(const QString &text, short type)
 
 int DataDealUtils::getChineseCountFromString(const QString &data, int checkLen)
 {
-    if (checkLen == 0)
-        checkLen = data.length();
-
-    if (data.isEmpty() || data.length() < checkLen)
-        return 0;
-    int count = 0;
-    for (int i = 1; i <= checkLen; i++) {
-        if ((data.toStdString().c_str()[i] & 0x80) >> 7) { // 判断最高位是否为1
-            count++;
-            ++i;
-        }
+    int nCount = 0;
+    int limit = qMin(checkLen, data.size());
+    for (int i = 0; i < limit; ++i) {
+        QChar ch = data.at(i);
+        // 中文字符Unicode区间
+        if (ch.unicode() >= 0x4E00 && ch.unicode() <= 0x9FFF)
+            nCount++;
     }
-    return count;
+    return nCount;
 }
 
 int DataDealUtils::getRandomNum(quint32 boundary)
@@ -877,6 +873,38 @@ int DataDealUtils::getRandomNum(quint32 boundary)
 #else
     return qrand() % boundary;
 #endif
+}
+
+int DataDealUtils::calcStrMatchScore(const QString &fullStr, const QString &partStr)
+{
+    if (fullStr.isEmpty() || partStr.isEmpty())
+        return 0;
+
+    // 完全包含，直接认为100%
+    if (fullStr.contains(partStr))
+        return 100;
+
+    if (fullStr.size() < partStr.size())
+        return 0;
+
+    int maxMatchCnt = 0;
+    // 滑动窗口比较
+    for (int offset = 0; offset <= fullStr.size() - partStr.size(); ++offset) {
+        int matchCnt = 0;
+
+        for (int i = 0; i < partStr.size(); ++i) {
+            if (fullStr.at(offset + i) == partStr.at(i)) {
+                ++matchCnt;
+            }
+        }
+
+        if (matchCnt > maxMatchCnt)
+            maxMatchCnt = matchCnt;
+
+        qDebug().noquote() << maxMatchCnt << matchCnt;
+    }
+
+    return maxMatchCnt * 100 / partStr.size();
 }
 
 QByteArray DataDealUtils::encodeString(const QString &text, int coding)
@@ -918,37 +946,34 @@ void DataDealUtils::appendStrWithSubStr(QString &str, const QString &subStr, con
 
 QString DataDealUtils::getInsertSql(QObject *obj)
 {
-    QString colInc = obj->property("auto_inc").toString();
+    if (!obj)
+        return QString();
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QStringList autoIncCols = obj->property("auto_inc").toString().split(",", Qt::SkipEmptyParts);
+#else
+    QStringList autoIncCols = obj->property("auto_inc").toString().split(",", QString::SkipEmptyParts);
+#endif
+    for (QString &col : autoIncCols) {
+        col = col.trimmed();
+    }
+
     QString tableName = obj->metaObject()->className();
 
     QStringList colList;
     QStringList valList;
 
-    for (int i = 0; i < obj->metaObject()->propertyCount(); ++i) {
+    for (int i = obj->metaObject()->propertyOffset(); i < obj->metaObject()->propertyCount(); ++i) {
         QMetaProperty prp = obj->metaObject()->property(i);
-        QString colName = prp.name();
+        QString colName = QString::fromLatin1(prp.name());
 
-        if (colName == "objectName" || colName == "tbl_pk" || colName == "auto_inc" || colName == colInc)
+        if (colName == "objectName" || colName == "tbl_pk" || colName == "auto_inc" || autoIncCols.contains(colName))
             continue;
 
         QVariant val = obj->property(prp.name());
-        QString strVal;
-        switch (val.type()) {
-        case QVariant::String:
-            strVal = "'" + val.toString().replace("'", "''") + "'";
-            break;
-        case QVariant::Date:
-            strVal = "'" + val.toDate().toString("yyyy-MM-dd") + "'";
-            break;
-        case QVariant::DateTime:
-            strVal = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
-            break;
-        default:
-            strVal = val.toString();
-        }
 
         colList << colName.toLower();
-        valList << strVal;
+        valList << formatSqlValue(val);
     }
 
     // 没有可插入字段
@@ -962,45 +987,38 @@ QString DataDealUtils::getInsertSql(QObject *obj)
 
 QString DataDealUtils::getUpdateSql(QObject *obj)
 {
-    QString colInc = obj->property("auto_inc").toString();
+    if (!obj)
+        return QString();
+
     QString tableName = obj->metaObject()->className();
+
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     QStringList pkList = obj->property("tbl_pk").toString().split(",", Qt::SkipEmptyParts);
+    QStringList autoIncCols = obj->property("auto_inc").toString().split(",", Qt::SkipEmptyParts);
 #else
     QStringList pkList = obj->property("tbl_pk").toString().split(",", QString::SkipEmptyParts);
+    QStringList autoIncCols = obj->property("auto_inc").toString().split(",", QString::SkipEmptyParts);
 #endif
-
-    auto formatValue = [&](const QVariant &val) -> QString {
-        QString strVal;
-        switch (val.type()) {
-        case QVariant::String:
-            strVal = "'" + val.toString().replace("'", "''") + "'";
-            break;
-        case QVariant::Date:
-            strVal = "'" + val.toDate().toString("yyyy-MM-dd") + "'";
-            break;
-        case QVariant::DateTime:
-            strVal = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
-            break;
-        default:
-            strVal = val.toString();
-        }
-        return strVal;
-    };
+    for (QString &col : autoIncCols) {
+        col = col.trimmed();
+    }
+    for (QString &pk : pkList) {
+        pk = pk.trimmed();
+    }
 
     // 构建 SET 子句
     QStringList setClauses;
-    for (int i = 0; i < obj->metaObject()->propertyCount(); ++i) {
+    for (int i = obj->metaObject()->propertyOffset(); i < obj->metaObject()->propertyCount(); ++i) {
         QMetaProperty prp = obj->metaObject()->property(i);
-        QString colName = prp.name();
+        QString colName = QString::fromLatin1(prp.name());
 
-        if (colName == "objectName" || colName == "tbl_pk" || colName == "auto_inc" || colName == colInc)
+        if (colName == "objectName" || colName == "tbl_pk" || colName == "auto_inc" || autoIncCols.contains(colName))
             continue;
         // 跳过主键字段，不在 SET 中更新
-        if (pkList.contains(colName, Qt::CaseSensitive))
+        if (pkList.contains(colName))
             continue;
         QVariant val = obj->property(prp.name());
-        QString formattedVal = formatValue(val);
+        QString formattedVal = formatSqlValue(val);
 
         setClauses << QString("%1=%2").arg(colName.toLower(), formattedVal);
     }
@@ -1014,7 +1032,7 @@ QString DataDealUtils::getUpdateSql(QObject *obj)
     whereClauses << QStringLiteral("1=1");
     for (const QString &pk : pkList) {
         QVariant val = obj->property(pk.toUtf8().constData());
-        QString formattedVal = formatValue(val);
+        QString formattedVal = formatSqlValue(val);
         whereClauses << QString("%1=%2").arg(pk.toLower(), formattedVal);
     }
 
@@ -1073,4 +1091,23 @@ QString DataDealUtils::fullExecutedQuery(const QSqlQuery &query)
     }
 
     return result;
+}
+
+QString DataDealUtils::formatSqlValue(const QVariant &val)
+{
+    if (!val.isValid() || val.isNull())
+        return "NULL";
+
+    switch (val.type()) {
+    case QVariant::String:
+        return "'" + val.toString().replace("'", "''") + "'";
+    case QVariant::Date:
+        return "'" + val.toDate().toString("yyyy-MM-dd") + "'";
+    case QVariant::DateTime:
+        return "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
+    case QVariant::Bool:
+        return val.toBool() ? "1" : "0";
+    default:
+        return val.toString();
+    }
 }
