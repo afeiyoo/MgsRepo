@@ -12,6 +12,7 @@ class Environment;
 class BizHandler;
 class SignalCtrl;
 class PageHandler;
+class Environment;
 class IEtcPageController;
 class GlobalManager : public QObject
 {
@@ -33,4 +34,5 @@ public:
     BizHandler *m_bizHandler = nullptr;   // 业务处理类
     SignalCtrl *m_sigCtrl = nullptr;      // 消息中心
     PageHandler *m_pageHandler = nullptr; // 界面控制
+    Environment *m_env = nullptr;         // 全局业务环境变量
 };

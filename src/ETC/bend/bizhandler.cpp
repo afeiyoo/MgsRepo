@@ -6,7 +6,6 @@
 
 #include "Logger.h"
 #include "dao/configs/config.h"
-#include "dao/dbs/dataservice.h"
 #include "environment.h"
 #include "global/apis.h"
 #include "global/etcdefs.h"
@@ -20,20 +19,18 @@ using namespace Utils;
 
 BizHandler::BizHandler(QObject *parent)
     : QObject{parent}
-{
-    m_env = new Environment(this);
-}
+{}
 
 BizHandler::~BizHandler() {}
 
 bool BizHandler::isInShifted()
 {
-    return m_env->m_isInShifted;
+    return GM_INSTANCE->m_env->m_isInShifted;
 }
 
 void BizHandler::quitSystemRequest()
 {
-    if (m_env->m_isInShifted) {
+    if (GM_INSTANCE->m_env->m_isInShifted) {
         emit GM_INSTANCE->m_sigCtrl->sigUpdateTradeHint("当前正在上班，无法退出系统");
         emit GM_INSTANCE->m_sigCtrl->sigUpdateHelpHint("请按【F7】操作下班");
         return;
@@ -57,7 +54,6 @@ void BizHandler::onCaptureInfo(const ST_CapVehInfo &info)
     LOG_INFO().noquote() << "抓拍返回: 颜色" << BizUtils::getColorFormColorCode(info.nColor) << "，车牌" << QString::fromUtf8(info.chPlate)
                          << "，图片大小" << info.nFullLen;
 
-    // TODO 修改流水抓拍车牌
     // TODO 获取车牌对应流水
     QString imgFilePath;
     if (!GM_INSTANCE->m_conf->m_isEnableCompareVehplate) {
@@ -74,13 +70,13 @@ void BizHandler::onCaptureInfo(const ST_CapVehInfo &info)
     } else {
     }
 
-    m_env->m_curCapVehPlate = plate;
-    m_env->m_curCapImageFilePath = imgFilePath;
+    GM_INSTANCE->m_env->m_curCapVehPlate = plate;
+    GM_INSTANCE->m_env->m_curCapImageFilePath = imgFilePath;
 
-    if (m_env->m_isInShifted && !GM_INSTANCE->m_conf->m_isEnableCompareVehplate) {
+    if (GM_INSTANCE->m_env->m_isInShifted && !GM_INSTANCE->m_conf->m_isEnableCompareVehplate) {
         // 保存车道抓拍流水
     }
-    if (m_env->m_isInShifted && !GM_INSTANCE->m_conf->m_psdFlagID.isEmpty()) {
+    if (GM_INSTANCE->m_env->m_isInShifted && !GM_INSTANCE->m_conf->m_psdFlagID.isEmpty()) {
         // 保存承载门架抓拍流水
     }
     if (!GM_INSTANCE->m_conf->m_isEnableCompareVehplate) {
@@ -93,29 +89,29 @@ void BizHandler::onCaptureInfo(const ST_CapVehInfo &info)
 ST_TradeInfo BizHandler::getTradeInfo(const QString &plate, bool useFirst)
 {
     ST_TradeInfo info;
-    for (auto it = m_env->m_tradeList.begin(); it != m_env->m_tradeList.end(); ++it) {
+    for (auto it = GM_INSTANCE->m_env->m_tradeList.begin(); it != GM_INSTANCE->m_env->m_tradeList.end(); ++it) {
         int score = DataDealUtils::calcStrMatchScore(it->vehPlate.trimmed(), plate.trimmed());
         if (score >= 87) {
             info = *it;
-            m_env->m_tradeList.erase(it);
+            GM_INSTANCE->m_env->m_tradeList.erase(it);
             return info;
         }
     }
 
-    if (!useFirst || m_env->m_tradeList.isEmpty())
+    if (!useFirst || GM_INSTANCE->m_env->m_tradeList.isEmpty())
         return info;
 
     if (useFirst) { // 兜底使用第一个交易记录
-        if (!m_env->m_tradeList.isEmpty()) {
-            auto it = m_env->m_tradeList.begin();
+        if (!GM_INSTANCE->m_env->m_tradeList.isEmpty()) {
+            auto it = GM_INSTANCE->m_env->m_tradeList.begin();
             info = *it;
-            m_env->m_tradeList.erase(it);
+            GM_INSTANCE->m_env->m_tradeList.erase(it);
         }
     }
 
-    auto it = m_env->m_tradeList.begin();
+    auto it = GM_INSTANCE->m_env->m_tradeList.begin();
     info = *it;
-    m_env->m_tradeList.erase(it);
+    GM_INSTANCE->m_env->m_tradeList.erase(it);
 
     return info;
 }

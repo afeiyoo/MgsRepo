@@ -22,7 +22,7 @@ public:
     bool isHolidayFreeVehClass(uint vehClass, bool checkVehClass = false) const;
 
     // 保存车道抓拍记录
-    void saveLaneCapRecord(const QString &vehPlate, const QString &stationdID, int vehClass);
+    void saveLaneCapRecord(const QString &vehPlate, const QString &capTradeID);
 
     // 保存承载门架抓拍记录
     void saveFFCapRecord(const QString &captureID, const QString &vehPlate);
@@ -32,6 +32,10 @@ public:
 
 protected:
     bool testConnection(const QString &connectionName, const QString &testSql) const;
+    bool saveRecord(const QObject &obj) const;
 
     EasyQtSql::SqlFactory *m_dbFactory = nullptr;
+
+private:
+    QVariantMap qObject2QVaiantMap(const QObject *obj) const;
 };

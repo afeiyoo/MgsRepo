@@ -80,6 +80,7 @@ void Config::readConfig()
     m_laneID = m_confUtil->getValue("BaseInfo/laneid", 0).toUInt();
     m_laneType = m_confUtil->getValue("BaseInfo/lanetype", 1).toUInt();
     m_psdFlagID = m_confUtil->getValue("BaseInfo/psdflagid", "").toString();
+    m_psdFlagName = m_confUtil->getValue("BaseInfo/psdflagname", "").toString();
 
     // 车道个性化配置
     m_isEnableCompareVehplate = m_confUtil->getValue("SpecialConf/isenablecomparevehplate", false).toBool();

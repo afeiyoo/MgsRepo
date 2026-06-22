@@ -6,7 +6,14 @@
 
 #include "EasyQtSql.h"
 #include "Logger.h"
+#include "T_FF_CapRecord.h"
+#include "T_LaneCapRecord.h"
+#include "bend/environment.h"
+#include "dao/configs/config.h"
+#include "global/globalmanager.h"
+#include "utils/bizutils.h"
 #include "utils/datadealutils.h"
+#include "utils/fileutils.h"
 
 using namespace EasyQtSql;
 using namespace Utils;
@@ -43,6 +50,60 @@ bool DataService::testConnection(const QString &connectionName, const QString &t
 
     LOG_CINFO("db").noquote() << "数据库连接初始化成功:" << testSql;
     return true;
+}
+
+bool DataService::saveRecord(const QObject &obj) const
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase("biz");
+
+    QString sql = DataDealUtils::getInsertSql(const_cast<QObject *>(&obj));
+
+    Transaction t(sdb);
+    try {
+        QVariantMap kvs = qObject2QVaiantMap(&obj);
+        NonQueryResult res = t.insertInto(obj.metaObject()->className()).values(kvs).exec();
+
+        LOG_CINFO("db").noquote() << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        return t.commit();
+    } catch (const DBException &e) {
+        t.rollback();
+        LOG_CERROR("db").noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        return false;
+    }
+}
+
+QVariantMap DataService::qObject2QVaiantMap(const QObject *obj) const
+{
+    //判空
+    QVariantMap result;
+    if (obj == nullptr)
+        return result;
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QStringList autoIncCols = obj->property("auto_inc").toString().split(",", Qt::SkipEmptyParts);
+#else
+    QStringList autoIncCols = obj->property("auto_inc").toString().split(",", QString::SkipEmptyParts);
+#endif
+    for (QString &col : autoIncCols) {
+        col = col.trimmed();
+    }
+
+    const QMetaObject *metaobject = obj->metaObject();
+    int count = metaobject->propertyCount();
+    int offset = metaobject->propertyOffset();
+    for (int i = offset; i < count; ++i) {
+        QMetaProperty metaproperty = metaobject->property(i);
+        const char *name = metaproperty.name();
+
+        if (!metaproperty.isReadable() || QLatin1String(name) == "objectName" || QLatin1String(name) == "tbl_pk" || QLatin1String(name) == "auto_inc"
+            || autoIncCols.contains(QLatin1String(name)))
+            continue;
+
+        QVariant value = obj->property(name);
+        result[QLatin1String(name)] = value;
+    }
+    return result;
 }
 
 QString DataService::getStationIP(const QString &stationID) const
@@ -96,14 +157,75 @@ bool DataService::isHolidayFreeVehClass(uint vehClass, bool checkVehClass) const
     }
 }
 
-void DataService::saveLaneCapRecord(const QString &vehPlate, const QString &stationdID, int vehClass) {}
+void DataService::saveLaneCapRecord(const QString &vehPlate, const QString &capTradeID)
+{
+    T_LaneCapRecord record;
+
+    record.StationID = GM_INSTANCE->m_conf->m_stationID;
+    record.LaneID = GM_INSTANCE->m_conf->m_laneID;
+    record.LaneType = GM_INSTANCE->m_conf->m_laneType;
+    record.ShiftDate = GM_INSTANCE->m_env->m_shiftDate;
+    record.ShiftID = GM_INSTANCE->m_env->m_shiftID;
+    record.DataTime = DataDealUtils::curDateTime();
+    record.TradeID = capTradeID;
+    record.VehPlate = vehPlate;
+    record.VehColor = BizUtils::getColorFromPlate(vehPlate);
+    record.VehClass = 0;
+    record.VehSpeed = 0;
+    record.VehFeatureCode = "";
+    record.FaceFeatureCode = "";
+    record.CreateTime = DataDealUtils::curDateTime();
+    record.Reserve = "";
+
+    bool dbOk = saveRecord(record);
+    if (!dbOk) {
+        LOG_CERROR("db").noquote() << "保存T_LaneCapRecord失败 TradeID:" << capTradeID;
+    }
+
+    // 生成xml文件
+    QString dtpContent = BizUtils::makeDtpContentFromObj(record);
+    QString fromNode = GM_INSTANCE->m_conf->m_stationID.rightJustified(4, QChar('0'))
+                       + QString::number(GM_INSTANCE->m_conf->m_laneID).rightJustified(2, QChar('0'));
+    QString toNode = GM_INSTANCE->m_conf->m_stationID.rightJustified(4, QChar('0'));
+    int recordCount = 1;
+    QString dtpXml = BizUtils::makeDtpXml(dtpContent, "214", fromNode, toNode, recordCount);
+
+    FileSaver saver(FileUtils::curApplicationDirPath() + "/upload/TradeQ_" + DataDealUtils::curDateTimeStr("yyyyMMddhhmmsszzz") + ".xml");
+    bool fileOk = saver.finalize();
+    if (!fileOk) {
+        LOG_CERROR("db").noquote() << "生成" << saver.fileName() << "报文失败: " << saver.errorString();
+    }
+}
 
 void DataService::saveFFCapRecord(const QString &captureID, const QString &vehPlate)
 {
+    T_FF_CapRecord record;
 
+    record.CaptureID = captureID;
+    record.FlagType = 0;
+    record.FlagID = GM_INSTANCE->m_conf->m_psdFlagID;
+    record.FlagName = GM_INSTANCE->m_conf->m_psdFlagName;
+    record.FlagIndex = GM_INSTANCE->m_conf->m_laneID;
+    record.CapTime = DataDealUtils::curDateTime();
+    record.Shiftdate = GM_INSTANCE->m_env->m_shiftDate;
+    record.ShiftID = DataDealUtils::curDateTimeStr("hh").toInt();
+    record.CapType = 0;
+    record.CapDevice = "统一高清";
+    record.Channel = GM_INSTANCE->m_conf->m_laneID;
+    record.VehPlate = vehPlate;
+    record.PictureID = captureID;
+    record.TradeID = "";
+    record.VehClass = 0;
+    record.VehBrand = "";
+    record.Reserve1 = "";
+    record.Reserve2 = "";
+
+    bool dbOk = saveRecord(record);
+    if (!dbOk) {
+        LOG_CERROR("db").noquote() << "保存T_FF_CapRecord失败 CaptureID:" << captureID;
+    }
+
+    // TODO 生成json文件
 }
 
-void DataService::saveFFShiftStat()
-{
-
-}
+void DataService::saveFFShiftStat() {}

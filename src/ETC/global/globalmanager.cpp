@@ -7,6 +7,7 @@
 #include "ConsoleAppender.h"
 #include "RollingFileAppender.h"
 #include "bend/bizhandler.h"
+#include "bend/environment.h"
 #include "dao/configs/config.h"
 #include "dao/configs/configini.h"
 #include "dao/dbs/dataservicedameng.h"
@@ -47,6 +48,7 @@ GlobalManager::GlobalManager(QObject *parent)
     m_gate = new GateWay(this);
     m_pageHandler = new PageHandler(this);
     m_bizHandler = new BizHandler(this);
+    m_env = new Environment(this);
 }
 
 GlobalManager::~GlobalManager() {}

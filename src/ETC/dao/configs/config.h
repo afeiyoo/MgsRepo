@@ -34,6 +34,7 @@ public:
     uint m_laneID;         // 车道号
     uint m_laneType;       // 车道类型
     QString m_psdFlagID;   // 承载门架编号
+    QString m_psdFlagName; // 承载门架名称
 
     // 数据库配置
     uint m_dbType;        // 类型

@@ -26,5 +26,4 @@ private:
     ST_TradeInfo getTradeInfo(const QString &plate, bool useFirst = true);
 
 private:
-    Environment *m_env = nullptr;
 };
