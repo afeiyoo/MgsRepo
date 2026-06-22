@@ -47,7 +47,7 @@ QString BizUtils::getPlateNoColor(const QString &fullPlate)
     int pos = -1;
     QString checkData = fullPlate.mid(0, 1);
 
-    if (DataDealUtils::getChineseCountFromString(fullPlate, 4) <= 1) {
+    if (DataDealUtils::getChineseCountFromString(fullPlate, 2) <= 1) {
         if ((pos = checkData.indexOf("白")) >= 0)
             return fullPlate.mid(pos + 1, fullPlate.length() - pos - 1);
         if ((pos = checkData.indexOf("黑")) >= 0)
@@ -75,37 +75,45 @@ QString BizUtils::correctVehplate(const QString &plate)
     return newPlate;
 }
 
+QString BizUtils::getColorFromPlate(const QString &fullPlate)
+{
+    QString newPlate = correctVehplate(fullPlate);
+
+    int code = getColorCodeFromPlate(newPlate);
+
+    return getColorFormColorCode(code);
+}
+
 int BizUtils::getColorCodeFromPlate(const QString &fullPlate)
 {
     if (fullPlate.isEmpty())
         return 9;
-    if (DataDealUtils::getChineseCountFromString(fullPlate, 4) <= 1) {
-        QString prefix = fullPlate.left(2);
-        if (prefix.contains(QStringLiteral("白"))) {
+    if (DataDealUtils::getChineseCountFromString(fullPlate, 2) <= 1) {
+        if (fullPlate.startsWith("白")) {
             return 3;
         } else {
             return 9;
         }
     }
-    QString checkData = fullPlate.mid(0, 1);
-    if (checkData.contains(QStringLiteral("蓝")))
+    if (fullPlate.startsWith(QStringLiteral("蓝"))) {
         return 0;
-    else if (checkData.contains(QStringLiteral("黄")))
+    } else if (fullPlate.startsWith("黄")) {
         return 1;
-    else if (checkData.contains(QStringLiteral("黑")))
+    } else if (fullPlate.startsWith("黑")) {
         return 2;
-    else if (checkData.contains(QStringLiteral("白")))
+    } else if (fullPlate.startsWith("白")) {
         return 3;
-    else if (checkData.contains(QStringLiteral("绿")))
+    } else if (fullPlate.startsWith("绿")) {
         return 4;
-    else if (checkData.contains(QStringLiteral("拼")))
+    } else if (fullPlate.startsWith("拼")) {
         return 5;
-    else if (checkData.contains(QStringLiteral("渐")))
+    } else if (fullPlate.startsWith("渐")) {
         return 6;
-    else if (checkData.contains(QStringLiteral("临")))
+    } else if (fullPlate.startsWith("临")) {
         return 7;
-    else
+    } else {
         return 9;
+    }
 }
 
 QString BizUtils::getColorFormColorCode(int colorCode)

@@ -24,6 +24,9 @@ public:
     // 车牌错误校核修复
     static QString correctVehplate(const QString &plate);
 
+    // 从车牌中获取并返回颜色名称
+    static QString getColorFromPlate(const QString &fullPlate);
+
     // 从车牌中获取并返回颜色编码
     static int getColorCodeFromPlate(const QString &fullPlate);
 

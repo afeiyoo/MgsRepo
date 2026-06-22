@@ -944,7 +944,7 @@ void DataDealUtils::appendStrWithSubStr(QString &str, const QString &subStr, con
     str += subStr;
 }
 
-QString DataDealUtils::getInsertSql(QObject *obj)
+QString DataDealUtils::getInsertSql(const QObject *obj)
 {
     if (!obj)
         return QString();
@@ -985,7 +985,7 @@ QString DataDealUtils::getInsertSql(QObject *obj)
     return sql;
 }
 
-QString DataDealUtils::getUpdateSql(QObject *obj)
+QString DataDealUtils::getUpdateSql(const QObject *obj)
 {
     if (!obj)
         return QString();
