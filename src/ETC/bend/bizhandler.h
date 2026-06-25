@@ -2,9 +2,6 @@
 
 #include <QObject>
 
-class ST_CapVehInfo;
-class ST_TradeInfo;
-class Environment;
 class BizHandler : public QObject
 {
     Q_OBJECT
@@ -13,17 +10,21 @@ public:
     ~BizHandler() override;
 
     // 返回当前是否上班
-    bool isInShifted();
+    bool isShiftedStarted();
 
+    // 系统初始化
+    void systemInit();
+
+    // 系统退出API
     void quitSystemRequest();
     void quitSystemQuery();
 
+    // 交接班API
+    void exchangeShiftRequest();
+    void endShift();
+
 public slots:
-    // 抓拍数据解析槽
-    void onCaptureInfo(const ST_CapVehInfo &info);
 
 private:
-    ST_TradeInfo getTradeInfo(const QString &plate, bool useFirst = true);
-
 private:
 };

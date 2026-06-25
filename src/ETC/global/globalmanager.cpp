@@ -83,8 +83,6 @@ int GlobalManager::init(IEtcPageController *ui)
     dbAppender->setDatePattern(RollingFileAppender::DatePattern::DailyRollover);
     cuteLogger->registerCategoryAppender("db", dbAppender);
 
-    m_pageHandler->init(ui);
-
     // 配置初始化
     LOG_INFO().noquote() << "ETC模块开始加载配置......";
     FileName confPath = FileName::fromString(FileUtils::curApplicationDirPath() + "/config/LaneConf.ini");
@@ -94,6 +92,9 @@ int GlobalManager::init(IEtcPageController *ui)
     }
     m_conf->load(confPath);
     LOG_INFO().noquote() << "ETC模块配置加载成功: " << m_conf->dump();
+
+    // 界面初始化
+    m_pageHandler->init(ui);
 
     // 键盘表加载
     LOG_INFO().noquote() << "ETC模块开始加载键盘表......";

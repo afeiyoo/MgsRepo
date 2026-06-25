@@ -13,6 +13,7 @@ signals:
     // 界面更新API
     void sigUpdateTradeHint(const QString &info, bool isWarn = false);
     void sigUpdateHelpHint(const QString &info);
+    void sigUpdateDevsList(const QList<uint> devs);
 
     // 窗口API
     void sigShowInfoDialog(int api, const QString &title, const QStringList &strs, bool switchLine = true);

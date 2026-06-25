@@ -85,4 +85,5 @@ void Config::readConfig()
     // 车道个性化配置
     m_isEnableCompareVehplate = m_confUtil->getValue("SpecialConf/isenablecomparevehplate", false).toBool();
     m_savePicPath = m_confUtil->getValue("SpecialConf/savepicpath", FileUtils::curApplicationDirPath() + "/upload").toString();
+    m_showDevsList = m_confUtil->getValue("SpecialConf/showdevslist", "").toString();
 }

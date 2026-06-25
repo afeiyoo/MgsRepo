@@ -32,6 +32,7 @@ include($$PWD/../LaneShares/Models/db/DbModels.pri)
 
 SOURCES += \
     bend/bizhandler.cpp \
+    bend/devshandler.cpp \
     bend/environment.cpp \
     dao/configs/config.cpp \
     dao/configs/configini.cpp \
@@ -48,6 +49,7 @@ SOURCES += \
 
 HEADERS += \
     bend/bizhandler.h \
+    bend/devshandler.h \
     bend/environment.h \
     dao/configs/config.h \
     dao/configs/configini.h \

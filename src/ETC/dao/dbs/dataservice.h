@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QDate>
 #include <QObject>
 
 namespace EasyQtSql {
@@ -30,12 +31,27 @@ public:
     // 保存承载门架工班记录
     void saveFFShiftStat();
 
+    // 检查是否本站工号
+    bool checkOperator(const QString &ID, const QString &stationID) const;
+
+    // 保存collectLog
+    bool saveCollectLog(const QString &tradeID, const QString &log, int index);
+
 protected:
     bool testConnection(const QString &connectionName, const QString &testSql) const;
     bool saveRecord(const QObject &obj) const;
 
+protected:
     EasyQtSql::SqlFactory *m_dbFactory = nullptr;
 
 private:
+    // 数据对象转QVariantMap
     QVariantMap qObject2QVaiantMap(const QObject *obj) const;
+
+    // 获取0-9999循环序列号
+    int getUniqueSeq();
+
+private:
+    uint m_uniqueSeq = 0; // 序列号
+    uint m_curDate = 0;
 };

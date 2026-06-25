@@ -6,6 +6,7 @@
 
 #include "EasyQtSql.h"
 #include "Logger.h"
+#include "T_CollectLog.h"
 #include "T_FF_CapRecord.h"
 #include "T_LaneCapRecord.h"
 #include "bend/environment.h"
@@ -104,6 +105,20 @@ QVariantMap DataService::qObject2QVaiantMap(const QObject *obj) const
         result[QLatin1String(name)] = value;
     }
     return result;
+}
+
+int DataService::getUniqueSeq()
+{
+    uint today = DataDealUtils::curDateStr("yyyyMMdd").toUInt();
+
+    if (m_curDate != today) {
+        m_curDate = today;
+        m_uniqueSeq = 0;
+    }
+
+    m_uniqueSeq = (m_uniqueSeq % 9999) + 1;
+
+    return m_uniqueSeq;
 }
 
 QString DataService::getStationIP(const QString &stationID) const
@@ -229,3 +244,62 @@ void DataService::saveFFCapRecord(const QString &captureID, const QString &vehPl
 }
 
 void DataService::saveFFShiftStat() {}
+
+bool DataService::checkOperator(const QString &ID, const QString &stationID) const
+{
+    if (ID.isEmpty())
+        return false;
+
+    QSqlDatabase sdb = m_dbFactory->getDatabase("biz");
+
+    QString sql = QString(R"(SELECT COUNT(*) AS CNT FROM T_USER WHERE USERID=? AND ORGID=?;)");
+
+    Transaction t(sdb);
+    try {
+        // TODO
+        return true;
+    } catch (const DBException &e) {
+        return false;
+    }
+}
+
+bool DataService::saveCollectLog(const QString &tradeID, const QString &log, int index)
+{
+    QString finalTradeID = tradeID;
+    if (finalTradeID.isEmpty()) {
+        finalTradeID = QString("NT%1%2").arg(GM_INSTANCE->m_conf->m_stationID).arg(DataDealUtils::curDateTimeStr("yyyyMMddhhmmsszzz"));
+    }
+
+    T_CollectLog record;
+
+    record.TradeID = tradeID;
+    record.LogIdx = index;
+    record.LaneID = GM_INSTANCE->m_conf->m_laneID;
+    record.ShiftDate = DataDealUtils::curDate();
+    record.ShiftNum = GM_INSTANCE->m_env->m_shiftID;
+    record.ShiftUser = GM_INSTANCE->m_env->m_operatorID.isEmpty() ? "999" : GM_INSTANCE->m_env->m_operatorID;
+    record.LogTime = DataDealUtils::curDateTime();
+    record.LogContent = log;
+
+    bool dbOk = saveRecord(record);
+    if (!dbOk) {
+        LOG_CERROR("db").noquote() << "保存T_CollectLog失败 TradeID:" << tradeID;
+    }
+
+    // 生成xml文件
+    QString dtpContent = BizUtils::makeDtpContentFromObj(record);
+    QString fromNode = GM_INSTANCE->m_conf->m_stationID.rightJustified(4, QChar('0'))
+                       + QString::number(GM_INSTANCE->m_conf->m_laneID).rightJustified(2, QChar('0'));
+    QString toNode = GM_INSTANCE->m_conf->m_stationID.rightJustified(4, QChar('0'));
+    int recordCount = 1;
+    QString dtpXml = BizUtils::makeDtpXml(dtpContent, "210", fromNode, toNode, recordCount);
+
+    FileSaver saver(FileUtils::curApplicationDirPath() + "/upload/MonitorQ_" + DataDealUtils::curDateTimeStr("MMddhhmmsszzz")
+                    + QString("%1").arg(getUniqueSeq(), 4, 10, QChar('0')) + ".xml");
+    bool fileOk = saver.finalize();
+    if (!fileOk) {
+        LOG_CERROR("db").noquote() << "生成" << saver.fileName() << "报文失败: " << saver.errorString();
+    }
+
+    return dbOk && fileOk;
+}

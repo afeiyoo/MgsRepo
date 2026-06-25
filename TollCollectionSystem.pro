@@ -14,7 +14,7 @@ SUBDIRS += \
     # SmartLaneController \
     PadService \
     ETC \
-    # LaneSystemMaster
+    LaneSystemMaster
 
 LaneSystemGUI.file = src/LaneSystemGUI/LaneSystemGUI.pro
 LaneSystemGUIDemo.file = src/LaneSystemGUIDemo/LaneSystemGUIDemo.pro

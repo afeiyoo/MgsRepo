@@ -16,6 +16,7 @@ void PageHandler::init(IEtcPageController *newUi)
 
     connect(GM_INSTANCE->m_sigCtrl, &SignalCtrl::sigUpdateTradeHint, this, &PageHandler::onUpdateTradeHint);
     connect(GM_INSTANCE->m_sigCtrl, &SignalCtrl::sigUpdateHelpHint, this, &PageHandler::onUpdateHelpHint);
+    connect(GM_INSTANCE->m_sigCtrl, &SignalCtrl::sigUpdateDevsList, this, &PageHandler::onUpdateDevsList);
     connect(GM_INSTANCE->m_sigCtrl, &SignalCtrl::sigShowInfoDialog, this, &PageHandler::onShowInfoDialog);
 }
 
@@ -29,6 +30,12 @@ void PageHandler::onUpdateHelpHint(const QString &info) const
 {
     if (m_ui)
         m_ui->setScrollTip(info);
+}
+
+void PageHandler::onUpdateDevsList(const QList<uint> devs) const
+{
+    if (m_ui)
+        m_ui->setDeviceList(devs);
 }
 
 void PageHandler::onShowInfoDialog(int api, const QString &title, const QStringList &strs, bool switchLine)

@@ -59,4 +59,5 @@ public:
     // 车道个性化配置
     bool m_isEnableCompareVehplate; // 是否启用车牌比对
     QString m_savePicPath;          // 保存抓拍图片路径
+    QString m_showDevsList;         // 界面显示设备列表
 };

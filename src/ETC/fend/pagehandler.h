@@ -15,6 +15,8 @@ public:
 public slots:
     void onUpdateTradeHint(const QString &info, bool isWarn) const;
     void onUpdateHelpHint(const QString &info) const;
+    void onUpdateDevsList(const QList<uint> devs) const;
+
     void onShowInfoDialog(int api, const QString &title, const QStringList &strs, bool switchLine);
 
 private:

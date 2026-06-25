@@ -14,6 +14,11 @@ public:
 
 private:
     void apiLogin(const QJsonValue &values);
+
+    void apiSystemInit(); // 系统初始化
+
     void apiSystemQuitRequest();
     void apiSystemQuitQuery(const QJsonValue &values);
+    void apiExchangeShiftRequest();
+    void apiEndShift();
 };

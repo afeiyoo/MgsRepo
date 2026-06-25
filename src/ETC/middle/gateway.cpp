@@ -2,6 +2,7 @@
 
 #include "Logger.h"
 #include "bend/bizhandler.h"
+#include "bend/environment.h"
 #include "global/apis.h"
 #include "global/baseexception.h"
 #include "global/errcode.h"
@@ -21,8 +22,11 @@ void GateWay::send(int api, const QJsonValue &values)
         try {
             LOG_DEBUG().noquote() << "API:" << api << "Json:" << values.toObject();
             switch (api) {
-            case API::LOGIN: {
-                apiLogin(values);
+            case API::EXCHANGE_SHIFT::REQUEST: {
+                apiExchangeShiftRequest();
+            } break;
+            case API::EXCHANGE_SHIFT::END_SHIFT_QUERY: {
+                apiEndShift();
             } break;
             case API::SYSTEM_QUIT::REQUEST: {
                 apiSystemQuitRequest();
@@ -31,6 +35,9 @@ void GateWay::send(int api, const QJsonValue &values)
                 apiSystemQuitQuery(values);
             } break;
             case API::TEST_CAP::REQUEST: {
+            } break;
+            case API::INIT::REQUEST: {
+                apiSystemInit();
             } break;
             default: {
             } break;
@@ -49,6 +56,11 @@ void GateWay::apiLogin(const QJsonValue &values)
     LOG_INFO().noquote() << "登录了 哈哈哈哈";
 }
 
+void GateWay::apiSystemInit()
+{
+    GM_INSTANCE->m_bizHandler->systemInit();
+}
+
 void GateWay::apiSystemQuitRequest()
 {
     GM_INSTANCE->m_bizHandler->quitSystemRequest();
@@ -60,3 +72,10 @@ void GateWay::apiSystemQuitQuery(const QJsonValue &values)
     if (yes)
         GM_INSTANCE->m_bizHandler->quitSystemQuery();
 }
+
+void GateWay::apiExchangeShiftRequest()
+{
+    GM_INSTANCE->m_bizHandler->exchangeShiftRequest();
+}
+
+void GateWay::apiEndShift() {}

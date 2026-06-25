@@ -10,7 +10,6 @@
 #include "global/globalmanager.h"
 #include "middle/gateway.h"
 #include "utils/bizutils.h"
-#include "utils/datadealutils.h"
 
 using namespace Utils;
 
@@ -27,6 +26,8 @@ int ETC::init(IEtcPageController *ui)
         return ret;
     }
 
+    GM_INSTANCE->m_gate->send(API::INIT::REQUEST, QJsonObject());
+
     return ret;
 }
 
@@ -38,6 +39,7 @@ void ETC::onKeyPress(int key)
         GM_INSTANCE->m_gate->send(API::TEST_CAP::REQUEST, QJsonObject());
     } break;
     case Qt::Key_F7: { // 上下班
+        GM_INSTANCE->m_gate->send(API::EXCHANGE_SHIFT::REQUEST, QJsonObject());
     } break;
     case Qt::Key_F8: { // 节假日模式启用/关闭
     } break;
