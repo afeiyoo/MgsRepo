@@ -2434,11 +2434,20 @@ bool BizHandler::checkHasEInvoice(const QString &tradeId)
         return false; // 接口查询失败，默认认为要补打票
 
     QVariantMap resMap = nloJson.parse(result).toMap();
+    if (resMap.contains("code")) {
+        int code = resMap["code"].toInt();
+        if (code != 0) {
+            LOG_WARNING().noquote() << "订单" << tradeId << "电子票开具查询失败";
+            return false;
+        }
+    }
+
+    QVariantMap dataMap = resMap["data"].toMap();
 
     // 0：未开票，1：已开票，2：红字确认单待确认，3：红字确认单失败，4：未开票（偷偷开了），8：记录已作废，9：已开纸票
     int status = 0;
-    if (resMap.contains("status"))
-        status = resMap["status"].toInt();
+    if (dataMap.contains("status"))
+        status = dataMap["status"].toInt();
 
     LOG_INFO().noquote() << "订单" << tradeId << "电子票开具查询结果:" << (status == 1);
 
