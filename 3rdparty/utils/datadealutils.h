@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QJsonDocument>
 #include <QObject>
 #include <QSqlQuery>
 
@@ -167,6 +168,21 @@ public:
 
     // 输出完整的SQL语句（不含占位符）
     static QString fullExecutedQuery(const QSqlQuery &query);
+
+    /*******************************************************/
+    /****                   Json相关                    ****/
+    /*******************************************************/
+    // Json对象转换成QVariantMap
+    static QVariantMap jsonToMap(const QByteArray &data, bool &ok, QString &errDesc);
+
+    // Json数组转换成QVariantList
+    static QVariantList jsonToList(const QByteArray &data, bool &ok, QString &errDesc);
+
+    // QVariantMap转换成QByteArray并可以指定输出格式
+    static QByteArray mapToJson(const QVariantMap &map, QJsonDocument::JsonFormat format = QJsonDocument::Compact);
+
+    // QVariantList转换成QByteArray并可以指定输出格式
+    static QByteArray listToJson(const QVariantList &list, QJsonDocument::JsonFormat format = QJsonDocument::Compact);
 
 private:
     static QString formatSqlValue(const QVariant &val);

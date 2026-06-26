@@ -6,6 +6,9 @@
     #include <QRandomGenerator>
 #endif
 #include <QDebug>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <QMetaProperty>
 #include <QTextCodec>
 #include <QVariant>
@@ -1091,6 +1094,64 @@ QString DataDealUtils::fullExecutedQuery(const QSqlQuery &query)
     }
 
     return result;
+}
+
+QVariantMap DataDealUtils::jsonToMap(const QByteArray &data, bool &ok, QString &errDesc)
+{
+    ok = false;
+    errDesc.clear();
+
+    QJsonParseError err;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &err);
+
+    if (err.error != QJsonParseError::NoError) {
+        errDesc = "Json转换QVariantMap失败: " + err.errorString();
+        return {};
+    }
+
+    if (!doc.isObject()) {
+        errDesc = "Json转换QVariantMap失败: 根节点不是对象";
+        return {};
+    }
+
+    ok = true;
+    return doc.object().toVariantMap();
+}
+
+QVariantList DataDealUtils::jsonToList(const QByteArray &data, bool &ok, QString &errDesc)
+{
+    ok = false;
+    errDesc.clear();
+
+    QJsonParseError err;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &err);
+
+    if (err.error != QJsonParseError::NoError) {
+        errDesc = "Json转换QVariantList失败: " + err.errorString();
+        return {};
+    }
+
+    if (!doc.isArray()) {
+        errDesc = "Json转换QVariantList失败: 根节点不是数组";
+        return {};
+    }
+
+    ok = true;
+    return doc.array().toVariantList();
+}
+
+QByteArray DataDealUtils::mapToJson(const QVariantMap &map, QJsonDocument::JsonFormat format)
+{
+    QJsonObject obj = QJsonObject::fromVariantMap(map);
+    QJsonDocument doc(obj);
+    return doc.toJson(format);
+}
+
+QByteArray DataDealUtils::listToJson(const QVariantList &list, QJsonDocument::JsonFormat format)
+{
+    QJsonArray array = QJsonArray::fromVariantList(list);
+    QJsonDocument doc(array);
+    return doc.toJson(format);
 }
 
 QString DataDealUtils::formatSqlValue(const QVariant &val)
