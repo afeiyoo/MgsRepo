@@ -12,7 +12,7 @@ public:
     QString doMainDeal(const QByteArray &reqBody) const;
 
 private:
-    QString dealQueryRepeat(const QVariantMap &aMap);
+    QString dealQueryRepeat(const QVariantMap &aMap) const;
 
 private:
     QString m_peerIP; // 请求IP

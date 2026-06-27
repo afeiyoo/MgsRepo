@@ -5,6 +5,7 @@
 #define GM_INS GlobalManager::instance()
 
 class Config;
+class DataService;
 class GlobalManager : public QObject
 {
     Q_OBJECT
@@ -17,5 +18,6 @@ public:
     int init();
 
 public:
-    Config *m_conf = nullptr; // 配置管理类
+    Config *m_conf = nullptr;    // 配置管理类
+    DataService *m_ds = nullptr; // 数据库操作类
 };

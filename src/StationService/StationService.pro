@@ -31,6 +31,8 @@ SOURCES += \
         config/config.cpp \
         core/globalmanager.cpp \
         dbs/dataservice.cpp \
+        dbs/dataservicedameng.cpp \
+        dbs/dataservicesqlserver.cpp \
         main.cpp
 
 HEADERS += \
@@ -39,7 +41,9 @@ HEADERS += \
     core/httphandler.h \
     config/config.h \
     core/globalmanager.h \
-    dbs/dataservice.h
+    dbs/dataservice.h \
+    dbs/dataservicedameng.h \
+    dbs/dataservicesqlserver.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

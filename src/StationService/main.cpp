@@ -14,7 +14,11 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    GM_INS->init();
+    int res = GM_INS->init();
+    if (res < 0) {
+        LOG_INFO().noquote() << "Application initialize failed! Error code is" << res;
+        return res;
+    }
 
     LOG_INFO().noquote() << "<<< Starting the application: StationService >>>";
 
