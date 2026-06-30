@@ -22,12 +22,25 @@ public:
     // 检查是否已交易
     QVariantList fetchSuccessedTrades(int vehicleIdentifyType, QString vehPlate, QString cardID, int dataType, int judgeTime) const;
 
+    // 获取符合条件的记录数
+    int fetchRecordCnt(const QVariantMap &kvs, const QString &tableName, const QString &tableKey) const;
+
+    // 更新记录
+    bool updateRecord(const QVariantMap &kvs, const QString &tableName, const QString &tableKey) const;
+
+    // 插入记录
+    bool insertRecord(const QVariantMap &kvs, const QString &tableName) const;
+
 protected:
     // 获取数据库连接测试SQL
     virtual QString getTestSql() const = 0;
 
     // 获取成功交易的SQL
     virtual QString getSuccessedTradesSql(int vehicleIdentifyType, QString vehPlate, QString cardID, int dataType, int judgeTime) const = 0;
+
+private:
+    QString findMapKeyCaseInsensitive(const QVariantMap &map, const QString &key) const;
+    QString valueToSqlLiteral(const QVariant &value) const;
 
 protected:
     // 数据库连接池

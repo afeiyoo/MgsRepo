@@ -1,8 +1,9 @@
 #include "dataservice.h"
-#include "utils/stdafx.h"
 
 #include "EasyQtSql.h"
 #include "Logger.h"
+#include "core/baseexception.h"
+#include "core/globalmanager.h"
 #include "utils/datadealutils.h"
 
 using namespace Utils;
@@ -12,10 +13,7 @@ DataService::DataService(QObject *parent)
     : QObject{parent}
 {}
 
-DataService::~DataService()
-{
-    SAFE_DELETE(m_dbFactory);
-}
+DataService::~DataService() {}
 
 bool DataService::testConnection() const
 {
@@ -65,5 +63,141 @@ QVariantList DataService::fetchSuccessedTrades(int vehicleIdentifyType, QString 
     } catch (const DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
         return {};
+    }
+}
+
+int DataService::fetchRecordCnt(const QVariantMap &kvs, const QString &tableName, const QString &tableKey) const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QStringList keys = tableKey.split(",", Qt::SkipEmptyParts);
+#else
+    QStringList keys = tableKey.split(",", QString::SkipEmptyParts);
+#endif
+
+    QString whereClause;
+    for (const QString &key : keys) {
+        QString k = key.trimmed();
+        QString mapKey = findMapKeyCaseInsensitive(kvs, k);
+        if (mapKey.isEmpty())
+            continue;
+
+        QString value = valueToSqlLiteral(kvs.value(mapKey));
+        if (value.isEmpty())
+            continue;
+
+        if (!whereClause.isEmpty())
+            whereClause += " AND ";
+        whereClause += (k + "=" + value);
+    }
+
+    if (whereClause.isEmpty()) {
+        LOG_ERROR().noquote() << "组装SQL失败: where子句为空";
+        return -1;
+    }
+
+    QString sql = "SELECT count(*) FROM " + tableName + " WHERE " + whereClause;
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+
+    EasyQtSql::Transaction t(sdb);
+    try {
+        EasyQtSql::QueryResult res = t.execQuery(sql);
+        LOG_INFO().noquote() << "执行SQL: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        if (!res.next())
+            return 0;
+
+        return res.scalar<int>();
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        return -1;
+    }
+}
+
+bool DataService::updateRecord(const QVariantMap &kvs, const QString &tableName, const QString &tableKey) const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QStringList keys = tableKey.split(",", Qt::SkipEmptyParts);
+#else
+    QStringList keys = tableKey.split(",", QString::SkipEmptyParts);
+#endif
+
+    QVariantMap newKvs = kvs;
+
+    QString whereClause;
+    for (const QString &key : keys) {
+        QString k = key.trimmed();
+        QString mapKey = findMapKeyCaseInsensitive(newKvs, k);
+        if (mapKey.isEmpty())
+            continue;
+        QVariant v = newKvs.take(mapKey); // 挪出主键对应的键值对
+
+        QString value = valueToSqlLiteral(v);
+        if (value.isEmpty())
+            continue;
+
+        if (!whereClause.isEmpty())
+            whereClause += " AND ";
+        whereClause += (k + "=" + value);
+    }
+
+    if (whereClause.isEmpty()) {
+        LOG_ERROR().noquote() << "组装SQL失败: where子句为空";
+        return false;
+    }
+
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    EasyQtSql::Transaction t(sdb);
+    try {
+        EasyQtSql::NonQueryResult res = t.update(tableName).set(newKvs).where(whereClause);
+        LOG_INFO().noquote() << "执行SQL语句: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        return t.commit();
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        return false;
+    }
+}
+
+bool DataService::insertRecord(const QVariantMap &kvs, const QString &tableName) const
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    EasyQtSql::Transaction t(sdb);
+    try {
+        EasyQtSql::NonQueryResult res = t.insertInto(tableName).values(kvs).exec();
+        LOG_INFO().noquote() << "执行sql语句: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+        return t.commit();
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        return false;
+    }
+}
+
+QString DataService::findMapKeyCaseInsensitive(const QVariantMap &map, const QString &key) const
+{
+    for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
+        if (it.key().compare(key, Qt::CaseInsensitive) == 0)
+            return it.key();
+    }
+
+    return QString();
+}
+
+QString DataService::valueToSqlLiteral(const QVariant &value) const
+{
+    if (!value.isValid() || value.isNull())
+        return "NULL";
+
+    switch (value.type()) {
+    case QVariant::Bool:
+        return value.toBool() ? "1" : "0";
+    case QVariant::Int:
+    case QVariant::UInt:
+    case QVariant::LongLong:
+    case QVariant::ULongLong:
+        return value.toString();
+    case QVariant::Double:
+        return QString::number(value.toDouble(), 'g', 15);
+    default:
+        return "'" + value.toString().replace("'", "''") + "'";
     }
 }

@@ -70,9 +70,8 @@ QString DataServiceDameng::getSuccessedTradesSql(int vehicleIdentifyType, QStrin
                                     .arg(judgeTime)
                                     .arg(shiftField);
 
-    QString sql = QString("SELECT TradeID, %1 AS LaneID, %2 AS TradeTime, %3 AS VehPlate, CardID, %4 AS Fee FROM %5 "
-                          "WHERE %6 AND %7 UNION ALL SELECT TradeID, %1 AS LaneID, %2 AS TradeTime, %8 AS VehPlate, CardID, %4 AS Fee "
-                          "FROM %9 WHERE %10 AND %7;")
+    QString sql = QString("SELECT TradeID, %1 AS LaneID, %2 AS TradeTime, %3 AS VehPlate, CardID, %4 AS Fee FROM %5 WHERE %6 AND %7 UNION ALL "
+                          "SELECT TradeID, %1 AS LaneID, %2 AS TradeTime, %8 AS VehPlate, CardID, %4 AS Fee FROM %9 WHERE %10 AND %7;")
                       .arg(laneField, timeField, etcPlateField, feeExpr, etcTable, etcWhere, commonWhere, mtcPlateField, mtcTable, mtcWhere);
 
     return sql;

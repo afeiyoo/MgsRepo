@@ -48,10 +48,10 @@ int GlobalManager::init()
     cuteLogger->registerAppender(rollingFileAppender);
 
     // 数据库连接初始化
-    if (m_conf->m_dbType) {
-        m_ds = new DataServiceDameng(this);
-    } else {
+    if (m_conf->m_dbType == 1) {
         m_ds = new DataServiceSqlServer(this);
+    } else {
+        m_ds = new DataServiceDameng(this);
     }
     bool dbOk = m_ds->init(m_conf->m_dbHost, m_conf->m_dbPort, m_conf->m_dbUser, m_conf->m_dbPassword, m_conf->m_dbName);
     if (!dbOk) {

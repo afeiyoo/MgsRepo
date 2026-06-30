@@ -14,6 +14,8 @@ public:
 private:
     QString dealQueryRepeat(const QVariantMap &aMap) const;
 
+    QString dealSaveData(const QVariantMap &aMap) const;
+
 private:
     QString m_peerIP; // 请求IP
 };

@@ -16,6 +16,8 @@ MainHandler::MainHandler(const QString &peerIP, QObject *parent)
     , m_peerIP{peerIP}
 {}
 
+MainHandler::~MainHandler() {}
+
 QString MainHandler::doMainDeal(const QByteArray &reqBody) const
 {
     bool ok = false;
@@ -35,6 +37,7 @@ QString MainHandler::doMainDeal(const QByteArray &reqBody) const
     if (queryType.contains("queryRepeat")) {
         dealtData = dealQueryRepeat(aMap);
     } else if (queryType.contains("saveData")) {
+        dealtData = dealSaveData(aMap);
     } else if (queryType.contains("queryXZPass")) {
     } else if (queryType.contains("queryShift")) {
     } else if (queryType.contains("queryData")) {
@@ -73,14 +76,14 @@ QString MainHandler::dealQueryRepeat(const QVariantMap &aMap) const
         QVariantList judgeDetails;
         for (const auto &trade : trades) {
             QVariantMap detail;
-            QVariantMap aMap = trade.toMap();
+            QVariantMap oneMap = trade.toMap();
+            detail["tradeId"] = oneMap["TRADEID"].toString();
+            detail["laneID"] = oneMap["LANEID"].toString();
+            detail["tradeTime"] = oneMap["TRADETIME"].toString();
+            detail["vehplate"] = oneMap["VEHPLATE"].toString();
+            detail["cardId"] = oneMap["CARDID"].toString();
+            detail["fee"] = oneMap["FEE"].toString();
 
-            detail["tradeId"] = aMap["TRADEID"].toString();
-            detail["laneID"] = aMap["LANEID"].toString();
-            detail["tradeTime"] = aMap["TRADETIME"].toString();
-            detail["vehplate"] = aMap["VEHPLATE"].toString();
-            detail["cardId"] = aMap["CARDID"].toString();
-            detail["fee"] = aMap["FEE"].toString();
             judgeDetails.append(detail);
         }
         resMap.insert("judgeDetail", judgeDetails);
@@ -88,4 +91,50 @@ QString MainHandler::dealQueryRepeat(const QVariantMap &aMap) const
 
     QString dealtData = DataDealUtils::mapToJson(resMap);
     return dealtData;
+}
+
+QString MainHandler::dealSaveData(const QVariantMap &aMap) const
+{
+    QString tableName;
+    QString tableKey;
+    QVariantMap kvs;
+    if (aMap.contains("saveTable"))
+        tableName = aMap["saveTable"].toString();
+    if (aMap.contains("tableKey"))
+        tableKey = aMap["tableKey"].toString();
+    if (aMap.contains("saveData"))
+        kvs = aMap["saveData"].toMap();
+
+    if (tableName.isEmpty())
+        throw BaseException(1, "saveTable为空，dealSaveData执行失败");
+    if (tableKey.isEmpty())
+        throw BaseException(1, "tableKey为空，dealSaveData执行失败");
+    if (kvs.isEmpty())
+        throw BaseException(1, "saveData为空，dealSaveData执行失败");
+
+    int cnt = GM_INS->m_ds->fetchRecordCnt(kvs, tableName, tableKey);
+    if (cnt < 0)
+        throw BaseException(1, "查询记录是否已存在时，发生异常");
+
+    QString successMessage;
+    if (cnt > 0) { // 记录已存在，执行更新
+        LOG_INFO().noquote() << "记录已存在，执行更新";
+        bool res = GM_INS->m_ds->updateRecord(kvs, tableName, tableKey);
+        if (!res)
+            throw BaseException(1, "更新记录失败");
+
+        successMessage = "更新记录成功";
+    } else { // 记录不存在，执行插入
+        LOG_INFO().noquote() << "记录不存在，执行插入";
+        bool res = GM_INS->m_ds->insertRecord(kvs, tableName);
+        if (!res)
+            throw BaseException(1, "插入记录失败");
+
+        successMessage = "插入记录成功";
+    }
+
+    QVariantMap resMap;
+    resMap["errCode"] = 0;
+    resMap["errorMessage"] = successMessage;
+    return DataDealUtils::mapToJson(resMap);
 }
