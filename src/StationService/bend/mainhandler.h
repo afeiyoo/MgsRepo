@@ -16,6 +16,8 @@ private:
 
     QString dealSaveData(const QVariantMap &aMap) const;
 
+    QString dealQueryXZPass(const QVariantMap &aMap) const;
+
 private:
     QString m_peerIP; // 请求IP
 };

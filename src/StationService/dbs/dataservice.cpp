@@ -7,7 +7,6 @@
 #include "utils/datadealutils.h"
 
 using namespace Utils;
-using namespace EasyQtSql;
 
 DataService::DataService(QObject *parent)
     : QObject{parent}
@@ -49,9 +48,9 @@ QVariantList DataService::fetchSuccessedTrades(int vehicleIdentifyType, QString 
     QString sql = getSuccessedTradesSql(vehicleIdentifyType, vehPlate, cardID, dataType, judgeTime);
     QSqlDatabase sdb = m_dbFactory->getDatabase();
 
-    Transaction t(sdb);
+    EasyQtSql::Transaction t(sdb);
     try {
-        QueryResult res = t.execQuery(sql);
+        EasyQtSql::QueryResult res = t.execQuery(sql);
         LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
 
         QVariantList trades;
@@ -60,7 +59,7 @@ QVariantList DataService::fetchSuccessedTrades(int vehicleIdentifyType, QString 
         }
 
         return trades;
-    } catch (const DBException &e) {
+    } catch (const EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
         return {};
     }
@@ -169,6 +168,25 @@ bool DataService::insertRecord(const QVariantMap &kvs, const QString &tableName)
     } catch (const EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
         return false;
+    }
+}
+
+int DataService::fetchXZPassTimes(const QString &sql) const
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+
+    EasyQtSql::Transaction t(sdb);
+    try {
+        EasyQtSql::QueryResult res = t.execQuery(sql);
+        LOG_INFO().noquote() << "执行SQL: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        if (!res.next())
+            return 0;
+
+        return res.scalar<int>();
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        return -1;
     }
 }
 

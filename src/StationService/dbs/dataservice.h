@@ -31,6 +31,9 @@ public:
     // 插入记录
     bool insertRecord(const QVariantMap &kvs, const QString &tableName) const;
 
+    // 获取厦漳大桥交易趟次
+    int fetchXZPassTimes(const QString &sql) const;
+
 protected:
     // 获取数据库连接测试SQL
     virtual QString getTestSql() const = 0;

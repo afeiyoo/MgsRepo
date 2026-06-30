@@ -39,6 +39,7 @@ QString MainHandler::doMainDeal(const QByteArray &reqBody) const
     } else if (queryType.contains("saveData")) {
         dealtData = dealSaveData(aMap);
     } else if (queryType.contains("queryXZPass")) {
+        dealtData = dealQueryXZPass(aMap);
     } else if (queryType.contains("queryShift")) {
     } else if (queryType.contains("queryData")) {
     } else {
@@ -89,8 +90,7 @@ QString MainHandler::dealQueryRepeat(const QVariantMap &aMap) const
         resMap.insert("judgeDetail", judgeDetails);
     }
 
-    QString dealtData = DataDealUtils::mapToJson(resMap);
-    return dealtData;
+    return DataDealUtils::mapToJson(resMap);
 }
 
 QString MainHandler::dealSaveData(const QVariantMap &aMap) const
@@ -136,5 +136,29 @@ QString MainHandler::dealSaveData(const QVariantMap &aMap) const
     QVariantMap resMap;
     resMap["errCode"] = 0;
     resMap["errorMessage"] = successMessage;
+    return DataDealUtils::mapToJson(resMap);
+}
+
+QString MainHandler::dealQueryXZPass(const QVariantMap &aMap) const
+{
+    QString querySql;
+    if (aMap.contains("querySql"))
+        querySql = aMap["querySql"].toString();
+
+    if (querySql.isEmpty())
+        throw BaseException(1, "querySql为空，dealQueryXZPass执行失败");
+
+    int cnt = GM_INS->m_ds->fetchXZPassTimes(querySql);
+    if (cnt < 0)
+        throw BaseException(1, "查询厦漳大桥通行趟次时，发生异常");
+
+    QVariantMap resMap;
+    if (cnt > 0) {
+        resMap["errCode"] = 0;
+        resMap["errorMessage"] = QString::number(cnt);
+    } else {
+        resMap["errCode"] = 1;
+        resMap["errorMessage"] = "未查询到相关记录";
+    }
     return DataDealUtils::mapToJson(resMap);
 }
