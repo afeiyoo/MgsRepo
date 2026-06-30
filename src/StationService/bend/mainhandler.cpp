@@ -41,6 +41,7 @@ QString MainHandler::doMainDeal(const QByteArray &reqBody) const
     } else if (queryType.contains("queryXZPass")) {
         dealtData = dealQueryXZPass(aMap);
     } else if (queryType.contains("queryShift")) {
+        dealtData = dealQueryShift(aMap);
     } else if (queryType.contains("queryData")) {
     } else {
     }
@@ -160,5 +161,50 @@ QString MainHandler::dealQueryXZPass(const QVariantMap &aMap) const
         resMap["errCode"] = 1;
         resMap["errorMessage"] = "未查询到相关记录";
     }
+    return DataDealUtils::mapToJson(resMap);
+}
+
+QString MainHandler::dealQueryShift(const QVariantMap &aMap) const
+{
+    QString shiftDate;
+    int shiftID = 0;
+    int laneID = 0;
+    int flag = 0;
+
+    if (aMap.contains("shiftDate"))
+        shiftDate = aMap["shiftDate"].toString();
+    if (aMap.contains("shiftId"))
+        shiftID = aMap["shiftId"].toInt();
+    else if (aMap.contains("shiftID"))
+        shiftID = aMap["shiftID"].toInt();
+    if (aMap.contains("laneId"))
+        laneID = aMap["laneId"].toInt();
+    else if (aMap.contains("laneID"))
+        laneID = aMap["laneID"].toInt();
+    if (aMap.contains("flag"))
+        flag = aMap["flag"].toInt();
+
+    if (shiftDate.isEmpty())
+        throw BaseException(1, "shiftDate值异常，dealQueryShift执行失败");
+    if (shiftID == 0)
+        throw BaseException(1, "shiftId值异常，dealQueryShift执行失败");
+    if (flag != 1 && flag != 2)
+        throw BaseException(1, "flag值异常，dealQueryShift执行失败");
+    if (laneID == 0)
+        throw BaseException(1, "laneId值异常，dealQueryShift执行失败");
+
+    int cnt = GM_INS->m_ds->fetchShiftCnt(shiftDate, shiftID, laneID, flag);
+
+    QVariantMap resMap;
+    if (cnt < 0) {
+        resMap["errCode"] = 1;
+        resMap["Count"] = 0;
+        resMap["errorMessage"] = "getShiftCount执行异常";
+    } else {
+        resMap["errCode"] = 0;
+        resMap["Count"] = cnt;
+        resMap["errorMessage"] = "";
+    }
+
     return DataDealUtils::mapToJson(resMap);
 }

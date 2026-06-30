@@ -76,3 +76,24 @@ QString DataServiceDameng::getSuccessedTradesSql(int vehicleIdentifyType, QStrin
 
     return sql;
 }
+
+QString DataServiceDameng::getShiftCntSql(const QString &shiftDate, int shiftID, int laneID, int flag) const
+{
+    QString sql;
+    if (flag == 1) {
+        sql = QString("SELECT SUM(total) FROM (SELECT COUNT(*) AS total FROM t_mtc_in WHERE EnShiftDate = '%1' AND EnShiftID = %2 AND EnLane = %3 "
+                      "AND IsValid = 1 UNION ALL SELECT COUNT(*) AS total FROM t_etc_in WHERE EnShiftDate = '%1' AND EnShiftID = %2 AND EnLane = %3 "
+                      "AND IsValid = 1)")
+                  .arg(shiftDate)
+                  .arg(shiftID)
+                  .arg(laneID);
+    } else {
+        sql = QString("SELECT SUM(total) FROM (SELECT COUNT(*) AS total FROM t_mtc_out WHERE ExShiftDate = '%1' AND ExShiftID = %2 AND ExLane = %3 "
+                      "AND IsValid = 1 UNION ALL SELECT COUNT(*) AS total FROM t_etc_out WHERE ExShiftDate = '%1' AND ExShiftID = %2 AND ExLane = %3 "
+                      "AND IsValid = 1)")
+                  .arg(shiftDate)
+                  .arg(shiftID)
+                  .arg(laneID);
+    }
+    return sql;
+}

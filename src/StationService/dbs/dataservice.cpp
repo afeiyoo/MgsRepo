@@ -190,6 +190,26 @@ int DataService::fetchXZPassTimes(const QString &sql) const
     }
 }
 
+int DataService::fetchShiftCnt(const QString &shiftDate, int shiftID, int laneID, int flag) const
+{
+    QString sql = getShiftCntSql(shiftDate, shiftID, laneID, flag);
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    EasyQtSql::Transaction t(sdb);
+    try {
+        EasyQtSql::QueryResult res = t.execQuery(sql);
+        LOG_INFO().noquote() << "执行SQL: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        if (!res.next())
+            return 0;
+
+        int count = res.scalar<int>();
+        return count;
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        return -1;
+    }
+}
+
 QString DataService::findMapKeyCaseInsensitive(const QVariantMap &map, const QString &key) const
 {
     for (auto it = map.constBegin(); it != map.constEnd(); ++it) {

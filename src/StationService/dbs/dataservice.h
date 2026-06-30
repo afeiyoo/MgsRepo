@@ -34,12 +34,18 @@ public:
     // 获取厦漳大桥交易趟次
     int fetchXZPassTimes(const QString &sql) const;
 
+    // 获取班次流水数量
+    int fetchShiftCnt(const QString &shiftDate, int shiftID, int laneID, int flag) const;
+
 protected:
     // 获取数据库连接测试SQL
     virtual QString getTestSql() const = 0;
 
     // 获取成功交易的SQL
     virtual QString getSuccessedTradesSql(int vehicleIdentifyType, QString vehPlate, QString cardID, int dataType, int judgeTime) const = 0;
+
+    // 获取班次流水数量的SQL
+    virtual QString getShiftCntSql(const QString &shiftDate, int shiftID, int laneID, int flag) const = 0;
 
 private:
     QString findMapKeyCaseInsensitive(const QVariantMap &map, const QString &key) const;

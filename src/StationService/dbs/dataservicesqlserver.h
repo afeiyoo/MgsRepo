@@ -18,4 +18,6 @@ protected:
     QString getTestSql() const override;
 
     QString getSuccessedTradesSql(int vehicleIdentifyType, QString vehPlate, QString cardID, int dataType, int judgeTime) const override;
+
+    QString getShiftCntSql(const QString &shiftDate, int shiftID, int laneID, int flag) const override;
 };
