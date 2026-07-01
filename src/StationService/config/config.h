@@ -29,6 +29,10 @@ public:
     QString m_dbPassword;
     uint m_dbPort;
 
+    // 基础配置
+    uint m_queryAuthType;
+    QString m_queryAuthIP;
+
 private:
     Utils::ConfigUtils *m_confUtil = nullptr; // 配置读取工具
 };

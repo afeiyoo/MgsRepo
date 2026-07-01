@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QVariant>
 
 namespace EasyQtSql {
 class SqlFactory;
@@ -36,6 +37,18 @@ public:
 
     // 获取班次流水数量
     int fetchShiftCnt(const QString &shiftDate, int shiftID, int laneID, int flag) const;
+
+    // 查询数量
+    int queryInt(const QString &sql) const;
+
+    // 查询字符串
+    QString queryString(const QString &sql) const;
+
+    // 查询键值对
+    QVariantMap queryMap(const QString &sql) const;
+
+    // 查询列表
+    QVariantList queryList(const QString &sql) const;
 
 protected:
     // 获取数据库连接测试SQL

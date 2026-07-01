@@ -20,6 +20,8 @@ private:
 
     QString dealQueryShift(const QVariantMap &aMap) const;
 
+    QString dealQueryData(const QVariantMap &aMap) const;
+
 private:
     QString m_peerIP; // 请求IP
 };

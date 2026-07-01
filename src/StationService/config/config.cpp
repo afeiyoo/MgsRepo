@@ -33,4 +33,8 @@ void Config::loadConfig(const Utils::FileName &path)
     // 日志配置
     m_logFormat = m_confUtil->getValue("Log/Format", "%{time} [%{type}] [%{threadid}] %{message}\n\n").toString();
     m_logLimits = m_confUtil->getValue("Log/Limit", 180).toUInt();
+
+    // 基础配置
+    m_queryAuthType = m_confUtil->getValue("BaseEnv/AuthType", 0).toInt();
+    m_queryAuthIP = m_confUtil->getValue("BaseEnv/AuthIP", "").toString();
 }

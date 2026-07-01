@@ -4,6 +4,7 @@
 #include <QVariantMap>
 
 #include "Logger.h"
+#include "config/config.h"
 #include "core/baseexception.h"
 #include "core/globalmanager.h"
 #include "dbs/dataservice.h"
@@ -43,6 +44,7 @@ QString MainHandler::doMainDeal(const QByteArray &reqBody) const
     } else if (queryType.contains("queryShift")) {
         dealtData = dealQueryShift(aMap);
     } else if (queryType.contains("queryData")) {
+        dealtData = dealQueryData(aMap);
     } else {
     }
 
@@ -199,12 +201,77 @@ QString MainHandler::dealQueryShift(const QVariantMap &aMap) const
     if (cnt < 0) {
         resMap["errCode"] = 1;
         resMap["Count"] = 0;
-        resMap["errorMessage"] = "getShiftCount执行异常";
+        resMap["errorMessage"] = "dealQueryShift执行异常";
     } else {
         resMap["errCode"] = 0;
         resMap["Count"] = cnt;
         resMap["errorMessage"] = "";
     }
+
+    return DataDealUtils::mapToJson(resMap);
+}
+
+QString MainHandler::dealQueryData(const QVariantMap &aMap) const
+{
+    if (GM_INS->m_conf->m_queryAuthType == 1) {
+        QString authStr = aMap["queryAuth"].toString();
+        if (authStr.toUpper() != DataDealUtils::cryptoMD5("fjeit" + DataDealUtils::curDateStr("yyyyMMdd")))
+            throw BaseException(1, "MD5授权校验未通过");
+    } else if (GM_INS->m_conf->m_queryAuthType == 2) {
+        if (!GM_INS->m_conf->m_queryAuthIP.contains(m_peerIP))
+            throw BaseException(1, "IP授权校验未通过");
+    }
+
+    int dataType = 0;
+    QString sql;
+    if (aMap.contains("querySql"))
+        sql = aMap["querySql"].toString();
+    if (aMap.contains("dataType"))
+        dataType = aMap["dataType"].toInt();
+
+    if (sql.isEmpty())
+        throw BaseException(1, "querySql为空，dealQueryData执行失败");
+    if (dataType < 1 || dataType > 4)
+        throw BaseException(1, "未知dataType类型，dealQueryData执行失败");
+
+    int errCode = 0;
+    QString errorMessage;
+    QVariant data;
+    if (dataType == 1) {
+        QVariantMap ans = GM_INS->m_ds->queryMap(sql);
+        data = ans;
+        if (ans.isEmpty()) {
+            errCode = 1;
+            errorMessage = "queryMap查询为空";
+        }
+    } else if (dataType == 2) {
+        int ans = GM_INS->m_ds->queryInt(sql);
+        data = ans;
+        if (ans < 0) {
+            errCode = 1;
+            errorMessage = "queryInt查询为空";
+        }
+    } else if (dataType == 3) {
+        QString ans = GM_INS->m_ds->queryString(sql);
+        data = ans;
+        if (ans.isEmpty()) {
+            errCode = 1;
+            errorMessage = "queryString查询为空";
+        }
+    } else if (dataType == 4) {
+        QVariantList ans = GM_INS->m_ds->queryList(sql);
+        data = ans;
+        if (ans.isEmpty()) {
+            errCode = 1;
+            errorMessage = "queryList查询为空";
+        }
+    }
+
+    QVariantMap resMap;
+    resMap["errCode"] = errCode;
+    resMap["dataType"] = dataType;
+    resMap["errorMessage"] = errorMessage;
+    resMap["data"] = data;
 
     return DataDealUtils::mapToJson(resMap);
 }

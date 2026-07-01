@@ -210,6 +210,82 @@ int DataService::fetchShiftCnt(const QString &shiftDate, int shiftID, int laneID
     }
 }
 
+int DataService::queryInt(const QString &sql) const
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    EasyQtSql::Transaction t(sdb);
+    try {
+        EasyQtSql::QueryResult res = t.execQuery(sql);
+        LOG_INFO().noquote() << "执行SQL: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        if (!res.next())
+            return -1;
+
+        int ans = res.scalar<int>();
+        return ans;
+    } catch (EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        return -1;
+    }
+}
+
+QString DataService::queryString(const QString &sql) const
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    EasyQtSql::Transaction t(sdb);
+    try {
+        EasyQtSql::QueryResult res = t.execQuery(sql);
+        LOG_INFO().noquote() << "执行SQL: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        if (!res.next())
+            return "";
+
+        QString ans = res.scalar<QString>();
+        return ans;
+    } catch (EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        return "";
+    }
+}
+
+QVariantMap DataService::queryMap(const QString &sql) const
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    EasyQtSql::Transaction t(sdb);
+    try {
+        EasyQtSql::QueryResult res = t.execQuery(sql);
+        LOG_INFO().noquote() << "执行SQL: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        if (res.next())
+            return {};
+
+        return res.toMap();
+    } catch (EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        return {};
+    }
+}
+
+QVariantList DataService::queryList(const QString &sql) const
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    EasyQtSql::Transaction t(sdb);
+    try {
+        EasyQtSql::QueryResult res = t.execQuery(sql);
+        LOG_INFO().noquote() << "执行SQL: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        QVariantList records;
+        while (res.next()) {
+            QVariantMap record = res.toMap();
+            records.append(record);
+        }
+        return records;
+    } catch (EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        return {};
+    }
+}
+
 QString DataService::findMapKeyCaseInsensitive(const QVariantMap &map, const QString &key) const
 {
     for (auto it = map.constBegin(); it != map.constEnd(); ++it) {
