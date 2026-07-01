@@ -33,22 +33,22 @@ public:
     bool insertRecord(const QVariantMap &kvs, const QString &tableName) const;
 
     // 获取厦漳大桥交易趟次
-    int fetchXZPassTimes(const QString &sql) const;
+    int fetchXZPassTimes(const QString &sql, bool *ok) const;
 
     // 获取班次流水数量
     int fetchShiftCnt(const QString &shiftDate, int shiftID, int laneID, int flag) const;
 
     // 查询数量
-    int queryInt(const QString &sql) const;
+    int queryInt(const QString &sql, bool *ok) const;
 
     // 查询字符串
-    QString queryString(const QString &sql) const;
+    QString queryString(const QString &sql, bool *ok) const;
 
     // 查询键值对
-    QVariantMap queryMap(const QString &sql) const;
+    QVariantMap queryMap(const QString &sql, bool *ok) const;
 
     // 查询列表
-    QVariantList queryList(const QString &sql) const;
+    QVariantList queryList(const QString &sql, bool *ok) const;
 
 protected:
     // 获取数据库连接测试SQL

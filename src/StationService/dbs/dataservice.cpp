@@ -171,8 +171,9 @@ bool DataService::insertRecord(const QVariantMap &kvs, const QString &tableName)
     }
 }
 
-int DataService::fetchXZPassTimes(const QString &sql) const
+int DataService::fetchXZPassTimes(const QString &sql, bool *ok) const
 {
+    *ok = true;
     QSqlDatabase sdb = m_dbFactory->getDatabase();
 
     EasyQtSql::Transaction t(sdb);
@@ -186,6 +187,7 @@ int DataService::fetchXZPassTimes(const QString &sql) const
         return res.scalar<int>();
     } catch (const EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        *ok = false;
         return -1;
     }
 }
@@ -210,8 +212,9 @@ int DataService::fetchShiftCnt(const QString &shiftDate, int shiftID, int laneID
     }
 }
 
-int DataService::queryInt(const QString &sql) const
+int DataService::queryInt(const QString &sql, bool *ok) const
 {
+    *ok = true;
     QSqlDatabase sdb = m_dbFactory->getDatabase();
     EasyQtSql::Transaction t(sdb);
     try {
@@ -219,18 +222,20 @@ int DataService::queryInt(const QString &sql) const
         LOG_INFO().noquote() << "执行SQL: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
 
         if (!res.next())
-            return -1;
+            return 0;
 
         int ans = res.scalar<int>();
         return ans;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        *ok = false;
         return -1;
     }
 }
 
-QString DataService::queryString(const QString &sql) const
+QString DataService::queryString(const QString &sql, bool *ok) const
 {
+    *ok = true;
     QSqlDatabase sdb = m_dbFactory->getDatabase();
     EasyQtSql::Transaction t(sdb);
     try {
@@ -244,12 +249,14 @@ QString DataService::queryString(const QString &sql) const
         return ans;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        *ok = false;
         return "";
     }
 }
 
-QVariantMap DataService::queryMap(const QString &sql) const
+QVariantMap DataService::queryMap(const QString &sql, bool *ok) const
 {
+    *ok = true;
     QSqlDatabase sdb = m_dbFactory->getDatabase();
     EasyQtSql::Transaction t(sdb);
     try {
@@ -262,12 +269,14 @@ QVariantMap DataService::queryMap(const QString &sql) const
         return res.toMap();
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        *ok = false;
         return {};
     }
 }
 
-QVariantList DataService::queryList(const QString &sql) const
+QVariantList DataService::queryList(const QString &sql, bool *ok) const
 {
+    *ok = true;
     QSqlDatabase sdb = m_dbFactory->getDatabase();
     EasyQtSql::Transaction t(sdb);
     try {
@@ -282,6 +291,7 @@ QVariantList DataService::queryList(const QString &sql) const
         return records;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        *ok = false;
         return {};
     }
 }

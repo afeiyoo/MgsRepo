@@ -156,8 +156,9 @@ QString MainHandler::dealQueryXZPass(const QVariantMap &aMap) const
     if (querySql.isEmpty())
         throw BaseException(1, "querySql为空，dealQueryXZPass执行失败");
 
-    int cnt = GM_INS->m_ds->fetchXZPassTimes(querySql);
-    if (cnt < 0)
+    bool ok = false;
+    int cnt = GM_INS->m_ds->fetchXZPassTimes(querySql, &ok);
+    if (!ok)
         throw BaseException(1, "查询厦漳大桥通行趟次时，发生异常");
 
     QVariantMap resMap;
@@ -242,33 +243,34 @@ QString MainHandler::dealQueryData(const QVariantMap &aMap) const
     int errCode = 0;
     QString errorMessage;
     QVariant data;
+    bool ok = false;
     if (dataType == 1) {
-        QVariantMap ans = GM_INS->m_ds->queryMap(sql);
+        QVariantMap ans = GM_INS->m_ds->queryMap(sql, &ok);
         data = ans;
-        if (ans.isEmpty()) {
+        if (!ok) {
             errCode = 1;
-            errorMessage = "queryMap查询为空";
+            errorMessage = "queryMap查询发生异常";
         }
     } else if (dataType == 2) {
-        int ans = GM_INS->m_ds->queryInt(sql);
+        int ans = GM_INS->m_ds->queryInt(sql, &ok);
         data = ans;
-        if (ans < 0) {
+        if (!ok) {
             errCode = 1;
-            errorMessage = "queryInt查询为空";
+            errorMessage = "queryInt查询发生异常";
         }
     } else if (dataType == 3) {
-        QString ans = GM_INS->m_ds->queryString(sql);
+        QString ans = GM_INS->m_ds->queryString(sql, &ok);
         data = ans;
-        if (ans.isEmpty()) {
+        if (!ok) {
             errCode = 1;
-            errorMessage = "queryString查询为空";
+            errorMessage = "queryString查询发生异常";
         }
     } else if (dataType == 4) {
-        QVariantList ans = GM_INS->m_ds->queryList(sql);
+        QVariantList ans = GM_INS->m_ds->queryList(sql, &ok);
         data = ans;
-        if (ans.isEmpty()) {
+        if (!ok) {
             errCode = 1;
-            errorMessage = "queryList查询为空";
+            errorMessage = "queryList查询发生异常";
         }
     }
 
