@@ -18,9 +18,8 @@ BlackListChecker::BlackListChecker(QObject *parent)
 BlackListChecker::~BlackListChecker()
 {
     if (isRunning()) {
-        quit();
-        if (wait(1000))
-            this->terminate();
+        requestInterruption();
+        wait(5000);
     }
 }
 
@@ -170,7 +169,7 @@ bool BlackListChecker::checkVersionIsValid(const QString &version) const
 
 void BlackListChecker::run()
 {
-    while (1) {
+    while (!isInterruptionRequested()) {
         // 检查过期文件，每五分钟检查一次
         if (DataDealUtils::curUnixDateTime() - m_delJsonTime > 5 * 60) {
             m_delJsonTime = DataDealUtils::curUnixDateTime();
@@ -189,6 +188,7 @@ void BlackListChecker::run()
             }
         }
 
-        QThread::sleep(10);
+        for (int i = 0; i < 10 && !isInterruptionRequested(); ++i)
+            QThread::sleep(1);
     }
 }
