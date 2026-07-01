@@ -303,7 +303,7 @@ QString MainHandler::checkETCBlackInfo(const QString &version) const
     QString result;
     FileName file = FileName::fromString(filePath);
     if (!file.exists()) {
-        QString curVersion = getCurBlackVersion();
+        QString curVersion = GM_INS->getCurBlackVersion();
         if (curVersion < version) {
             queryRes = 2;
         } else {
@@ -331,15 +331,4 @@ QString MainHandler::checkETCBlackInfo(const QString &version) const
     resMap["amount"] = 0;
 
     return DataDealUtils::mapToJson(resMap);
-}
-
-QString MainHandler::getCurBlackVersion() const
-{
-    ConfigUtils conf;
-    conf.init(FileUtils::curApplicationDirPath() + "/config/StationService.ini", ConfigUtils::INI);
-
-    QString curVersion = conf.getValue("BaseEnv/Version", "").toString();
-    LOG_INFO().noquote() << "当前增量版本:" << curVersion;
-
-    return curVersion;
 }

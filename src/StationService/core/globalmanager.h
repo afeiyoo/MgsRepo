@@ -17,6 +17,9 @@ public:
 
     int init();
 
+    QString getCurBlackVersion() const;
+    bool saveCurBlackVersion(const QString &ver);
+
 public:
     Config *m_conf = nullptr;    // 配置管理类
     DataService *m_ds = nullptr; // 数据库操作类

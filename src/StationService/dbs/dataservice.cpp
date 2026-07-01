@@ -40,7 +40,7 @@ bool DataService::testConnection() const
     }
 
     LOG_INFO().noquote() << "数据库连接初始化成功";
-    return false;
+    return true;
 }
 
 QVariantList DataService::fetchSuccessedTrades(int vehicleIdentifyType, QString vehPlate, QString cardID, int dataType, int judgeTime) const
@@ -256,7 +256,7 @@ QVariantMap DataService::queryMap(const QString &sql) const
         EasyQtSql::QueryResult res = t.execQuery(sql);
         LOG_INFO().noquote() << "执行SQL: " << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
 
-        if (res.next())
+        if (!res.next())
             return {};
 
         return res.toMap();

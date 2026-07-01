@@ -25,6 +25,7 @@ include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+        bend/blacklistchecker.cpp \
         bend/mainhandler.cpp \
         core/baseexception.cpp \
         core/httphandler.cpp \
@@ -36,6 +37,7 @@ SOURCES += \
         main.cpp
 
 HEADERS += \
+    bend/blacklistchecker.h \
     bend/mainhandler.h \
     core/baseexception.h \
     core/httphandler.h \

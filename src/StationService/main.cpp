@@ -4,6 +4,7 @@
 
 #include "HttpServer/httplistener.h"
 #include "Logger.h"
+#include "bend/blacklistchecker.h"
 #include "core/globalmanager.h"
 #include "core/httphandler.h"
 #include "utils/fileutils.h"
@@ -21,6 +22,9 @@ int main(int argc, char *argv[])
     }
 
     LOG_INFO().noquote() << "<<< Starting the application: StationService >>>";
+
+    BlackListChecker checker;
+    checker.start();
 
     FileName configFile = FileName::fromString(FileUtils::curApplicationDirPath() + "/config/StationServiceCfg.ini");
     QSettings *listenerSettings = new QSettings(FileUtils::canonicalPath(configFile).toString(), QSettings::IniFormat, &a);

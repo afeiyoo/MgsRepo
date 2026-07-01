@@ -5,6 +5,7 @@
 #include "config/config.h"
 #include "dbs/dataservicedameng.h"
 #include "dbs/dataservicesqlserver.h"
+#include "utils/configutils.h"
 #include "utils/fileutils.h"
 
 using namespace Utils;
@@ -59,4 +60,24 @@ int GlobalManager::init()
     }
 
     return 0;
+}
+
+QString GlobalManager::getCurBlackVersion() const
+{
+    ConfigUtils conf;
+    conf.init(FileUtils::curApplicationDirPath() + "/config/StationServiceCfg.ini", ConfigUtils::INI);
+
+    QString curVersion = conf.getValue("BaseEnv/Version", "").toString();
+    LOG_INFO().noquote() << "当前增量版本:" << curVersion;
+
+    return curVersion;
+}
+
+bool GlobalManager::saveCurBlackVersion(const QString &ver)
+{
+    ConfigUtils conf;
+    conf.init(FileUtils::curApplicationDirPath() + "/config/StationServiceCfg.ini", ConfigUtils::INI);
+
+    conf.setValue("BaseEnv/Version", ver);
+    LOG_INFO().noquote() << "更新增量版本:" << ver;
 }

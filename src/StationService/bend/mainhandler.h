@@ -26,8 +26,6 @@ private:
 
     QString checkETCBlackInfo(const QString &version) const;
 
-    QString getCurBlackVersion() const;
-
 private:
     QString m_peerIP; // 请求IP
 };
