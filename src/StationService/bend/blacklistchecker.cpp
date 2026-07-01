@@ -13,12 +13,16 @@ using namespace Utils;
 
 BlackListChecker::BlackListChecker(QObject *parent)
     : QThread{parent}
-{
-    m_delJsonTime = DataDealUtils::curUnixDateTime();
-    m_checkJsonTime = DataDealUtils::curUnixDateTime();
-}
+{}
 
-BlackListChecker::~BlackListChecker() {}
+BlackListChecker::~BlackListChecker()
+{
+    if (isRunning()) {
+        quit();
+        if (wait(1000))
+            this->terminate();
+    }
+}
 
 void BlackListChecker::checkJsonToDelete()
 {
@@ -55,7 +59,7 @@ void BlackListChecker::checkJsonToDelete()
     }
 }
 
-void BlackListChecker::getBlackJsonMsg()
+int BlackListChecker::getBlackJsonMsg()
 {
     QString curVersion = GM_INS->getCurBlackVersion();
     if (curVersion.isEmpty()) {
@@ -73,10 +77,11 @@ void BlackListChecker::getBlackJsonMsg()
     if (date > QDateTime::currentDateTime()) {
         LOG_INFO().noquote() << QString("版本号%1大于当前日期%2,数据未准备好")
                                     .arg(date.toString("yyyyMMddhhmm"), DataDealUtils::curDateTimeStr("yyyyMMddhhmm"));
-        return;
+        return 0;
     }
 
     int remainCount = 0;
+    int downloadCount = 0;
     QString reqVersion = date.toString("yyyyMMddhhmm");
     QString reqUrl = GM_INS->m_conf->m_blackCheckUrl + "/" + reqVersion;
     do {
@@ -90,7 +95,7 @@ void BlackListChecker::getBlackJsonMsg()
         bool ok = client.getSync(retMsg, QUrl(reqUrl));
         if (!ok || retMsg.isEmpty()) {
             LOG_INFO().noquote() << QString("%1版本增量文件下载失败").arg(reqVersion);
-            return;
+            return 0;
         }
 
         // 创建保存目录
@@ -102,7 +107,7 @@ void BlackListChecker::getBlackJsonMsg()
         QVariantMap resMap = DataDealUtils::jsonToMap(retMsg, jsonOk, jsonErrDesc);
         if (!jsonOk) {
             LOG_ERROR().noquote() << QString("%1增量文件内容异常!").arg(reqVersion);
-            return;
+            return -1;
         }
 
         QString dataType;
@@ -113,25 +118,26 @@ void BlackListChecker::getBlackJsonMsg()
 
         if (dataType.isEmpty()) {
             LOG_ERROR().noquote() << "dataType值异常!";
-            return;
+            return -1;
         }
 
         FileName file = FileName::fromString(QString("%1/%2_%3.json").arg(versionDir).arg(reqVersion).arg(dataType));
         FileSaver saver(file.toString());
         if (!saver.write(retMsg)) {
             LOG_ERROR().noquote() << "数据写入文件失败:" << file.fileName();
-            return;
+            return -1;
         }
         if (saver.finalize()) {
             LOG_INFO().noquote() << QString("下载%1,%2版本完成").arg(reqVersion).arg(dataType);
             GM_INS->saveCurBlackVersion(reqVersion);
+            downloadCount++;
         } else {
             LOG_INFO().noquote() << QString("下载%1,%2版本失败").arg(reqVersion).arg(dataType);
-            return;
+            return -1;
         }
     } while (remainCount > 0);
 
-    return;
+    return downloadCount;
 }
 
 bool BlackListChecker::checkVersionIsValid(const QString &version) const
@@ -173,7 +179,14 @@ void BlackListChecker::run()
         // 检查增量文件，每五分钟检查一次
         if (DataDealUtils::curUnixDateTime() - m_checkJsonTime > 5 * 60) {
             m_checkJsonTime = DataDealUtils::curUnixDateTime();
-            getBlackJsonMsg();
+            while (1) { // 持续追加版本
+                int ret = getBlackJsonMsg();
+                if (ret == 0)
+                    break;
+                if (ret < 0)
+                    break; // 异常时结束本轮，避免一直卡在线程里
+                QThread::sleep(60);
+            }
         }
 
         QThread::sleep(10);

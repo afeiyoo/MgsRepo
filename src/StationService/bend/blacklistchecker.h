@@ -14,7 +14,7 @@ private:
     void checkJsonToDelete();
     int deletePathFile(const QString &path);
 
-    void getBlackJsonMsg();
+    int getBlackJsonMsg();
     bool checkVersionIsValid(const QString &version) const;
 
 protected:
