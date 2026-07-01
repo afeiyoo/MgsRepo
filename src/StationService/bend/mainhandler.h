@@ -22,6 +22,12 @@ private:
 
     QString dealQueryData(const QVariantMap &aMap) const;
 
+    QString dealQueryETCBlack(const QVariantMap &aMap) const;
+
+    QString checkETCBlackInfo(const QString &version) const;
+
+    QString getCurBlackVersion() const;
+
 private:
     QString m_peerIP; // 请求IP
 };

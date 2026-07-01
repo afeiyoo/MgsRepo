@@ -8,7 +8,9 @@
 #include "core/baseexception.h"
 #include "core/globalmanager.h"
 #include "dbs/dataservice.h"
+#include "utils/configutils.h"
 #include "utils/datadealutils.h"
+#include "utils/fileutils.h"
 
 using namespace Utils;
 
@@ -45,7 +47,10 @@ QString MainHandler::doMainDeal(const QByteArray &reqBody) const
         dealtData = dealQueryShift(aMap);
     } else if (queryType.contains("queryData")) {
         dealtData = dealQueryData(aMap);
+    } else if (queryType.contains("queryETCBlack")) {
+        dealtData = dealQueryETCBlack(aMap);
     } else {
+        throw BaseException(1, QString("未知查询类型%1").arg(queryType));
     }
 
     return dealtData;
@@ -274,4 +279,67 @@ QString MainHandler::dealQueryData(const QVariantMap &aMap) const
     resMap["data"] = data;
 
     return DataDealUtils::mapToJson(resMap);
+}
+
+QString MainHandler::dealQueryETCBlack(const QVariantMap &aMap) const
+{
+    QString version;
+    if (aMap.contains("version"))
+        version = aMap["version"].toString();
+
+    if (version.isEmpty())
+        throw BaseException(1, "version值为空，dealQueryETCBlack执行失败");
+
+    QString dealtData;
+    QString res = checkETCBlackInfo(version);
+    return res;
+}
+
+QString MainHandler::checkETCBlackInfo(const QString &version) const
+{
+    QString filePath = QString("%1/download/%2/%3_queryETCBlack.json").arg(FileUtils::curApplicationDirPath(), version.left(8), version);
+
+    int queryRes = 0;
+    QString result;
+    FileName file = FileName::fromString(filePath);
+    if (!file.exists()) {
+        QString curVersion = getCurBlackVersion();
+        if (curVersion < version) {
+            queryRes = 2;
+        } else {
+            queryRes = 0;
+        }
+    } else {
+        FileReader reader;
+        QString errStr;
+        if (!reader.fetch(file.toString(), &errStr)) {
+            throw BaseException(1, QString("读取文件%1失败: %2").arg(file.fileName(), errStr));
+        }
+
+        QString jsonData = reader.data();
+        if (jsonData.isEmpty()) {
+            queryRes = 4;
+        } else { // 文件内容存在，则直接读取文件内容返回
+            return jsonData;
+        }
+    }
+
+    QVariantMap resMap;
+    resMap["queryResult"] = queryRes;
+    resMap["version"] = version;
+    resMap["operateTable"] = 0;
+    resMap["amount"] = 0;
+
+    return DataDealUtils::mapToJson(resMap);
+}
+
+QString MainHandler::getCurBlackVersion() const
+{
+    ConfigUtils conf;
+    conf.init(FileUtils::curApplicationDirPath() + "/config/StationService.ini", ConfigUtils::INI);
+
+    QString curVersion = conf.getValue("BaseEnv/Version", "").toString();
+    LOG_INFO().noquote() << "当前增量版本:" << curVersion;
+
+    return curVersion;
 }
