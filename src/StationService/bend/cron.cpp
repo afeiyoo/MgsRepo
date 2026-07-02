@@ -68,6 +68,7 @@ int Cron::getIncrementFiles()
     QString curVersion = GM_INS->getCurBlackVersion();
     if (curVersion.isEmpty()) {
         curVersion = DataDealUtils::curDateTimeStr("yyyyMMddhh") + "00";
+        LOG_INFO().noquote() << "增量版本号未配置: 从版本" << curVersion << "开始下载";
     }
 
     QDateTime date = QDateTime::fromString(curVersion, "yyyyMMddhhmm");
@@ -89,7 +90,7 @@ int Cron::getIncrementFiles()
     QString reqVersion = date.toString("yyyyMMddhhmm");
     QString reqUrl = GM_INS->m_conf->m_incrementCheckUrl + "/" + reqVersion;
     do {
-        LOG_ERROR().noquote() << "开始请求获取增量状态名单信息 Url: " << reqUrl << " ReqMsg: " << reqVersion;
+        LOG_ERROR().noquote() << "开始请求获取增量文件 Url: " << reqUrl << " 请求版本: " << reqVersion;
 
         if (remainCount != 0)
             reqUrl = GM_INS->m_conf->m_incrementCheckUrl + "/" + reqVersion + "/" + QString::number(remainCount);
@@ -99,14 +100,14 @@ int Cron::getIncrementFiles()
         bool ok = client.getSync(retMsg, QUrl(reqUrl));
         if (!ok || retMsg.isEmpty()) {
             LOG_INFO().noquote() << QString("%1版本增量文件下载失败:").arg(reqVersion) << retMsg;
-            return 0;
+            return -1;
         }
 
         bool jsonOk = false;
         QString jsonErrDesc;
         QVariantMap resMap = DataDealUtils::jsonToMap(retMsg, &jsonOk, &jsonErrDesc);
         if (!jsonOk) {
-            LOG_ERROR().noquote() << QString("%1增量文件内容异常:").arg(reqVersion) << jsonErrDesc;
+            LOG_ERROR().noquote() << QString("%1版本增量文件内容异常:").arg(reqVersion) << jsonErrDesc;
             return -1;
         }
 
@@ -132,11 +133,11 @@ int Cron::getIncrementFiles()
             return -1;
         }
         if (saver.finalize()) {
-            LOG_INFO().noquote() << QString("下载%1,%2版本完成").arg(reqVersion).arg(dataType);
+            LOG_INFO().noquote() << QString("增量文件%1保存成功").arg(file.fileName());
             GM_INS->saveCurBlackVersion(reqVersion);
             downloadCount++;
         } else {
-            LOG_ERROR().noquote() << QString("下载%1,%2版本失败").arg(reqVersion).arg(dataType);
+            LOG_ERROR().noquote() << QString("增量文件%1保存失败").arg(file.fileName());
             return -1;
         }
     } while (remainCount > 0);
@@ -174,21 +175,19 @@ bool Cron::checkVersionIsValid(const QString &version) const
 
 int Cron::getFullFiles()
 {
-    QUrl reqUrl = QUrl(GM_INS->m_conf->m_fullCheckUrl);
-    if (!reqUrl.isValid()) {
-        LOG_ERROR().noquote() << "请求获取远程BlackUpdate.xml失败: URL无效";
-        return -1;
-    }
-
+    // 获取远程版本号
     LOG_INFO().noquote() << "开始请求获取远程BlackUpdate.xml: " << GM_INS->m_conf->m_fullCheckUrl;
 
+    QUrl reqUrl = QUrl(GM_INS->m_conf->m_fullCheckUrl);
     Http client;
     QByteArray retMsg;
     bool netOk = client.getSync(retMsg, reqUrl);
     if (!netOk || retMsg.isEmpty()) {
-        LOG_ERROR().noquote() << "获取远程BlackUpdate.xml失败:" << retMsg;
+        LOG_ERROR().noquote() << "获取远程BlackUpdate.xml失败，原因:" << retMsg;
         return -1;
     }
+
+    LOG_INFO().noquote() << "获取远程BlackUpdate.xml成功!";
 
     bool jsonOk = false;
     QString jsonErrDesc;
@@ -231,7 +230,7 @@ int Cron::getFullFiles()
     bool startDownload = false;
     FileName infoFile = FileName::fromString(GM_INS->m_conf->m_fullSavePath + "/BlackUpdate.xml");
     if (!infoFile.exists()) {
-        LOG_INFO().noquote() << "本地BlackUpdate.xml不存在，启动下载";
+        LOG_INFO().noquote() << "本地BlackUpdate.xml不存在，启动全量文件下载";
         startDownload = true;
     } else {
         FileReader reader;
@@ -252,13 +251,13 @@ int Cron::getFullFiles()
 
         LOG_INFO().noquote() << "远程全量版本号:" << remoteVer << "本地全量版本号:" << localVer;
         if (localVer.toUInt() < remoteVer.toUInt()) {
-            LOG_INFO().noquote() << "远程全量版本号高于本地全量版本号，启动下载";
+            LOG_INFO().noquote() << "远程全量版本号高于本地全量版本号，启动全量文件下载";
             startDownload = true;
         }
     }
 
     if (!startDownload) {
-        LOG_INFO().noquote() << "经检查，当前无需下载全量文件";
+        LOG_INFO().noquote() << "经检查当前全量文件版本已是最新，无需下载！";
         return 0;
     }
 
@@ -414,17 +413,10 @@ void Cron::run()
             m_delJsonTime = DataDealUtils::curUnixDateTime();
             checkJsonToDelete();
         }
-        // 检查增量文件，每五分钟检查一次
-        if (DataDealUtils::curUnixDateTime() - m_checkIncrementTime > 5 * 60) {
+        // 检查增量文件，每2.5分钟检查一次
+        if (DataDealUtils::curUnixDateTime() - m_checkIncrementTime > 2 * 60 + 30) {
             m_checkIncrementTime = DataDealUtils::curUnixDateTime();
-            while (1) { // 持续追加版本
-                int ret = getIncrementFiles();
-                if (ret == 0)
-                    break;
-                if (ret < 0)
-                    break; // 异常时结束本轮，避免一直卡在线程里
-                QThread::sleep(60);
-            }
+            getIncrementFiles();
         }
         // 检查全量文件，每30分钟检查一次
         if (DataDealUtils::curUnixDateTime() - m_checkFullTime > 30 * 60) {
