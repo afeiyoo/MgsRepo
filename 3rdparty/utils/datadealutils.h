@@ -3,6 +3,7 @@
 #include <QJsonDocument>
 #include <QObject>
 #include <QSqlQuery>
+#include <QXmlStreamReader>
 
 namespace Utils {
 
@@ -18,6 +19,9 @@ public:
     /*******************************************************/
     // MD5编码
     static QString cryptoMD5(const QString &s, bool bUtf8 = true);
+
+    // 大文件计算MD5编码
+    static QString bigFileMd5(const QString &filePath, bool &ok);
 
     // Modbus CRC16校验
     static quint16 getModbus16(quint8 *data, int len);
@@ -170,7 +174,7 @@ public:
     static QString fullExecutedQuery(const QSqlQuery &query);
 
     /*******************************************************/
-    /****                   Json相关                    ****/
+    /****                 内容格式转换相关               ****/
     /*******************************************************/
     // Json对象转换成QVariantMap
     static QVariantMap jsonToMap(const QByteArray &data, bool &ok, QString &errDesc);
@@ -184,8 +188,14 @@ public:
     // QVariantList转换成QByteArray并可以指定输出格式
     static QByteArray listToJson(const QVariantList &list, QJsonDocument::JsonFormat format = QJsonDocument::Compact);
 
+    // XML转换成QVariantMap
+    static QVariantMap xmlToMap(const QByteArray &data, bool &ok, QString &errDesc);
+
 private:
     static QString formatSqlValue(const QVariant &val);
+
+    static QVariant parseXmlElement(QXmlStreamReader &reader);
+    static void insertXmlValue(QVariantMap &map, const QString &key, const QVariant &value);
 };
 
 } // namespace Utils

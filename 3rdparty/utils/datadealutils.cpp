@@ -6,6 +6,7 @@
     #include <QRandomGenerator>
 #endif
 #include <QDebug>
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonParseError>
@@ -26,6 +27,28 @@ QString DataDealUtils::cryptoMD5(const QString &s, bool bUtf8 /*= true */)
     QByteArray input = bUtf8 ? s.toUtf8() : s.toLocal8Bit();
     QByteArray hash = QCryptographicHash::hash(input, QCryptographicHash::Md5);
     return QString(hash.toHex()).toUpper();
+}
+
+QString DataDealUtils::bigFileMd5(const QString &filePath, bool &ok)
+{
+    ok = false;
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QString();
+    }
+
+    QCryptographicHash hash(QCryptographicHash::Md5);
+    while (!file.atEnd()) {
+        QByteArray chunk = file.read(1024 * 1024);
+        if (chunk.isEmpty() && file.error() != QFile::NoError) {
+            return QString();
+        }
+        hash.addData(chunk);
+    }
+
+    ok = true;
+    return QString(hash.result().toHex()).toUpper();
 }
 
 quint16 DataDealUtils::getModbus16(quint8 *data, int len)
@@ -1154,6 +1177,29 @@ QByteArray DataDealUtils::listToJson(const QVariantList &list, QJsonDocument::Js
     return doc.toJson(format);
 }
 
+QVariantMap DataDealUtils::xmlToMap(const QByteArray &data, bool &ok, QString &errDesc)
+{
+    QXmlStreamReader reader(data);
+
+    ok = true;
+    errDesc.clear();
+    while (!reader.atEnd()) {
+        reader.readNext();
+
+        if (reader.isStartElement()) {
+            // 跳过根节点，只返回根节点内部内容
+            return parseXmlElement(reader).toMap();
+        }
+    }
+
+    if (reader.hasError()) {
+        ok = false;
+        errDesc = reader.errorString();
+    }
+
+    return QVariantMap();
+}
+
 QString DataDealUtils::formatSqlValue(const QVariant &val)
 {
     if (!val.isValid() || val.isNull())
@@ -1170,5 +1216,61 @@ QString DataDealUtils::formatSqlValue(const QVariant &val)
         return val.toBool() ? "1" : "0";
     default:
         return val.toString();
+    }
+}
+
+QVariant DataDealUtils::parseXmlElement(QXmlStreamReader &reader)
+{
+    QVariantMap map;
+    QString text;
+
+    while (!reader.atEnd()) {
+        reader.readNext();
+
+        if (reader.isStartElement()) {
+            QString childName = reader.name().toString();
+            QVariant childValue = parseXmlElement(reader);
+            insertXmlValue(map, childName, childValue);
+        } else if (reader.isCharacters() && !reader.isWhitespace()) {
+            text += reader.text().toString().trimmed();
+        } else if (reader.isEndElement()) {
+            break;
+        }
+    }
+
+    if (!map.isEmpty())
+        return map;
+
+    QString s = text.trimmed();
+    bool ok = false;
+    int i = s.toInt(&ok);
+    if (ok)
+        return i;
+
+    double d = s.toDouble(&ok);
+    if (ok)
+        return d;
+
+    return s;
+}
+
+void DataDealUtils::insertXmlValue(QVariantMap &map, const QString &key, const QVariant &value)
+{
+    if (!map.contains(key)) {
+        map.insert(key, value);
+        return;
+    }
+
+    QVariant oldValue = map.value(key);
+
+    if (oldValue.type() == QVariant::List) {
+        QVariantList list = oldValue.toList();
+        list.append(value);
+        map.insert(key, list);
+    } else {
+        QVariantList list;
+        list.append(oldValue);
+        list.append(value);
+        map.insert(key, list);
     }
 }

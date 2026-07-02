@@ -32,8 +32,10 @@ public:
     // 基础配置
     uint m_queryAuthType;
     QString m_queryAuthIP;
-    QString m_blackCheckUrl; // 增量下载地址
-    uint m_saveDays;         // 增量文件保存时间
+    QString m_incrementCheckUrl; // 增量下载地址
+    uint m_saveDays;             // 增量文件保存时间
+    QString m_fullCheckUrl;      // 全量下载地址
+    QString m_fullSavePath;      // 全量文件保存路径
 
 private:
     Utils::ConfigUtils *m_confUtil = nullptr; // 配置读取工具

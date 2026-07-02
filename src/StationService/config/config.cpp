@@ -37,6 +37,8 @@ void Config::loadConfig(const Utils::FileName &path)
     // 基础配置
     m_queryAuthType = m_confUtil->getValue("BaseEnv/AuthType", 0).toInt();
     m_queryAuthIP = m_confUtil->getValue("BaseEnv/AuthIP", "").toString();
-    m_blackCheckUrl = m_confUtil->getValue("BaseEnv/BlackUrl", "").toString();
+    m_incrementCheckUrl = m_confUtil->getValue("BaseEnv/BlackUrl", "").toString();
     m_saveDays = m_confUtil->getValue("BaseEnv/SaveDays", 31).toUInt();
+    m_fullSavePath = m_confUtil->getValue("BaseEnv/FullSavePath", "").toString();
+    m_fullCheckUrl = m_confUtil->getValue("BaseEnv/FullCheckUrl", "").toString();
 }
