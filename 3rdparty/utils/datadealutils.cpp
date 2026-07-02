@@ -29,9 +29,9 @@ QString DataDealUtils::cryptoMD5(const QString &s, bool bUtf8 /*= true */)
     return QString(hash.toHex()).toUpper();
 }
 
-QString DataDealUtils::bigFileMd5(const QString &filePath, bool &ok)
+QString DataDealUtils::bigFileMd5(const QString &filePath, bool *ok)
 {
-    ok = false;
+    *ok = false;
 
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -47,7 +47,7 @@ QString DataDealUtils::bigFileMd5(const QString &filePath, bool &ok)
         hash.addData(chunk);
     }
 
-    ok = true;
+    *ok = true;
     return QString(hash.result().toHex()).toUpper();
 }
 
@@ -1119,47 +1119,47 @@ QString DataDealUtils::fullExecutedQuery(const QSqlQuery &query)
     return result;
 }
 
-QVariantMap DataDealUtils::jsonToMap(const QByteArray &data, bool &ok, QString &errDesc)
+QVariantMap DataDealUtils::jsonToMap(const QByteArray &data, bool *ok, QString *errDesc)
 {
-    ok = false;
-    errDesc.clear();
+    *ok = false;
+    (*errDesc).clear();
 
     QJsonParseError err;
     QJsonDocument doc = QJsonDocument::fromJson(data, &err);
 
     if (err.error != QJsonParseError::NoError) {
-        errDesc = "Json转换QVariantMap失败: " + err.errorString();
+        *errDesc = "Json转换QVariantMap失败: " + err.errorString();
         return {};
     }
 
     if (!doc.isObject()) {
-        errDesc = "Json转换QVariantMap失败: 根节点不是对象";
+        *errDesc = "Json转换QVariantMap失败: 根节点不是对象";
         return {};
     }
 
-    ok = true;
+    *ok = true;
     return doc.object().toVariantMap();
 }
 
-QVariantList DataDealUtils::jsonToList(const QByteArray &data, bool &ok, QString &errDesc)
+QVariantList DataDealUtils::jsonToList(const QByteArray &data, bool *ok, QString *errDesc)
 {
-    ok = false;
-    errDesc.clear();
+    *ok = false;
+    (*errDesc).clear();
 
     QJsonParseError err;
     QJsonDocument doc = QJsonDocument::fromJson(data, &err);
 
     if (err.error != QJsonParseError::NoError) {
-        errDesc = "Json转换QVariantList失败: " + err.errorString();
+        *errDesc = "Json转换QVariantList失败: " + err.errorString();
         return {};
     }
 
     if (!doc.isArray()) {
-        errDesc = "Json转换QVariantList失败: 根节点不是数组";
+        *errDesc = "Json转换QVariantList失败: 根节点不是数组";
         return {};
     }
 
-    ok = true;
+    *ok = true;
     return doc.array().toVariantList();
 }
 
@@ -1177,12 +1177,12 @@ QByteArray DataDealUtils::listToJson(const QVariantList &list, QJsonDocument::Js
     return doc.toJson(format);
 }
 
-QVariantMap DataDealUtils::xmlToMap(const QByteArray &data, bool &ok, QString &errDesc)
+QVariantMap DataDealUtils::xmlToMap(const QByteArray &data, bool *ok, QString *errDesc)
 {
     QXmlStreamReader reader(data);
 
-    ok = true;
-    errDesc.clear();
+    *ok = true;
+    (*errDesc).clear();
     while (!reader.atEnd()) {
         reader.readNext();
 
@@ -1193,8 +1193,8 @@ QVariantMap DataDealUtils::xmlToMap(const QByteArray &data, bool &ok, QString &e
     }
 
     if (reader.hasError()) {
-        ok = false;
-        errDesc = reader.errorString();
+        *ok = false;
+        *errDesc = reader.errorString();
     }
 
     return QVariantMap();

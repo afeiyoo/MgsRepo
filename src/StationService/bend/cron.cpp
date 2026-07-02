@@ -104,7 +104,7 @@ int Cron::getIncrementFiles()
 
         bool jsonOk = false;
         QString jsonErrDesc;
-        QVariantMap resMap = DataDealUtils::jsonToMap(retMsg, jsonOk, jsonErrDesc);
+        QVariantMap resMap = DataDealUtils::jsonToMap(retMsg, &jsonOk, &jsonErrDesc);
         if (!jsonOk) {
             LOG_ERROR().noquote() << QString("%1增量文件内容异常:").arg(reqVersion) << jsonErrDesc;
             return -1;
@@ -162,7 +162,7 @@ bool Cron::checkVersionIsValid(const QString &version) const
 
     bool jsonOk = false;
     QString jsonErrDesc;
-    DataDealUtils::jsonToMap(reader.data(), jsonOk, jsonErrDesc);
+    DataDealUtils::jsonToMap(reader.data(), &jsonOk, &jsonErrDesc);
 
     if (!jsonOk) {
         LOG_ERROR().noquote() << QString("增量文件%1数据异常:").arg(file.fileName()) << jsonErrDesc;
@@ -180,7 +180,7 @@ int Cron::getFullFiles()
         return -1;
     }
 
-    LOG_INFO().noquote() << "开始请求获取远程BlackUpdate.xml Url: " << GM_INS->m_conf->m_fullCheckUrl;
+    LOG_INFO().noquote() << "开始请求获取远程BlackUpdate.xml: " << GM_INS->m_conf->m_fullCheckUrl;
 
     Http client;
     QByteArray retMsg;
@@ -192,7 +192,7 @@ int Cron::getFullFiles()
 
     bool jsonOk = false;
     QString jsonErrDesc;
-    QVariantMap resMap = DataDealUtils::jsonToMap(retMsg, jsonOk, jsonErrDesc);
+    QVariantMap resMap = DataDealUtils::jsonToMap(retMsg, &jsonOk, &jsonErrDesc);
     if (!jsonOk) {
         LOG_ERROR().noquote() << "远程BlackUpdate.xml解析异常:" << jsonErrDesc;
         return -1;
@@ -242,7 +242,7 @@ int Cron::getFullFiles()
 
         bool xmlOk = false;
         QString xmlErrDesc;
-        QVariantMap infoMap = DataDealUtils::xmlToMap(reader.data(), xmlOk, xmlErrDesc);
+        QVariantMap infoMap = DataDealUtils::xmlToMap(reader.data(), &xmlOk, &xmlErrDesc);
         if (!xmlOk) {
             LOG_ERROR().noquote() << "解析本地BlackUpdate.xml失败:" << xmlErrDesc;
             return -1;
@@ -315,7 +315,7 @@ int Cron::downloadFullFiles(const QVariantList &fileList, const QVariantList &md
 
     for (int i = 0; i < downloadedFiles.size(); ++i) {
         bool md5Ok = false;
-        QString actualMd5 = DataDealUtils::bigFileMd5(downloadedFiles.at(i), md5Ok);
+        QString actualMd5 = DataDealUtils::bigFileMd5(downloadedFiles.at(i), &md5Ok);
         QString expectedMd5 = md5List.at(i).toString().trimmed().toUpper();
 
         FileName file = FileName::fromString(downloadedFiles.at(i));

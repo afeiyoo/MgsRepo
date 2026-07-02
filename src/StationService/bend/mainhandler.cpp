@@ -25,7 +25,7 @@ QString MainHandler::doMainDeal(const QByteArray &reqBody) const
 {
     bool ok = false;
     QString errDesc;
-    QVariantMap aMap = DataDealUtils::jsonToMap(reqBody, ok, errDesc);
+    QVariantMap aMap = DataDealUtils::jsonToMap(reqBody, &ok, &errDesc);
 
     if (!ok) {
         LOG_ERROR().noquote() << errDesc;
