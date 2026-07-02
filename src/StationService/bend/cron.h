@@ -24,6 +24,7 @@ private:
     int downloadFullFiles(const QVariantList &fileList, const QVariantList &md5Lit, const QVariantList &urlList);
     void removeDownloadedFiles(const QStringList &filePaths);
     bool saveFullXml(const QVariantMap &map);
+    void removeOldFullFiles(const QString &ver);
 
 protected:
     void run() override;

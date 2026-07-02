@@ -228,6 +228,7 @@ int Cron::getFullFiles()
 
     // 获取本地版本号，进行比较分析
     bool startDownload = false;
+    QString localVer;
     FileName infoFile = FileName::fromString(GM_INS->m_conf->m_fullSavePath + "/BlackUpdate.xml");
     if (!infoFile.exists()) {
         LOG_INFO().noquote() << "本地BlackUpdate.xml不存在，启动全量文件下载";
@@ -247,7 +248,7 @@ int Cron::getFullFiles()
             return -1;
         }
 
-        QString localVer = infoMap["batchno"].toString();
+        localVer = infoMap["batchno"].toString();
 
         LOG_INFO().noquote() << "远程全量版本号:" << remoteVer << "本地全量版本号:" << localVer;
         if (localVer.toUInt() < remoteVer.toUInt()) {
@@ -270,6 +271,9 @@ int Cron::getFullFiles()
     // 所有全量文件下载成功，将json文件内容转换为XML文件，并保存
     if (!saveFullXml(resMap))
         return -1;
+
+    // 删除旧版本全量文件
+    removeOldFullFiles(localVer);
 
     return 0;
 }
@@ -403,6 +407,26 @@ bool Cron::saveFullXml(const QVariantMap &map)
 
     LOG_INFO().noquote() << "保存BlackUpdate.xml成功:" << file.fileName();
     return true;
+}
+
+void Cron::removeOldFullFiles(const QString &ver)
+{
+    QDir dir(GM_INS->m_conf->m_fullSavePath);
+    if (!dir.exists())
+        return;
+
+    dir.setFilter(QDir::Files);
+    dir.setNameFilters({QString("*%2*").arg(ver)});
+
+    QFileInfoList fileInfoList = dir.entryInfoList();
+    for (const auto &fi : fileInfoList) {
+        QString errStr;
+        if (FileUtils::removeRecursively(FileName(fi), &errStr)) {
+            LOG_INFO().noquote() << "成功删除旧版本" << ver << "全量文件:" << fi.fileName();
+        } else {
+            LOG_ERROR().noquote() << "未成功删除旧版本" << ver << "全量文件:" << fi.fileName();
+        }
+    }
 }
 
 void Cron::run()
