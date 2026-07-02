@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QTextCodec>
 #include <QXmlStreamWriter>
 
@@ -228,7 +229,6 @@ int Cron::getFullFiles()
 
     // 获取本地版本号，进行比较分析
     bool startDownload = false;
-    QString localVer;
     FileName infoFile = FileName::fromString(GM_INS->m_conf->m_fullSavePath + "/BlackUpdate.xml");
     if (!infoFile.exists()) {
         LOG_INFO().noquote() << "本地BlackUpdate.xml不存在，启动全量文件下载";
@@ -248,7 +248,7 @@ int Cron::getFullFiles()
             return -1;
         }
 
-        localVer = infoMap["batchno"].toString();
+        QString localVer = infoMap["batchno"].toString();
 
         LOG_INFO().noquote() << "远程全量版本号:" << remoteVer << "本地全量版本号:" << localVer;
         if (localVer.toUInt() < remoteVer.toUInt()) {
@@ -273,7 +273,7 @@ int Cron::getFullFiles()
         return -1;
 
     // 删除旧版本全量文件
-    removeOldFullFiles(localVer);
+    removeOldFullFiles(remoteVer);
 
     return 0;
 }
@@ -414,17 +414,28 @@ void Cron::removeOldFullFiles(const QString &ver)
     QDir dir(GM_INS->m_conf->m_fullSavePath);
     if (!dir.exists())
         return;
+    if (ver.isEmpty())
+        return;
 
-    dir.setFilter(QDir::Files);
-    dir.setNameFilters({QString("*%2*").arg(ver)});
+    int currentVer = ver.toInt();
 
+    dir.setFilter(QDir::Files | QDir::NoDotAndDotDot);
     QFileInfoList fileInfoList = dir.entryInfoList();
+    QRegularExpression versionRe("_(\\d{8})\\.zip(?:_\\d+)?$");
     for (const auto &fi : fileInfoList) {
+        QRegularExpressionMatch match = versionRe.match(fi.fileName());
+        if (!match.hasMatch())
+            continue;
+
+        int fileVer = match.captured(1).toInt();
+        if (fileVer >= currentVer)
+            continue;
+
         QString errStr;
         if (FileUtils::removeRecursively(FileName(fi), &errStr)) {
-            LOG_INFO().noquote() << "成功删除旧版本" << ver << "全量文件:" << fi.fileName();
+            LOG_INFO().noquote() << "成功删除旧版本全量文件:" << fi.fileName();
         } else {
-            LOG_ERROR().noquote() << "未成功删除旧版本" << ver << "全量文件:" << fi.fileName();
+            LOG_ERROR().noquote() << "未成功删除旧版本全量文件:" << fi.fileName() << "原因:" << errStr;
         }
     }
 }
