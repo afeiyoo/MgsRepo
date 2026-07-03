@@ -152,21 +152,27 @@ QString MainHandler::dealQueryXZPass(const QVariantMap &aMap) const
     if (aMap.contains("querySql"))
         querySql = aMap["querySql"].toString();
 
-    if (querySql.isEmpty())
-        throw BaseException(1, "querySql为空，dealQueryXZPass执行失败");
+    QVariantMap resMap;
+    if (querySql.isEmpty()) {
+        resMap["errCode"] = 1;
+        resMap["returnMessage"] = "querySql为空，dealQueryXZPass执行失败";
+        return DataDealUtils::mapToJson(resMap);
+    }
 
     bool ok = false;
     int cnt = GM_INS->m_ds->fetchXZPassTimes(querySql, &ok);
-    if (!ok)
-        throw BaseException(1, "查询厦漳大桥通行趟次时，发生异常");
+    if (!ok) {
+        resMap["errCode"] = 1;
+        resMap["returnMessage"] = "查询厦漳大桥通行趟次时，发生异常";
+        return DataDealUtils::mapToJson(resMap);
+    }
 
-    QVariantMap resMap;
     if (cnt > 0) {
         resMap["errCode"] = 0;
-        resMap["errorMessage"] = QString::number(cnt);
+        resMap["returnMessage"] = QString::number(cnt);
     } else {
         resMap["errCode"] = 1;
-        resMap["errorMessage"] = "未查询到相关记录";
+        resMap["returnMessage"] = "未查询到相关记录";
     }
     return DataDealUtils::mapToJson(resMap);
 }
