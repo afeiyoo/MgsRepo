@@ -3,7 +3,7 @@
 #include "Logger.h"
 #include "NlohmannJson/nlojson.hpp"
 #include "bend/bizhandler.h"
-#include "config/baseexception.h"
+#include "core/baseexception.h"
 
 using namespace stefanfrings;
 

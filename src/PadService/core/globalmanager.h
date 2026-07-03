@@ -22,6 +22,8 @@ public:
     void init();
 
 public:
+    // 配置文件路径
+    QString m_confPath;
     // 配置对象
     Config *m_config = nullptr;
     // 数据库连接池

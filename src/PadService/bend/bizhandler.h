@@ -3,7 +3,7 @@
 #include <QObject>
 
 #include "HttpClient/src/httpreply.h"
-#include "bend/dataservice.h"
+#include "dataservice/dataservice.h"
 #include "global/defs.h"
 
 class BizHandler : public QObject

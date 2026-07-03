@@ -6,8 +6,8 @@
 #include "NlohmannJson/nlojson.hpp"
 #include "bean/t_discardticketreview.h"
 #include "bean/t_specialcards.h"
-#include "config/baseexception.h"
-#include "global/globalmanager.h"
+#include "core/baseexception.h"
+#include "core/globalmanager.h"
 #include "utils/datadealutils.h"
 
 DataService::DataService(QObject *parent)

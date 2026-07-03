@@ -2,9 +2,8 @@
 
 #include "HttpServer/httplistener.h"
 #include "Logger.h"
-#include "bend/httphandler.h"
-#include "global/globalmanager.h"
-#include "utils/fileutils.h"
+#include "core/globalmanager.h"
+#include "core/httphandler.h"
 
 int main(int argc, char *argv[])
 {
@@ -13,8 +12,7 @@ int main(int argc, char *argv[])
     GM_INSTANCE->init();
 
     LOG_INFO().noquote() << "<<< Starting the application >>>";
-    Utils::FileName configFile = Utils::FileName::fromString(Utils::FileUtils::curApplicationDirPath() + "/config/config.ini");
-    QSettings setting(configFile.toString(), QSettings::IniFormat, &app);
+    QSettings setting(GM_INSTANCE->m_confPath, QSettings::IniFormat, &app);
     setting.beginGroup("listener");
 
     HttpHandler handler(&app);

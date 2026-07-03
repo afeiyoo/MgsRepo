@@ -3,8 +3,8 @@
 #include "ConsoleAppender.h"
 #include "Logger.h"
 #include "RollingFileAppender.h"
-#include "bend/dtpsender.h"
 #include "config/config.h"
+#include "core/dtpsender.h"
 #include "utils/fileutils.h"
 
 Q_GLOBAL_STATIC(GlobalManager, ins);
@@ -14,6 +14,7 @@ GlobalManager::GlobalManager(QObject *parent)
 {
     m_config = new Config(this);
     m_dtpSender = new DtpSender(this);
+    m_confPath = Utils::FileUtils::curApplicationDirPath() + "/config/config.ini";
 }
 
 GlobalManager::~GlobalManager() {}
@@ -40,7 +41,7 @@ void GlobalManager::init()
     cuteLogger->registerAppender(rollingFileAppender);
 
     // 配置加载
-    Utils::FileName configPath = Utils::FileName::fromString(Utils::FileUtils::curApplicationDirPath() + "/config/config.ini");
+    Utils::FileName configPath = Utils::FileName::fromString(m_confPath);
     m_config->loadConfig(configPath);
 
     // 系统环境初始化
