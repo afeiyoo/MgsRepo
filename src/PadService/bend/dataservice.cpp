@@ -1074,3 +1074,28 @@ QVariantList DataService::getExGreenPassTrades(const QString &startTime, const Q
 
     return records;
 }
+
+QVariantList DataService::getStationAuthorization(const QString &stationID)
+{
+    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QString sql(R"(SELECT * FROM t_emergencyauthfunction WHERE stationid = ?)");
+
+    EasyQtSql::Transaction t(sdb);
+    try {
+        EasyQtSql::PreparedQuery query = t.prepare(sql);
+        EasyQtSql::QueryResult res = query.exec(stationID);
+
+        LOG_INFO().noquote() << "执行SQL语句: " << Utils::DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        QVariantList resList;
+        while (res.next()) {
+            QVariantMap oneMap = res.toMap();
+            resList.append(oneMap);
+        }
+
+        return resList;
+    } catch (EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
+        return {};
+    }
+}

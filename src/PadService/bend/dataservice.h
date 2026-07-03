@@ -99,13 +99,8 @@ public:
     int getOutShiftSettleCount(const QString &stationId, const QString &shiftDate, int shiftId, QUrl url);
 
     // 插入相关班次数据
-    bool insertOutShiftSettle(const QString &dataId,
-                              const QString &shiftDate,
-                              int shiftId,
-                              const QString &stationId,
-                              const QString &operatorId,
-                              const QString &operatorName,
-                              QUrl url);
+    bool insertOutShiftSettle(const QString &dataId, const QString &shiftDate, int shiftId, const QString &stationId, const QString &operatorId,
+                              const QString &operatorName, QUrl url);
 
     // 插入稽核审核图片
     bool insertTicketReviewPic(const T_DiscardTicketReview &review, QUrl url);
@@ -115,4 +110,7 @@ public:
 
     // 查询本站绿通流水
     QVariantList getExGreenPassTrades(const QString &startTime, const QString &stopTime, QUrl url);
+
+    // 查询对应收费站相应功能权限
+    QVariantList getStationAuthorization(const QString &stationID);
 };

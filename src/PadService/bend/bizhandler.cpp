@@ -99,6 +99,9 @@ QString BizHandler::doMainDeal(int cmdType, const QVariantMap &dataMap, const QB
     case 40:
         dealtData = doDealCmd40(dataMap); // 云坐席台账
         break;
+    case 41:
+        dealtData = doDealCmd41(dataMap); // 权限管理
+        break;
     default:
         break;
     }
@@ -2622,4 +2625,36 @@ QString BizHandler::requestRemoteAPI(int type, const QString &id, const QString 
     }
 
     return result;
+}
+
+QString BizHandler::doDealCmd41(const QVariantMap &aMap)
+{
+    QString stationID;
+
+    if (aMap.contains("stationID"))
+        stationID = aMap["stationID"].toString();
+
+    if (stationID.isEmpty())
+        throw BaseException(1, "响应失败: 请求站代码为空");
+
+    QVariantList resList = m_ds.getStationAuthorization(stationID);
+    if (resList.isEmpty())
+        throw BaseException(1, "相应失败: 未查询到相关记录");
+
+    QVariantList authInfos;
+    for (const auto &record : resList) {
+        QVariantMap oneMap = record.toMap();
+
+        QVariantMap info;
+        info["authNo"] = oneMap["FUNID"].toInt();
+        info["authName"] = oneMap["FUNNAME"].toString();
+        authInfos.append(info);
+    }
+
+    QVariantMap resMap;
+    resMap["status"] = 0;
+    resMap["desc"] = QString("成功查询到%1条记录").arg(resList.size());
+    resMap["authInfo"] = authInfos;
+
+    return Utils::DataDealUtils::mapToJson(resMap);
 }
