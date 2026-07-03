@@ -6,10 +6,7 @@
 #include "Logger.h"
 #include "bend/cron.h"
 #include "core/globalmanager.h"
-#include "core/httphandler.h"
-#include "utils/fileutils.h"
-
-using namespace Utils;
+#include "core/requestmapper.h"
 
 int main(int argc, char *argv[])
 {
@@ -17,7 +14,6 @@ int main(int argc, char *argv[])
 
     int res = GM_INS->init();
     if (res < 0) {
-        LOG_INFO().noquote() << "Application initialize failed! Error code is" << res;
         return res;
     }
 
@@ -27,13 +23,10 @@ int main(int argc, char *argv[])
     Cron checker;
     checker.start();
 
-    // Http监听
-    FileName configFile = FileName::fromString(FileUtils::curApplicationDirPath() + "/config/StationServiceCfg.ini");
-    QSettings *listenerSettings = new QSettings(FileUtils::canonicalPath(configFile).toString(), QSettings::IniFormat, &a);
+    // Http 服务
+    QSettings *listenerSettings = new QSettings(GM_INS->m_confPath, QSettings::IniFormat, &a);
     listenerSettings->beginGroup("Listener");
-
-    HttpHandler *handler = new HttpHandler(&a);
-    new stefanfrings::HttpListener(listenerSettings, handler, &a);
+    new stefanfrings::HttpListener(listenerSettings, new RequestMapper(&a), &a);
 
     int result = a.exec();
     if (result)

@@ -8,7 +8,6 @@
 #include "core/baseexception.h"
 #include "core/globalmanager.h"
 #include "dbs/dataservice.h"
-#include "utils/configutils.h"
 #include "utils/datadealutils.h"
 #include "utils/fileutils.h"
 

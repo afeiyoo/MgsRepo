@@ -31,6 +31,7 @@ SOURCES += \
         core/httphandler.cpp \
         config/config.cpp \
         core/globalmanager.cpp \
+        core/requestmapper.cpp \
         dbs/dataservice.cpp \
         dbs/dataservicedameng.cpp \
         dbs/dataservicesqlserver.cpp \
@@ -43,6 +44,7 @@ HEADERS += \
     core/httphandler.h \
     config/config.h \
     core/globalmanager.h \
+    core/requestmapper.h \
     dbs/dataservice.h \
     dbs/dataservicedameng.h \
     dbs/dataservicesqlserver.h

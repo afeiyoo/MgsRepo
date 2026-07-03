@@ -1,6 +1,7 @@
 #include "globalmanager.h"
 
 #include "ConsoleAppender.h"
+#include "HttpServer/staticfilecontroller.h"
 #include "RollingFileAppender.h"
 #include "config/config.h"
 #include "dbs/dataservicedameng.h"
@@ -16,6 +17,7 @@ GlobalManager::GlobalManager(QObject *parent)
     : QObject{parent}
 {
     m_conf = new Config(this);
+    m_confPath = FileUtils::curApplicationDirPath() + "/config/StationServiceCfg.ini";
 }
 
 GlobalManager::~GlobalManager() {}
@@ -28,11 +30,11 @@ GlobalManager *GlobalManager::instance()
 int GlobalManager::init()
 {
     // 配置加载
-    FileName confPath = FileName::fromString(FileUtils::curApplicationDirPath() + "/config/StationServiceCfg.ini");
-    if (!confPath.exists()) {
+    FileName confFile = FileName::fromString(m_confPath);
+    if (!confFile.exists()) {
         return -100;
     }
-    m_conf->loadConfig(confPath);
+    m_conf->loadConfig(confFile);
 
     // 日志初始化
     ConsoleAppender *consoleAppender = new ConsoleAppender();
@@ -58,6 +60,11 @@ int GlobalManager::init()
     if (!dbOk) {
         return -101;
     }
+
+    // 静态文件服务初始化
+    QSettings *fileSetting = new QSettings(m_confPath, QSettings::IniFormat, this);
+    fileSetting->beginGroup("Files");
+    m_staticFileController = new stefanfrings::StaticFileController(fileSetting, this);
 
     return 0;
 }

@@ -6,6 +6,9 @@
 
 class Config;
 class DataService;
+namespace stefanfrings {
+class StaticFileController;
+}
 class GlobalManager : public QObject
 {
     Q_OBJECT
@@ -21,6 +24,8 @@ public:
     bool saveCurBlackVersion(const QString &ver);
 
 public:
-    Config *m_conf = nullptr;    // 配置管理类
-    DataService *m_ds = nullptr; // 数据库操作类
+    Config *m_conf = nullptr;                                             // 配置管理类
+    DataService *m_ds = nullptr;                                          // 数据库操作类
+    stefanfrings::StaticFileController *m_staticFileController = nullptr; // 静态文件服务
+    QString m_confPath;                                                   // 配置文件路径
 };
