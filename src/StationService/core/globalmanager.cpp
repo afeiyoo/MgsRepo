@@ -75,7 +75,7 @@ int GlobalManager::init()
 QString GlobalManager::getCurBlackVersion() const
 {
     ConfigUtils conf;
-    conf.init(FileUtils::curApplicationDirPath() + "/config/StationServiceCfg.ini", ConfigUtils::INI);
+    conf.init(m_confPath, ConfigUtils::INI);
 
     QString curVersion = conf.getValue("BaseEnv/Version", "").toString();
     LOG_INFO().noquote() << "当前增量版本:" << curVersion;
@@ -86,8 +86,9 @@ QString GlobalManager::getCurBlackVersion() const
 bool GlobalManager::saveCurBlackVersion(const QString &ver)
 {
     ConfigUtils conf;
-    conf.init(FileUtils::curApplicationDirPath() + "/config/StationServiceCfg.ini", ConfigUtils::INI);
+    conf.init(m_confPath, ConfigUtils::INI);
 
     conf.setValue("BaseEnv/Version", ver);
     LOG_INFO().noquote() << "更新增量版本:" << ver;
+    return true;
 }

@@ -19,7 +19,9 @@ using namespace Utils;
 
 Cron::Cron(QObject *parent)
     : QThread{parent}
-{}
+{
+    m_delJsonTime = DataDealUtils::curUnixDateTime();
+}
 
 Cron::~Cron()
 {
@@ -32,8 +34,8 @@ Cron::~Cron()
 void Cron::checkJsonToDelete()
 {
     QDateTime curDate = DataDealUtils::curDateTime();
-    QString saveDirPath = QString("%1/download").arg(FileUtils::curApplicationDirPath()); // 增量文件存储路径
-    QDate expireDate = curDate.addDays(-GM_INS->m_conf->m_saveDays).date();               // 到期文件的日期
+    QString saveDirPath = QString("%1/download").arg(FileUtils::curApplicationDirPath());        // 增量文件存储路径
+    QDate expireDate = curDate.addDays(-static_cast<qint64>(GM_INS->m_conf->m_saveDays)).date(); // 到期文件的日期
 
     QDir dir(saveDirPath);
     if (!dir.exists())
