@@ -1,7 +1,7 @@
 #include "networkhttpreply.h"
 
 NetworkHttpReply::NetworkHttpReply(const HttpRequest &req, Http &http)
-    : http(http), req(req), retryCount(0) {
+    : http(http), req(req), retryCount(0), finishedEmitted(false) {
     if (req.url.isEmpty()) {
         qWarning() << "Empty URL";
     }
@@ -48,13 +48,20 @@ void NetworkHttpReply::emitError() {
 }
 
 void NetworkHttpReply::emitFinished() {
+    if (finishedEmitted)
+        return;
+    finishedEmitted = true;
+
     readTimeoutTimer->stop();
 
     // disconnect to avoid replyFinished() from being called
+    if (!networkReply) {
+        emit finished(*this);
+        return;
+    }
+
     networkReply->disconnect();
     /** 2026-04-17 第三方库修改 断线重连问题 */
-    networkReply->abort();
-
     emit finished(*this);
 
     // bye bye my reply
@@ -137,15 +144,14 @@ void NetworkHttpReply::readTimeout() {
                         networkReply->operation() == QNetworkAccessManager::HeadOperation) &&
                        retryCount < http.getMaxRetries();
 
+    if (!shouldRetry) {
+        emitError();
+        return;
+    }
+
     networkReply->disconnect();
     networkReply->abort();
     networkReply->deleteLater();
-
-    if (!shouldRetry) {
-        emitError();
-        emit finished(*this);
-        return;
-    }
 
     retryCount++;
     QNetworkReply *retryReply = http.networkReply(req);
@@ -164,7 +170,11 @@ int NetworkHttpReply::statusCode() const {
 }
 
 QString NetworkHttpReply::reasonPhrase() const {
-    return networkReply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString();
+    /** 2026-06-22 第三方库修改 错误日志输出修改 */
+    QString reason = networkReply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString();
+    if (reason.isEmpty() && networkReply->error() != QNetworkReply::NoError)
+        reason = networkReply->errorString();
+    return reason;
 }
 
 const QList<QNetworkReply::RawHeaderPair> NetworkHttpReply::headers() const {

@@ -1,7 +1,9 @@
 #pragma once
 
+#include <QJsonDocument>
 #include <QObject>
 #include <QSqlQuery>
+#include <QXmlStreamReader>
 
 namespace Utils {
 
@@ -17,6 +19,9 @@ public:
     /*******************************************************/
     // MD5编码
     static QString cryptoMD5(const QString &s, bool bUtf8 = true);
+
+    // 大文件计算MD5编码
+    static QString bigFileMd5(const QString &filePath, bool *ok);
 
     // Modbus CRC16校验
     static quint16 getModbus16(quint8 *data, int len);
@@ -56,10 +61,10 @@ public:
 
     //获取当前时间的unix时间戳
     static uint curUnixDateTime();
+
     /*******************************************************/
     /****                   内容输出相关                 ****/
     /*******************************************************/
-
     // 数字转字符串，并在左侧补0，可指定数字最小宽度
     static QString padValue(quint32 value, int width = -1);
 
@@ -134,13 +139,6 @@ public:
     // 3-移除首尾空格,中间空格保留1个
     static QString trimmed(const QString &text, short type);
 
-    // 获取字符串中的中文个数
-    static int getChineseCountFromString(const QString &data, int checkLen);
-
-    // 生成指定范围(0~doundary)的随机数
-    // Qt5.10前的版本，在获取随机数前需要先调用 qsrand(seed), 生成随机数种子
-    static int getRandomNum(quint32 boundary);
-
     // 将字符串转换成指定编码 1. 转GBK编码 2. 转UTF8编码
     static QByteArray encodeString(const QString &text, int coding);
 
@@ -151,16 +149,53 @@ public:
     static void appendStrWithSubStr(QString &str, const QString &subStr, const QString &delimiter);
 
     /*******************************************************/
+    /****                数据统计相关                    ****/
+    /*******************************************************/
+    // 获取字符串中的中文个数
+    static int getChineseCountFromString(const QString &data, int checkLen);
+
+    // 生成指定范围(0~doundary)的随机数
+    // Qt5.10前的版本，在获取随机数前需要先调用 qsrand(seed), 生成随机数种子
+    static int getRandomNum(quint32 boundary);
+
+    // 计算两个字符串之间的相似度
+    static int calcStrMatchScore(const QString &fullStr, const QString &partStr);
+
+    /*******************************************************/
     /****                   SQL 相关                    ****/
     /*******************************************************/
     // 解析obj对象，获取对应的插入Sql
-    static QString getInsertSql(QObject *obj);
+    static QString getInsertSql(const QObject *obj);
 
     // 解析obj对象，获取对应的更新Sql
-    static QString getUpdateSql(QObject *obj);
+    static QString getUpdateSql(const QObject *obj);
 
     // 输出完整的SQL语句（不含占位符）
     static QString fullExecutedQuery(const QSqlQuery &query);
+
+    /*******************************************************/
+    /****                 内容格式转换相关               ****/
+    /*******************************************************/
+    // Json对象转换成QVariantMap
+    static QVariantMap jsonToMap(const QByteArray &data, bool *ok, QString *errDesc);
+
+    // Json数组转换成QVariantList
+    static QVariantList jsonToList(const QByteArray &data, bool *ok, QString *errDesc);
+
+    // QVariantMap转换成QByteArray并可以指定输出格式
+    static QByteArray mapToJson(const QVariantMap &map, QJsonDocument::JsonFormat format = QJsonDocument::Compact);
+
+    // QVariantList转换成QByteArray并可以指定输出格式
+    static QByteArray listToJson(const QVariantList &list, QJsonDocument::JsonFormat format = QJsonDocument::Compact);
+
+    // XML转换成QVariantMap
+    static QVariantMap xmlToMap(const QByteArray &data, bool *ok, QString *errDesc);
+
+private:
+    static QString formatSqlValue(const QVariant &val);
+
+    static QVariant parseXmlElement(QXmlStreamReader &reader);
+    static void insertXmlValue(QVariantMap &map, const QString &key, const QVariant &value);
 };
 
 } // namespace Utils

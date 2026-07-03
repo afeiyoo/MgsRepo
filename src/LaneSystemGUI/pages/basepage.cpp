@@ -9,14 +9,15 @@
 #include "components/recenttradepanel.h"
 #include "components/scrolltext.h"
 #include "components/weightinfopanel.h"
+#include "dialogs/authdialog.h"
 #include "global/globalmanager.h"
 #include "global/signalmanager.h"
 #include "global/uiconst.h"
 #include "utils/datadealutils.h"
 #include "utils/uiutils.h"
 
-#include <QDebug>
 #include <QHBoxLayout>
+#include <QJsonObject>
 #include <QScrollBar>
 #include <QTableView>
 #include <QTimer>
@@ -152,18 +153,18 @@ void BasePage::setScrollTip(const QString &tip)
     m_scrollTip->setScrollText(tip);
 }
 
-void BasePage::logAppend(LaneSystemGUI::EM_LogLevel logLevel, const QString &log)
+void BasePage::logAppend(IPageController::EM_LogLevel logLevel, const QString &log)
 {
     const int maxCount = 300;
     const int trimCount = 100;
 
     // 维护日志缓存
     QString level;
-    if (logLevel == LaneSystemGUI::INFO) {
+    if (logLevel == IPageController::INFO) {
         level = "INFO";
-    } else if (logLevel == LaneSystemGUI::WARN) {
+    } else if (logLevel == IPageController::WARN) {
         level = "WARN";
-    } else if (logLevel == LaneSystemGUI::ERROR) {
+    } else if (logLevel == IPageController::ERROR) {
         level = "ERROR";
     } else {
         level = "DEBUG";
@@ -362,7 +363,7 @@ void BasePage::setDeviceList(const QList<uint> &devList)
     m_deviceIconPanel->setDeviceList(devList);
 }
 
-void BasePage::updateDeviceStatus(LaneSystemGUI::EM_DeviceIcon dev, uint status)
+void BasePage::updateDeviceStatus(IPageController::EM_DeviceIcon dev, uint status)
 {
     if (!m_deviceIconPanel)
         return;
@@ -377,6 +378,21 @@ void BasePage::showAuthDialog(const QString &id, const QString &name)
     m_authDlg->show();
     m_authDlg->setID(id);
     m_authDlg->setName(name);
+}
+
+void BasePage::showInfoDialog(const QString &title, const QStringList &strs, bool switchLine)
+{
+    QString message;
+    for (const auto &s : strs) {
+        QString line = s;
+        line.replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;");
+        message += line + "<br/>";
+    }
+    auto btn = UiUtils::showMessageBoxInfo(title, message, QMessageBox::Yes | QMessageBox::Cancel, switchLine);
+
+    QJsonObject obj;
+    obj["yes"] = btn == QMessageBox::Yes;
+    emit GM_SIG->sigDialogResp(m_api, obj);
 }
 
 QWidget *BasePage::initDisplayArea()
@@ -766,4 +782,9 @@ void BasePage::createBottomWidget()
     bottomHLayout->addWidget(widget1);
     bottomHLayout->addStretch();
     bottomHLayout->addWidget(clock);
+}
+
+void BasePage::setApi(int newApi)
+{
+    m_api = newApi;
 }

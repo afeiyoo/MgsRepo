@@ -17,6 +17,9 @@
 // STL
 #include <iostream>
 
+// Qt
+#include <QTextCodec>
+
 /**
  * \class FileAppender
  *
@@ -104,11 +107,13 @@ bool FileAppender::openFile()
     bool isOpen = m_logFile.isOpen();
     if (!isOpen) {
         isOpen = m_logFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
-        if (isOpen)
+        if (isOpen) {
             m_logStream.setDevice(&m_logFile);
-        else
+            m_logStream.setCodec(QTextCodec::codecForName("UTF-8"));
+        } else {
             std::cerr << "<FileAppender::append> Cannot open the log file "
                       << qPrintable(m_logFile.fileName()) << std::endl;
+        }
     }
     return isOpen;
 }

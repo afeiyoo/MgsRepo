@@ -1,0 +1,31 @@
+#pragma once
+
+#include <QObject>
+
+#define GM_INS GlobalManager::instance()
+
+class Config;
+class DataService;
+namespace stefanfrings {
+class StaticFileController;
+}
+class GlobalManager : public QObject
+{
+    Q_OBJECT
+public:
+    explicit GlobalManager(QObject *parent = nullptr);
+    ~GlobalManager() override;
+
+    static GlobalManager *instance();
+
+    int init();
+
+    QString getCurBlackVersion() const;
+    bool saveCurBlackVersion(const QString &ver);
+
+public:
+    Config *m_conf = nullptr;                                             // 配置管理类
+    DataService *m_ds = nullptr;                                          // 数据库操作类
+    stefanfrings::StaticFileController *m_staticFileController = nullptr; // 静态文件服务
+    QString m_confPath;                                                   // 配置文件路径
+};

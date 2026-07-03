@@ -1,7 +1,7 @@
 #include "devicepanel.h"
 
 #include "ElaWidgetTools/ElaIconButton.h"
-#include "lanesystemgui.h"
+#include "IPageController.h"
 
 #include <QDebug>
 #include <QHBoxLayout>
@@ -69,52 +69,52 @@ void DevicePanel::initUi()
 QString DevicePanel::iconPath(uint dev, uint status) const
 {
     QString path;
-    switch (static_cast<LaneSystemGUI::EM_DeviceIcon>(dev)) {
-    case LaneSystemGUI::CAPTURE: {
+    switch (static_cast<IPageController::EM_DeviceIcon>(dev)) {
+    case IPageController::CAPTURE: {
         if (status == 1 || status == 2)
             path = QString(":/static/images/cap_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::CELLING_LAMP: {
+    case IPageController::CELLING_LAMP: {
         if (status == 1 || status == 2 || status == 3)
             path = QString(":/static/images/celling_lamp_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::FIRST_COIL: {
+    case IPageController::FIRST_COIL: {
         if (status == 1 || status == 2 || status == 3)
             path = QString(":/static/images/first_coil_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::SECOND_COIL: {
+    case IPageController::SECOND_COIL: {
         if (status == 1 || status == 2 || status == 3)
             path = QString(":/static/images/second_coil_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::THIRD_COIL: {
+    case IPageController::THIRD_COIL: {
         if (status == 1 || status == 2 || status == 3)
             path = QString(":/static/images/third_coil_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::FOURTH_COIL: {
+    case IPageController::FOURTH_COIL: {
         if (status == 1 || status == 2 || status == 3)
             path = QString(":/static/images/fourth_coil_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::CAP_COIL: {
+    case IPageController::CAP_COIL: {
         if (status == 1 || status == 2 || status == 3)
             path = QString(":/static/images/capcoil_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::RAILLING_COIL: {
+    case IPageController::RAILLING_COIL: {
         if (status == 1 || status == 2 || status == 3)
             path = QString(":/static/images/railcoil_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::PASSING_LAMP: {
+    case IPageController::PASSING_LAMP: {
         if (status == 1 || status == 2 || status == 3)
             path = QString(":/static/images/passing_lamp_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::RAILING_MACHINE: {
+    case IPageController::RAILING_MACHINE: {
         if (status == 1 || status == 2 || status == 3)
             path = QString(":/static/images/railing_machine_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::RSU: {
+    case IPageController::RSU: {
         if (status == 1 || status == 2 || status == 3)
             path = QString(":/static/images/rsu_%1.png").arg(status);
     } break;
-    case LaneSystemGUI::WEIGHT: {
+    case IPageController::WEIGHT: {
         if (status == 1 || status == 2)
             path = QString(":/static/images/weight_%1.png").arg(status);
     } break;

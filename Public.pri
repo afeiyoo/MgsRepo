@@ -85,6 +85,8 @@ MGS_OUTPUT_PATH = $$PWD
     MGS_LIBRARY_PATH = $$MGS_OUTPUT_PATH/$$MGS_LIBRARY_BASENAME
     # 可执行文件的输出目录
     MGS_BIN_PATH = $$MGS_OUTPUT_PATH/bin
+    # 引文头文件的输出目录
+    MGS_INCLUDE_PATH = $$MGS_OUTPUT_PATH/include
 }
 
 # 函数定义，拷贝指定的动态库到目标目录 DESTDIR
@@ -135,6 +137,32 @@ defineTest(copyLibsToDestdir) {
         }
         export(QMAKE_POST_LINK)
     }
+    return(true)
+}
+
+# 函数定义，将库的引用头文件复制到指定目录
+defineTest(copyHeadersToInclude) {
+    PUBLIC_INCLUDE_DIR = $$MGS_INCLUDE_PATH/$$1
+
+    win32 {
+        PUBLIC_INCLUDE_DIR_WIN = $$PUBLIC_INCLUDE_DIR
+        PUBLIC_INCLUDE_DIR_WIN ~= s,/,\\,g
+        QMAKE_POST_LINK += if not exist $$shell_quote($$PUBLIC_INCLUDE_DIR_WIN) mkdir $$shell_quote($$PUBLIC_INCLUDE_DIR_WIN) $$escape_expand(\\n\\t)
+
+        for(header, $$2) {
+            HEADER_WIN = $$header
+            HEADER_WIN ~= s,/,\\,g
+            QMAKE_POST_LINK += cmd /c copy /Y $$shell_quote($$HEADER_WIN) $$shell_quote($$PUBLIC_INCLUDE_DIR_WIN) $$escape_expand(\\n\\t)
+        }
+    } else {
+        QMAKE_POST_LINK += mkdir -p $$shell_quote($$PUBLIC_INCLUDE_DIR) $$escape_expand(\\n\\t)
+
+        for(header, $$2) {
+            QMAKE_POST_LINK += cp -f $$shell_quote($$header) $$shell_quote($$PUBLIC_INCLUDE_DIR) $$escape_expand(\\n\\t)
+        }
+    }
+
+    export(QMAKE_POST_LINK)
     return(true)
 }
 

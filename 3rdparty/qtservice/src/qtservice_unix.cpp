@@ -8,6 +8,7 @@
 #include <QCoreApplication>
 #include <QStringList>
 #include <QFile>
+#include <QFileInfo>
 #include <QTimer>
 #include <QDir>
 #include <pwd.h>
@@ -376,7 +377,8 @@ bool QtServiceBasePrivate::start()
     // Could just call controller.start() here, but that would fail if
     // we're not installed. We do not want to strictly require installation.
     ::setenv("QTSERVICE_RUN", "1", 1);  // Tell the detached process it's it
-    return QProcess::startDetached(filePath(), args.mid(1), "/");
+    /** 2026-07-03 第三方库修改 正确设置服务的当前工作路径 */
+    return QProcess::startDetached(filePath(), args.mid(1), QFileInfo(filePath()).absolutePath());
 }
 
 bool QtServiceBasePrivate::install(const QString &account, const QString &password)

@@ -8,8 +8,6 @@ TEMPLATE = lib
 CONFIG += shared dll
 TARGET = $$qtLibraryTargetName($$TARGET)
 
-DEFINES += USE_ELAWIDGETTOOLS
-
 shared|dll {
     DEFINES += LANESYSTEMGUI_DYNAMIC
 } else {
@@ -48,6 +46,7 @@ SOURCES += \
     pages/mtcoutpage.cpp
 
 HEADERS += \
+    IPageController.h \
     components/devicepanel.h \
     components/iconbutton.h \
     components/pagearea.h \
@@ -79,6 +78,14 @@ unix {
     target.path = /usr/lib
 }
 !isEmpty(target.path): INSTALLS += target
+
+# 引用头文件导出
+PUBLIC_HEADERS = \
+    $$PWD/lanesystemgui.h \
+    $$PWD/lanesystemgui_global.h \
+    $$PWD/IPageController.h \
+    $$PWD/global/signalmanager.h
+copyHeadersToInclude($$TARGET, PUBLIC_HEADERS)
 
 RESOURCES += \
     resource.qrc

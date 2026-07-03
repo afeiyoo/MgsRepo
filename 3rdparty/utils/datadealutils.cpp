@@ -6,6 +6,10 @@
     #include <QRandomGenerator>
 #endif
 #include <QDebug>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <QMetaProperty>
 #include <QTextCodec>
 #include <QVariant>
@@ -23,6 +27,28 @@ QString DataDealUtils::cryptoMD5(const QString &s, bool bUtf8 /*= true */)
     QByteArray input = bUtf8 ? s.toUtf8() : s.toLocal8Bit();
     QByteArray hash = QCryptographicHash::hash(input, QCryptographicHash::Md5);
     return QString(hash.toHex()).toUpper();
+}
+
+QString DataDealUtils::bigFileMd5(const QString &filePath, bool *ok)
+{
+    *ok = false;
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QString();
+    }
+
+    QCryptographicHash hash(QCryptographicHash::Md5);
+    while (!file.atEnd()) {
+        QByteArray chunk = file.read(1024 * 1024);
+        if (chunk.isEmpty() && file.error() != QFile::NoError) {
+            return QString();
+        }
+        hash.addData(chunk);
+    }
+
+    *ok = true;
+    return QString(hash.result().toHex()).toUpper();
 }
 
 quint16 DataDealUtils::getModbus16(quint8 *data, int len)
@@ -853,19 +879,15 @@ QString DataDealUtils::trimmed(const QString &text, short type)
 
 int DataDealUtils::getChineseCountFromString(const QString &data, int checkLen)
 {
-    if (checkLen == 0)
-        checkLen = data.length();
-
-    if (data.isEmpty() || data.length() < checkLen)
-        return 0;
-    int count = 0;
-    for (int i = 1; i <= checkLen; i++) {
-        if ((data.toStdString().c_str()[i] & 0x80) >> 7) { // 判断最高位是否为1
-            count++;
-            ++i;
-        }
+    int nCount = 0;
+    int limit = qMin(checkLen, data.size());
+    for (int i = 0; i < limit; ++i) {
+        QChar ch = data.at(i);
+        // 中文字符Unicode区间
+        if (ch.unicode() >= 0x4E00 && ch.unicode() <= 0x9FFF)
+            nCount++;
     }
-    return count;
+    return nCount;
 }
 
 int DataDealUtils::getRandomNum(quint32 boundary)
@@ -877,6 +899,38 @@ int DataDealUtils::getRandomNum(quint32 boundary)
 #else
     return qrand() % boundary;
 #endif
+}
+
+int DataDealUtils::calcStrMatchScore(const QString &fullStr, const QString &partStr)
+{
+    if (fullStr.isEmpty() || partStr.isEmpty())
+        return 0;
+
+    // 完全包含，直接认为100%
+    if (fullStr.contains(partStr))
+        return 100;
+
+    if (fullStr.size() < partStr.size())
+        return 0;
+
+    int maxMatchCnt = 0;
+    // 滑动窗口比较
+    for (int offset = 0; offset <= fullStr.size() - partStr.size(); ++offset) {
+        int matchCnt = 0;
+
+        for (int i = 0; i < partStr.size(); ++i) {
+            if (fullStr.at(offset + i) == partStr.at(i)) {
+                ++matchCnt;
+            }
+        }
+
+        if (matchCnt > maxMatchCnt)
+            maxMatchCnt = matchCnt;
+
+        qDebug().noquote() << maxMatchCnt << matchCnt;
+    }
+
+    return maxMatchCnt * 100 / partStr.size();
 }
 
 QByteArray DataDealUtils::encodeString(const QString &text, int coding)
@@ -916,39 +970,36 @@ void DataDealUtils::appendStrWithSubStr(QString &str, const QString &subStr, con
     str += subStr;
 }
 
-QString DataDealUtils::getInsertSql(QObject *obj)
+QString DataDealUtils::getInsertSql(const QObject *obj)
 {
-    QString colInc = obj->property("auto_inc").toString();
+    if (!obj)
+        return QString();
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QStringList autoIncCols = obj->property("auto_inc").toString().split(",", Qt::SkipEmptyParts);
+#else
+    QStringList autoIncCols = obj->property("auto_inc").toString().split(",", QString::SkipEmptyParts);
+#endif
+    for (QString &col : autoIncCols) {
+        col = col.trimmed();
+    }
+
     QString tableName = obj->metaObject()->className();
 
     QStringList colList;
     QStringList valList;
 
-    for (int i = 0; i < obj->metaObject()->propertyCount(); ++i) {
+    for (int i = obj->metaObject()->propertyOffset(); i < obj->metaObject()->propertyCount(); ++i) {
         QMetaProperty prp = obj->metaObject()->property(i);
-        QString colName = prp.name();
+        QString colName = QString::fromLatin1(prp.name());
 
-        if (colName == "objectName" || colName == "tbl_pk" || colName == "auto_inc" || colName == colInc)
+        if (colName == "objectName" || colName == "tbl_pk" || colName == "auto_inc" || autoIncCols.contains(colName))
             continue;
 
         QVariant val = obj->property(prp.name());
-        QString strVal;
-        switch (val.type()) {
-        case QVariant::String:
-            strVal = "'" + val.toString().replace("'", "''") + "'";
-            break;
-        case QVariant::Date:
-            strVal = "'" + val.toDate().toString("yyyy-MM-dd") + "'";
-            break;
-        case QVariant::DateTime:
-            strVal = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
-            break;
-        default:
-            strVal = val.toString();
-        }
 
         colList << colName.toLower();
-        valList << strVal;
+        valList << formatSqlValue(val);
     }
 
     // 没有可插入字段
@@ -960,47 +1011,40 @@ QString DataDealUtils::getInsertSql(QObject *obj)
     return sql;
 }
 
-QString DataDealUtils::getUpdateSql(QObject *obj)
+QString DataDealUtils::getUpdateSql(const QObject *obj)
 {
-    QString colInc = obj->property("auto_inc").toString();
+    if (!obj)
+        return QString();
+
     QString tableName = obj->metaObject()->className();
+
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     QStringList pkList = obj->property("tbl_pk").toString().split(",", Qt::SkipEmptyParts);
+    QStringList autoIncCols = obj->property("auto_inc").toString().split(",", Qt::SkipEmptyParts);
 #else
     QStringList pkList = obj->property("tbl_pk").toString().split(",", QString::SkipEmptyParts);
+    QStringList autoIncCols = obj->property("auto_inc").toString().split(",", QString::SkipEmptyParts);
 #endif
-
-    auto formatValue = [&](const QVariant &val) -> QString {
-        QString strVal;
-        switch (val.type()) {
-        case QVariant::String:
-            strVal = "'" + val.toString().replace("'", "''") + "'";
-            break;
-        case QVariant::Date:
-            strVal = "'" + val.toDate().toString("yyyy-MM-dd") + "'";
-            break;
-        case QVariant::DateTime:
-            strVal = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
-            break;
-        default:
-            strVal = val.toString();
-        }
-        return strVal;
-    };
+    for (QString &col : autoIncCols) {
+        col = col.trimmed();
+    }
+    for (QString &pk : pkList) {
+        pk = pk.trimmed();
+    }
 
     // 构建 SET 子句
     QStringList setClauses;
-    for (int i = 0; i < obj->metaObject()->propertyCount(); ++i) {
+    for (int i = obj->metaObject()->propertyOffset(); i < obj->metaObject()->propertyCount(); ++i) {
         QMetaProperty prp = obj->metaObject()->property(i);
-        QString colName = prp.name();
+        QString colName = QString::fromLatin1(prp.name());
 
-        if (colName == "objectName" || colName == "tbl_pk" || colName == "auto_inc" || colName == colInc)
+        if (colName == "objectName" || colName == "tbl_pk" || colName == "auto_inc" || autoIncCols.contains(colName))
             continue;
         // 跳过主键字段，不在 SET 中更新
-        if (pkList.contains(colName, Qt::CaseSensitive))
+        if (pkList.contains(colName))
             continue;
         QVariant val = obj->property(prp.name());
-        QString formattedVal = formatValue(val);
+        QString formattedVal = formatSqlValue(val);
 
         setClauses << QString("%1=%2").arg(colName.toLower(), formattedVal);
     }
@@ -1014,7 +1058,7 @@ QString DataDealUtils::getUpdateSql(QObject *obj)
     whereClauses << QStringLiteral("1=1");
     for (const QString &pk : pkList) {
         QVariant val = obj->property(pk.toUtf8().constData());
-        QString formattedVal = formatValue(val);
+        QString formattedVal = formatSqlValue(val);
         whereClauses << QString("%1=%2").arg(pk.toLower(), formattedVal);
     }
 
@@ -1073,4 +1117,160 @@ QString DataDealUtils::fullExecutedQuery(const QSqlQuery &query)
     }
 
     return result;
+}
+
+QVariantMap DataDealUtils::jsonToMap(const QByteArray &data, bool *ok, QString *errDesc)
+{
+    *ok = false;
+    (*errDesc).clear();
+
+    QJsonParseError err;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &err);
+
+    if (err.error != QJsonParseError::NoError) {
+        *errDesc = "Json转换QVariantMap失败: " + err.errorString();
+        return {};
+    }
+
+    if (!doc.isObject()) {
+        *errDesc = "Json转换QVariantMap失败: 根节点不是对象";
+        return {};
+    }
+
+    *ok = true;
+    return doc.object().toVariantMap();
+}
+
+QVariantList DataDealUtils::jsonToList(const QByteArray &data, bool *ok, QString *errDesc)
+{
+    *ok = false;
+    (*errDesc).clear();
+
+    QJsonParseError err;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &err);
+
+    if (err.error != QJsonParseError::NoError) {
+        *errDesc = "Json转换QVariantList失败: " + err.errorString();
+        return {};
+    }
+
+    if (!doc.isArray()) {
+        *errDesc = "Json转换QVariantList失败: 根节点不是数组";
+        return {};
+    }
+
+    *ok = true;
+    return doc.array().toVariantList();
+}
+
+QByteArray DataDealUtils::mapToJson(const QVariantMap &map, QJsonDocument::JsonFormat format)
+{
+    QJsonObject obj = QJsonObject::fromVariantMap(map);
+    QJsonDocument doc(obj);
+    return doc.toJson(format);
+}
+
+QByteArray DataDealUtils::listToJson(const QVariantList &list, QJsonDocument::JsonFormat format)
+{
+    QJsonArray array = QJsonArray::fromVariantList(list);
+    QJsonDocument doc(array);
+    return doc.toJson(format);
+}
+
+QVariantMap DataDealUtils::xmlToMap(const QByteArray &data, bool *ok, QString *errDesc)
+{
+    QXmlStreamReader reader(data);
+
+    *ok = true;
+    (*errDesc).clear();
+    while (!reader.atEnd()) {
+        reader.readNext();
+
+        if (reader.isStartElement()) {
+            // 跳过根节点，只返回根节点内部内容
+            return parseXmlElement(reader).toMap();
+        }
+    }
+
+    if (reader.hasError()) {
+        *ok = false;
+        *errDesc = reader.errorString();
+    }
+
+    return QVariantMap();
+}
+
+QString DataDealUtils::formatSqlValue(const QVariant &val)
+{
+    if (!val.isValid() || val.isNull())
+        return "NULL";
+
+    switch (val.type()) {
+    case QVariant::String:
+        return "'" + val.toString().replace("'", "''") + "'";
+    case QVariant::Date:
+        return "'" + val.toDate().toString("yyyy-MM-dd") + "'";
+    case QVariant::DateTime:
+        return "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
+    case QVariant::Bool:
+        return val.toBool() ? "1" : "0";
+    default:
+        return val.toString();
+    }
+}
+
+QVariant DataDealUtils::parseXmlElement(QXmlStreamReader &reader)
+{
+    QVariantMap map;
+    QString text;
+
+    while (!reader.atEnd()) {
+        reader.readNext();
+
+        if (reader.isStartElement()) {
+            QString childName = reader.name().toString();
+            QVariant childValue = parseXmlElement(reader);
+            insertXmlValue(map, childName, childValue);
+        } else if (reader.isCharacters() && !reader.isWhitespace()) {
+            text += reader.text().toString().trimmed();
+        } else if (reader.isEndElement()) {
+            break;
+        }
+    }
+
+    if (!map.isEmpty())
+        return map;
+
+    QString s = text.trimmed();
+    bool ok = false;
+    int i = s.toInt(&ok);
+    if (ok)
+        return i;
+
+    double d = s.toDouble(&ok);
+    if (ok)
+        return d;
+
+    return s;
+}
+
+void DataDealUtils::insertXmlValue(QVariantMap &map, const QString &key, const QVariant &value)
+{
+    if (!map.contains(key)) {
+        map.insert(key, value);
+        return;
+    }
+
+    QVariant oldValue = map.value(key);
+
+    if (oldValue.type() == QVariant::List) {
+        QVariantList list = oldValue.toList();
+        list.append(value);
+        map.insert(key, list);
+    } else {
+        QVariantList list;
+        list.append(oldValue);
+        list.append(value);
+        map.insert(key, list);
+    }
 }

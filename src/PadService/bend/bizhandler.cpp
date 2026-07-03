@@ -451,7 +451,8 @@ QString BizHandler::getVehicleWayFromPlate(const QString &plateNumber)
     QUrl url(GM_INSTANCE->m_config->m_baseConfig.mapUrl);
 
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendJson.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendJson.toUtf8(), "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -484,7 +485,8 @@ QString BizHandler::getVehicleWayFromScan(const QString &scan)
 
     QUrl url(GM_INSTANCE->m_config->m_baseConfig.mapUrl);
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendJson.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendJson.toUtf8(), "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -1010,7 +1012,8 @@ QString BizHandler::getGreenVehicleWayFromScan(const QString &scan)
     LOG_INFO().noquote() << "发送地图路径请求: " << sendJson;
     QUrl url(GM_INSTANCE->m_config->m_baseConfig.mapUrl);
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendJson.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendJson.toUtf8(), "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -1122,10 +1125,9 @@ QString BizHandler::getGantryImage(const QString &plateNumber, const QString &ga
 
     QUrl url(GM_INSTANCE->m_config->m_baseConfig.gantryPicUrl);
     QByteArray result;
-    int defaultTimeOut = Http::instance().getReadTimeout();
-    Http::instance().setReadTimeout(30 * 1000);
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
-    Http::instance().setReadTimeout(defaultTimeOut);
+    Http client;
+    client.setReadTimeout(30 * 1000);
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -1149,7 +1151,8 @@ QString BizHandler::getLaneImage(const QString &captureId)
 
     QUrl url(GM_INSTANCE->m_config->m_baseConfig.lanePicUrl);
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -1223,7 +1226,8 @@ QString BizHandler::doDealCmd23(const QVariantMap &aMap)
     QString devCtrlurl = QString("http://%1:13592/devCtrl").arg(laneIP);
     QUrl url(devCtrlurl);
     QByteArray result;
-    bool okNet = Http::instance().postSync(result, url, reqBody.toUtf8(), "application/json");
+    Http client;
+    bool okNet = client.postSync(result, url, reqBody.toUtf8(), "application/json");
     if (!okNet) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -1279,7 +1283,8 @@ QString BizHandler::doDealCmd24(const QByteArray &reqBody)
 
     QUrl url(GM_INSTANCE->m_config->m_baseConfig.plateOcrUrl);
     QByteArray result;
-    bool okNet = Http::instance().postSync(result, url, reqBody, "application/json");
+    Http client;
+    bool okNet = client.postSync(result, url, reqBody, "application/json");
     if (!okNet) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -1318,7 +1323,8 @@ QString BizHandler::doDealCmd25(const QVariantMap &aMap)
 
     QString url(GM_INSTANCE->m_config->m_baseConfig.blackStatusUrl);
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData.toUtf8(), "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -1515,11 +1521,11 @@ QString BizHandler::doDealCmd30(const QVariantMap &aMap)
     QString encodedVehicleId = QUrl::toPercentEncoding(QString("%1_%2").arg(plateNoColor).arg(colorIndex));
     QUrl url(GM_INSTANCE->m_config->m_baseConfig.arrearsUrl + "/" + encodedVehicleId);
     // 跳过证书校验
-    Http().instance().setSkipVerify(true);
-
+    Http client;
+    client.setSkipVerify(true);
     QByteArray result;
-    bool ok = Http::instance().getSync(result, url);
-    Http().instance().setSkipVerify(false);
+    bool ok = client.getSync(result, url);
+
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -1750,9 +1756,10 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
 
         QUrl url(GM_INSTANCE->m_config->m_baseConfig.payBackUrl + "/" + vehicleId);
         QByteArray result;
-        Http::instance().setSkipVerify(true);
-        bool okNet = Http::instance().postSync(result, url, sendData, "application/json");
-        Http::instance().setSkipVerify(false);
+        Http client;
+        client.setSkipVerify(true);
+        bool okNet = client.postSync(result, url, sendData, "application/json");
+
         if (!okNet) {
             QVariantMap map;
             map["status"] = 1;
@@ -1915,7 +1922,8 @@ QVariantMap BizHandler::cloudPay(const QString &tradeNum, const QVariantMap &aMa
 
     QString url(GM_INSTANCE->m_config->m_baseConfig.cloudPayUrl);
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData, "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData, "application/json");
     if (!ok) {
         QVariantMap resMap;
         resMap["paystate"] = 1;
@@ -1939,7 +1947,8 @@ QVariantMap BizHandler::getBillState(const QString &tradeNum)
 
     QUrl url(GM_INSTANCE->m_config->m_baseConfig.billQueryUrl + "/" + tradeNum);
     QByteArray result;
-    bool ok = Http::instance().getSync(result, url);
+    Http client;
+    bool ok = client.getSync(result, url);
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -1981,7 +1990,8 @@ QVariantMap BizHandler::refund(const QString &tradeNum, const QVariantMap &aMap)
 
     QString url(GM_INSTANCE->m_config->m_baseConfig.refundUrl);
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData, "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData, "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -2052,7 +2062,8 @@ QString BizHandler::doDealCmd32(const QVariantMap &aMap)
 
     QUrl url(GM_INSTANCE->m_config->m_baseConfig.multiBulkUrl);
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData, "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData, "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -2091,7 +2102,8 @@ QString BizHandler::doDealCmd33(const QVariantMap &aMap)
 
     QUrl url(GM_INSTANCE->m_config->m_baseConfig.containerConfirmUrl);
     QByteArray result;
-    bool ok = Http::instance().postSync(result, url, sendData, "application/json");
+    Http client;
+    bool ok = client.postSync(result, url, sendData, "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }
@@ -2345,9 +2357,16 @@ QString BizHandler::doDealCmd38(const QVariantMap &aMap)
     }
 
     // 是否补打票
+    QStringList evIds;
+    for (QString tradeId : outTradeList.keys()) { // 是否已开电子票查询
+        bool hasEInVoice = checkHasEInvoice(tradeId);
+        if (hasEInVoice)
+            evIds << tradeId;
+    }
+
     QVariantList ticketUseScrapRecords = m_ds.getTicketUseScrapInfos(outTradeList.keys(), QUrl(stationServiceUrl));
     QStringList tusIds;
-    for (const auto &tusRec : ticketUseScrapRecords) {
+    for (const auto &tusRec : ticketUseScrapRecords) { // 是否废票查询
         QVariantMap ticketUseScrap = tusRec.toMap();
 
         tusIds << ticketUseScrap.value("tradeid").toString();
@@ -2355,6 +2374,13 @@ QString BizHandler::doDealCmd38(const QVariantMap &aMap)
 
     for (auto &tradeMap : outTradeList.values()) {
         QString tradeId = tradeMap.value("tradeId").toString();
+
+        if (evIds.contains(tradeId)) { // 已开过电子票，不打票
+            tradeMap["isPrint"] = 0;
+            outTradeList[tradeId] = tradeMap;
+            continue;
+        }
+
         if (tusIds.contains(tradeId)) {
             // 检查废票表中有该流水的作废信息
             for (const auto &tusRec : ticketUseScrapRecords) {
@@ -2392,6 +2418,40 @@ QString BizHandler::doDealCmd38(const QVariantMap &aMap)
     QString dealtData = nloJson.serialize(resMap);
 
     return dealtData;
+}
+
+bool BizHandler::checkHasEInvoice(const QString &tradeId)
+{
+    NloJson nloJson;
+
+    LOG_INFO().noquote() << "查询是否已开过电子票:" << tradeId;
+
+    QUrl url(GM_INSTANCE->m_config->m_baseConfig.eInvoiceUrl + "/" + tradeId);
+    QByteArray result;
+    Http client;
+    bool ok = client.getSync(result, url);
+    if (!ok)
+        return false; // 接口查询失败，默认认为要补打票
+
+    QVariantMap resMap = nloJson.parse(result).toMap();
+    if (resMap.contains("code")) {
+        int code = resMap["code"].toInt();
+        if (code != 0) {
+            LOG_WARNING().noquote() << "订单" << tradeId << "电子票开具查询失败";
+            return false;
+        }
+    }
+
+    QVariantMap dataMap = resMap["data"].toMap();
+
+    // 0：未开票，1：已开票，2：红字确认单待确认，3：红字确认单失败，4：未开票（偷偷开了），8：记录已作废，9：已开纸票
+    int status = 0;
+    if (dataMap.contains("status"))
+        status = dataMap["status"].toInt();
+
+    LOG_INFO().noquote() << "订单" << tradeId << "电子票开具查询结果:" << (status == 1);
+
+    return status == 1;
 }
 
 QString BizHandler::doDealCmd39(const QVariantMap &aMap)
@@ -2553,10 +2613,10 @@ QString BizHandler::requestRemoteAPI(int type, const QString &id, const QString 
 
     QString url(GM_INSTANCE->m_config->m_baseConfig.remoteAPIUrl + uri);
 
-    Http httpClient;
+    Http client;
     QByteArray result;
-    httpClient.addRequestHeader("UserToken", QString("%1").arg(token).toUtf8());
-    bool ok = httpClient.postSync(result, url, data.toUtf8(), "application/json");
+    client.addRequestHeader("UserToken", QString("%1").arg(token).toUtf8());
+    bool ok = client.postSync(result, url, data.toUtf8(), "application/json");
     if (!ok) {
         throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
     }

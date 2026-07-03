@@ -13,6 +13,7 @@ GlobalManager::GlobalManager(QObject *parent)
     : QObject{parent}
 {
     m_config = new Config(this);
+    m_dtpSender = new DtpSender(this);
 }
 
 GlobalManager::~GlobalManager() {}
@@ -43,7 +44,7 @@ void GlobalManager::init()
     m_config->loadConfig(configPath);
 
     // 系统环境初始化
-    m_pictureDir = Utils::FileName::fromString(QCoreApplication::applicationDirPath() + "/pictures");
+    m_pictureDir = Utils::FileName::fromString(Utils::FileUtils::curApplicationDirPath() + "/pictures");
     Utils::FileUtils::makeSureDirExist(m_pictureDir);
     QString error;
     Utils::FileUtils::autoDeleteFiles(m_pictureDir.toString(), ".jpg", 30 * 24, &error);
@@ -69,7 +70,6 @@ void GlobalManager::init()
     m_dbFactory = EasyQtSql::SqlFactory::getInstance()->config(setting, "oracle");
 
     // Dtp发送对象初始化
-    m_dtpSender = new DtpSender(this);
     m_dtpSender->initDtp("./libDtp-Client.so");
 
     // 云坐席台账接口URI初始化

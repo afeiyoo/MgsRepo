@@ -83,6 +83,7 @@ struct ST_BaseConfig
     QString billQueryUrl;
     QString refundUrl;
     QString remoteAPIUrl;
+    QString eInvoiceUrl;
 };
 
 // 数据库配置

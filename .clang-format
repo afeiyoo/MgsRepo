@@ -34,6 +34,12 @@ AlwaysBreakAfterReturnType: None
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: true
+StatementMacros:
+  - Q_GADGET
+  - Q_OBJECT
+  - Q_PROPERTY
+  - Q_UNUSED
+  - QT_REQUIRE_VERSION
 # 允许参数打包（尽量把多个参数放在同一行直到超宽）
 BinPackArguments: true
 BinPackParameters: true

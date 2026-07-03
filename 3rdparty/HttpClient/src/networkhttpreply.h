@@ -7,7 +7,8 @@
 #include "httpreply.h"
 #include "httprequest.h"
 
-class NetworkHttpReply : public HttpReply {
+class NetworkHttpReply : public HttpReply
+{
     Q_OBJECT
 
 public:
@@ -36,6 +37,7 @@ private:
     QNetworkReply *networkReply;
     QTimer *readTimeoutTimer;
     int retryCount;
+    bool finishedEmitted; // 2026-06-22 第三方库修改 防止abort方法重复调用
     QByteArray bytes;
 };
 

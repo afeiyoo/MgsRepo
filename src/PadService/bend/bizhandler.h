@@ -109,6 +109,8 @@ private:
 
     // 3.3.38 获取出口流水是否补打票信息
     QString doDealCmd38(const QVariantMap &aMap);
+    // 开票信息查询，判断是否已经开过电子票，开过则返回不打票
+    bool checkHasEInvoice(const QString &tradeId);
 
     // 3.3.39 获取出口绿通流水
     QString doDealCmd39(const QVariantMap &aMap);
@@ -116,7 +118,7 @@ private:
     // 3.3.40 云坐席台账
     QString doDealCmd40(const QVariantMap &aMap);
     // 请求云坐席台账接口
-    QString requestRemoteAPI(int type, const QString &id, const QString &data, const QString& token);
+    QString requestRemoteAPI(int type, const QString &id, const QString &data, const QString &token);
 
 private:
     DataService m_ds;

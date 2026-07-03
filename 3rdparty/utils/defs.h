@@ -6,24 +6,28 @@
 #include <QVariant>
 
 //==============================================================================
-// 界面显示
+// 设备数据
 //==============================================================================
-namespace Front {
-// 称重信息
-struct ST_WeightInfoItem
+// 抓拍数据
+struct ST_CapVehInfo
 {
-    int index = 0; // 队列号
-    QString plate;
-    uint axisType = 0;
-    uint axisNum = 0;
-    qreal tollWeight = 0.0;
-    uint status = 0; // 0-等待中，1-已交易
-    bool isManual = false;
-    qreal limitWeight = 0.0; // 限重
-    bool allowPass = false;  // 是否允许过车
-    qreal exceedRate = 0.0;
+    QByteArray chHWYIP; //抓拍IP
+    QByteArray chPlate; //车牌
+    int nColor = 0;     //颜色
+    QByteArray chSpecialImage;
+    int nSpecialLen = 0;
+    QByteArray chFullImage;
+    int nFullLen = 0;
+    QByteArray chPlateImage;
+    int nPlateLen = 0;
+    QByteArray chTwoImage;
+    int nTwoLen = 0;
+    uint cameraTime = 0;      //Unix
+    uchar chVehicleColor;     //车身颜色
+    uchar chVehicleClass = 0; //车型
+    QByteArray reserve;       //备用
 };
-} // namespace Front
+Q_DECLARE_METATYPE(ST_CapVehInfo)
 
 //==============================================================================
 // 软件配置
@@ -1699,7 +1703,7 @@ public:
     bool doubleCardCal = false;
     bool discount = false;
     bool bindPlate = true; //是否绑定卡
-    bool mixTrade = false;  //混合车道是否天线交易（ETC车道默认true）
+    bool mixTrade = false; //混合车道是否天线交易（ETC车道默认true）
 
     CalFeeRequest() {}
     ~CalFeeRequest() override {}
@@ -2160,6 +2164,7 @@ public:
 // 设备数据
 //==============================================================================
 namespace DevData {
+
 // 小黄人车型信息
 struct ST_VehRecoTypeInfo
 {
@@ -2199,26 +2204,6 @@ struct ST_VehRecoHeartInfo
     QString Reserve;    //备用
 };
 
-// 抓拍信息
-struct ST_CapVehInfo
-{
-    QString chHWYIP = ""; //抓拍IP
-    QString chPlate = ""; //车牌
-    int nColor = 0;       //颜色
-    QByteArray chSpecialImage;
-    int nSpecialLen = 0;
-    QByteArray chFullImage;
-    int nFullLen = 0;
-    QByteArray chPlateImage;
-    int nPlateLen = 0;
-    QByteArray chTwoImage;
-    int nTwoLen = 0;
-    uint cameraTime = 0;      //Unix
-    uchar chVehicleColor;     //车身颜色
-    uchar chVehicleClass = 0; //车型
-    QString reserve = "";     //备用
-};
-
 // 称重设备返回数据
 struct ST_VehicleWeightInfo
 {
@@ -2245,24 +2230,24 @@ struct ST_VehicleWeightInfo
 //处理后用于业务的称重
 struct ST_WeightInfo
 {
-    int index;                     // 队列号
-    int vehSpeed;                  // 速度Km/h
-    QDateTime weightTime;          // 称重返回时间
-    int axisGNum;                  // 轴组数 3
-    int axisNum;                   // 轴数 5
-    int axisType;                  // 轴型 115
-    int origAxisType;              // 原始轴型 127 （即人工修改轴型此数据不动）
-    int origTollWeight;            // 原始重量（即分割称重前的重量）
-    int tollWeight;                // 车辆总重量 1800
-    QString groupTollWeight;       // 各轴组重 550|560|600
-    QString axisTollWeight;        // 各轴重 550|560|600
-    int lawLimit;                  // 超限重量（原始版）
-    int factLimit;                 // 超限重量（提升0.05版）
-    qreal exceedRate;              // 超限率
-    int dealType;                  // 是否手动插入 0:称重设备返回  1:手动录入车辆轴型 2:手工录入车辆轴限  4:手工插入称重
-    int userType;                  // 用户类型 0x1B是拖挂车 0x1A是大件运输车
-    QString vehPlate;              // 预留抓拍
-    bool isLawVeh = false;         // 是否路政超限
+    int index;               // 队列号
+    int vehSpeed;            // 速度Km/h
+    QDateTime weightTime;    // 称重返回时间
+    int axisGNum;            // 轴组数 3
+    int axisNum;             // 轴数 5
+    int axisType;            // 轴型 115
+    int origAxisType;        // 原始轴型 127 （即人工修改轴型此数据不动）
+    int origTollWeight;      // 原始重量（即分割称重前的重量）
+    int tollWeight;          // 车辆总重量 1800
+    QString groupTollWeight; // 各轴组重 550|560|600
+    QString axisTollWeight;  // 各轴重 550|560|600
+    int lawLimit;            // 超限重量（原始版）
+    int factLimit;           // 超限重量（提升0.05版）
+    qreal exceedRate;        // 超限率
+    int dealType;            // 是否手动插入 0:称重设备返回  1:手动录入车辆轴型 2:手工录入车辆轴限  4:手工插入称重
+    int userType;            // 用户类型 0x1B是拖挂车 0x1A是大件运输车
+    QString vehPlate;        // 预留抓拍
+    bool isLawVeh = false;   // 是否路政超限
     bool isManualUserType = false; // 是否人工确认过 是否已经确认过
     bool allowPass = false;        // 是否允许过车（入口用）
     bool isRareAxis = false;       // 是否罕见轴型
@@ -2489,7 +2474,6 @@ public:
 Q_DECLARE_METATYPE(DevData::ST_VehicleWeightInfo)
 Q_DECLARE_METATYPE(DevData::ST_WeightInfo)
 Q_DECLARE_METATYPE(DevData::ST_IOVdStatus)
-Q_DECLARE_METATYPE(DevData::ST_CapVehInfo)
 Q_DECLARE_METATYPE(DevData::ST_VehRecoHeartInfo)
 Q_DECLARE_METATYPE(DevData::ST_VehRecoImageInfo)
 Q_DECLARE_METATYPE(DevData::ST_VehRecoTypeInfo)

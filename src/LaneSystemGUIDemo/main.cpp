@@ -292,6 +292,20 @@ int main(int argc, char *argv[])
         }
     });
 
+    // auto *etc = gui.createEtcWindow(false, qApp);
+    // initEtc(etc);
+
+    // QObject::connect(etc, &MtcOutPageController::sigKeyPress, [&](int key) {
+    //     switch (key) {
+    //     case Qt::Key_I:
+    //         etc->showAuthDialog("", "");
+    //         break;
+    //     case Qt::Key_X:
+    //         a.exit(0);
+    //         break;
+    //     }
+    // });
+
     int result = a.exec();
     if (result)
         LOG_WARNING().noquote() << "LaneSystemGUI 运行错误，错误码: " << result;
