@@ -5,7 +5,8 @@
 #include "qtservice_p.h"
 #include <QCoreApplication>
 #include <QDateTime>
-#include <QFile>
+#include <QDir>
+#include <QFileInfo>
 #include <QLibrary>
 #include <QMutex>
 #include <QSemaphore>
@@ -786,6 +787,7 @@ bool QtServiceBasePrivate::start()
     for (int i = 0; i < argc; ++i)
         argv[i] = argvData[i].data();
 
+    sysSetPath();
     q_ptr->createApplication(argc, argv.data());
     QCoreApplication *app = QCoreApplication::instance();
     if (!app)
@@ -842,9 +844,6 @@ bool QtServiceBasePrivate::install(const QString &account, const QString &passwo
             pwd = (wchar_t*)password.utf16();
         }
 
-        // Only set INTERACTIVE if act is LocalSystem. (and act should be 0 if it is LocalSystem).
-        if (!act) dwServiceType |= SERVICE_INTERACTIVE_PROCESS;
-
         // Create the service
         SC_HANDLE hService = pCreateService(hSCM, (wchar_t *)controller.serviceName().utf16(),
                                             (wchar_t *)controller.serviceName().utf16(),
@@ -879,7 +878,7 @@ bool QtServiceBasePrivate::sysInit()
     sysd = new QtServiceSysPrivate();
 
     sysd->serviceStatus			    = 0;
-    sysd->status.dwServiceType		    = SERVICE_WIN32_OWN_PROCESS|SERVICE_INTERACTIVE_PROCESS;
+    sysd->status.dwServiceType		    = SERVICE_WIN32_OWN_PROCESS;
     sysd->status.dwCurrentState		    = SERVICE_STOPPED;
     sysd->status.dwControlsAccepted         = sysd->serviceFlags(serviceFlags);
     sysd->status.dwWin32ExitCode	    = NO_ERROR;
@@ -892,7 +891,11 @@ bool QtServiceBasePrivate::sysInit()
 
 void QtServiceBasePrivate::sysSetPath()
 {
-
+    /** 2026-07-03 第三方库修改 正确设置服务的当前工作路径 */
+    const QString appDirPath = QFileInfo(filePath()).absolutePath();
+    if (!appDirPath.isEmpty()) {
+        QDir::setCurrent(appDirPath);
+    }
 }
 
 void QtServiceBasePrivate::sysCleanup()
