@@ -19,6 +19,8 @@ include($$THIRD_PARTY_LIBRARY_PATH/HttpServer/HttpServer.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/HttpClient/HttpClient.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
+CONFIG += qtservice-buildlib
+include($$THIRD_PARTY_LIBRARY_PATH/qtservice/src/qtservice.pri)
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -32,6 +34,7 @@ SOURCES += \
         config/config.cpp \
         core/globalmanager.cpp \
         core/requestmapper.cpp \
+        core/stationserviceapp.cpp \
         dbs/dataservice.cpp \
         dbs/dataservicedameng.cpp \
         dbs/dataservicemysql.cpp \
@@ -46,6 +49,7 @@ HEADERS += \
     config/config.h \
     core/globalmanager.h \
     core/requestmapper.h \
+    core/stationserviceapp.h \
     dbs/dataservice.h \
     dbs/dataservicedameng.h \
     dbs/dataservicemysql.h \
