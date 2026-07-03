@@ -179,6 +179,11 @@ int Cron::getFullFiles()
     // 获取远程版本号
     LOG_INFO().noquote() << "开始请求获取远程BlackUpdate.xml: " << GM_INS->m_conf->m_fullCheckUrl;
 
+    if (GM_INS->m_conf->m_fullCheckUrl.isEmpty()) {
+        LOG_WARNING().noquote() << "获取远程BlackUpdate.xml的URL配置为空，终止请求";
+        return -1;
+    }
+
     QUrl reqUrl = QUrl(GM_INS->m_conf->m_fullCheckUrl);
     Http client;
     QByteArray retMsg;

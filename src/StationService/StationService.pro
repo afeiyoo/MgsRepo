@@ -34,6 +34,7 @@ SOURCES += \
         core/requestmapper.cpp \
         dbs/dataservice.cpp \
         dbs/dataservicedameng.cpp \
+        dbs/dataservicemysql.cpp \
         dbs/dataservicesqlserver.cpp \
         main.cpp
 
@@ -47,6 +48,7 @@ HEADERS += \
     core/requestmapper.h \
     dbs/dataservice.h \
     dbs/dataservicedameng.h \
+    dbs/dataservicemysql.h \
     dbs/dataservicesqlserver.h
 
 # Default rules for deployment.

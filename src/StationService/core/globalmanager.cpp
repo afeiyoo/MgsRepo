@@ -5,6 +5,7 @@
 #include "RollingFileAppender.h"
 #include "config/config.h"
 #include "dbs/dataservicedameng.h"
+#include "dbs/dataservicemysql.h"
 #include "dbs/dataservicesqlserver.h"
 #include "utils/configutils.h"
 #include "utils/fileutils.h"
@@ -53,8 +54,10 @@ int GlobalManager::init()
     // 数据库连接初始化
     if (m_conf->m_dbType == 1) {
         m_ds = new DataServiceSqlServer(this);
-    } else {
+    } else if (m_conf->m_dbType == 2) {
         m_ds = new DataServiceDameng(this);
+    } else {
+        m_ds = new DataServiceMysql(this);
     }
     bool dbOk = m_ds->init(m_conf->m_dbHost, m_conf->m_dbPort, m_conf->m_dbUser, m_conf->m_dbPassword, m_conf->m_dbName);
     if (!dbOk) {
