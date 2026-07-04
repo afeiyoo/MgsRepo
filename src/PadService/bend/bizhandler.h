@@ -2,8 +2,6 @@
 
 #include <QObject>
 
-#include "HttpClient/src/httpreply.h"
-#include "dataservice/dataservice.h"
 #include "global/defs.h"
 
 class BizHandler : public QObject
@@ -124,6 +122,5 @@ private:
     QString doDealCmd41(const QVariantMap &aMap);
 
 private:
-    DataService m_ds;
     static QMap<QString, ST_AuditInfo> m_auditInfos;
 };

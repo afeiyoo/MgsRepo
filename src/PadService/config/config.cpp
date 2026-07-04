@@ -8,6 +8,8 @@
 Config::Config(QObject *parent)
     : QObject{parent}
 {
+    m_confUtil = new Utils::ConfigUtils();
+
     // 日志配置
     m_logConfig.format = "%{time} [%{type}] [%{threadid}] %{message}\n\n";
     m_logConfig.filesLimit = 180;
@@ -21,7 +23,6 @@ Config::~Config()
 void Config::loadConfig(const Utils::FileName &configPath)
 {
     QString str = Utils::FileUtils::canonicalPath(configPath).toString();
-    m_confUtil = new Utils::ConfigUtils();
     m_confUtil->init(str, Utils::ConfigUtils::INI);
 
     // 数据库配置

@@ -2,14 +2,20 @@
 
 #include <QObject>
 
+#include "EasyQtSql/EasyQtSql.h"
+
 class T_SpecialCards;
 class T_DiscardTicketReview;
-class DataService : public QObject
+class DataService
 {
-    Q_OBJECT
 public:
-    explicit DataService(QObject *parent = nullptr);
-    ~DataService() override;
+    explicit DataService();
+    ~DataService();
+
+    int init(const QString &dbType, const QString &driver, const QString &userName, const QString &passWord, const QString &dbName);
+
+    // 测试数据库连接
+    bool testConnection() const;
 
     // 通过车牌号获取某辆车最近一次出口通行记录，返回该记录 type=0，etc出口，type=1，mtc出口
     bool getLatestOutTradeInPlate(const QString &vehPlate, QObject *obj, int type);
@@ -113,4 +119,8 @@ public:
 
     // 查询对应收费站相应功能权限
     QVariantList getStationAuthorization(const QString &stationID);
+
+private:
+    // 数据库连接池
+    EasyQtSql::SqlFactory *m_dbFactory = nullptr;
 };

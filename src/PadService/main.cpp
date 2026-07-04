@@ -9,7 +9,9 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
 
-    GM_INSTANCE->init();
+    int res = GM_INSTANCE->init();
+    if (res < 0)
+        return res;
 
     LOG_INFO().noquote() << "<<< Starting the application >>>";
     QSettings setting(GM_INSTANCE->m_confPath, QSettings::IniFormat, &app);

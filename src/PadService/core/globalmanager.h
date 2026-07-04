@@ -1,15 +1,16 @@
 #pragma once
 
+#include <QMap>
 #include <QObject>
 #include <QSet>
 
-#include "EasyQtSql/EasyQtSql.h"
 #include "utils/fileutils.h"
 
 #define GM_INSTANCE GlobalManager::instance()
 
 class DtpSender;
 class Config;
+class DataService;
 class GlobalManager : public QObject
 {
     Q_OBJECT
@@ -19,15 +20,15 @@ public:
 
     static GlobalManager *instance();
 
-    void init();
+    int init();
 
 public:
     // 配置文件路径
     QString m_confPath;
     // 配置对象
     Config *m_config = nullptr;
-    // 数据库连接池
-    EasyQtSql::SqlFactory *m_dbFactory = nullptr;
+    // 数据库操作对象
+    DataService *m_ds = nullptr;
     // 图片保存目录
     Utils::FileName m_pictureDir;
     // DTP传输对象

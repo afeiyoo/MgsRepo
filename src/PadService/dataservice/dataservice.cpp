@@ -1,6 +1,5 @@
 #include "dataservice.h"
 
-#include "EasyQtSql/EasyQtSql.h"
 #include "HttpClient/src/http.h"
 #include "Logger.h"
 #include "NlohmannJson/nlojson.hpp"
@@ -10,15 +9,23 @@
 #include "core/globalmanager.h"
 #include "utils/datadealutils.h"
 
-DataService::DataService(QObject *parent)
-    : QObject{parent}
-{}
+DataService::DataService() {}
 
 DataService::~DataService() {}
 
+int DataService::init(const QString &dbType, const QString &driver, const QString &userName, const QString &passWord, const QString &dbName)
+{
+    QString connectionString = QString("Driver={%1};DBQ=%2;UID=%3;PWD=%4").arg(driver, dbName, userName, passWord);
+    EasyQtSql::SqlFactory::DBSetting setting(dbType, connectionString);
+
+    m_dbFactory = EasyQtSql::SqlFactory::getInstance()->config(setting, "oracle");
+
+    return testConnection();
+}
+
 bool DataService::getLatestOutTradeInPlate(const QString &vehPlate, QObject *obj, int type)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(
         R"(SELECT * FROM %1 WHERE exvehplate = ? AND extime = (SELECT max(extime) FROM (SELECT max(extime) AS extime FROM t_etc_out WHERE exvehplate = ? UNION SELECT max(extime) AS extime FROM t_mtc_out WHERE exvehplate =?) t))");
 
@@ -48,7 +55,7 @@ bool DataService::getLatestOutTradeInPlate(const QString &vehPlate, QObject *obj
 
 bool DataService::getLatestOutTradeInTradeID(const QString &tradeId, QObject *obj, int type)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(
         R"(SELECT * FROM %1 WHERE tradeid = ? AND extime = (SELECT max(extime) FROM (SELECT max(extime) AS extime FROM t_etc_out WHERE tradeid = ? UNION SELECT max(extime) AS extime FROM t_mtc_out WHERE tradeid =?) t))");
 
@@ -78,7 +85,7 @@ bool DataService::getLatestOutTradeInTradeID(const QString &tradeId, QObject *ob
 
 QVariantMap DataService::getEnInfo(const QString &passID)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(
         R"(SELECT tradeid, TO_CHAR(entime, 'yyyy-mm-dd HH24:mi:ss') AS entime, cnlaneid, enstation, stationname FROM t_mtc_in WHERE passid = ? UNION ALL SELECT tradeid, TO_CHAR(entime, 'yyyy-mm-dd HH24:mi:ss') AS entime, cnlaneid, enstation, stationname FROM t_etc_in WHERE passid = ?)");
 
@@ -102,7 +109,7 @@ QVariantMap DataService::getEnInfo(const QString &passID)
 
 QList<QVariantMap> DataService::getGantryInfos(const QString &passId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(
         R"(SELECT g.gantryid AS gantryid, e.tradetime AS tradetime, e.flagid AS flagid, g.flagname AS flagname, e.errcode FROM t_ff_etcTrade e, t_etcflag g WHERE e.passid = ? AND e.flagid = g.flagid UNION ALL SELECT g.gantryid AS gantryid, e.tradetime AS tradetime, e.flagid AS flagid, g.flagname AS flagname, e.errcode FROM t_ff_cpcrecord e, t_etcflag g WHERE e.passid = ? AND e.flagid = g.flagid ORDER BY tradetime)");
 
@@ -128,7 +135,7 @@ QList<QVariantMap> DataService::getGantryInfos(const QString &passId)
 
 QString DataService::getGantryNodeID(const QString &nodeHex)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT nodeid FROM t_cnfeenode WHERE nodetype = 1 AND hexnode = ?)");
 
     EasyQtSql::Transaction t(sdb);
@@ -149,7 +156,7 @@ QString DataService::getGantryNodeID(const QString &nodeHex)
 
 QString DataService::getGantryNodeName(const QString &nodeId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT nodename FROM t_cnfeenode WHERE nodetype = 1 AND nodeid = ?)");
 
     EasyQtSql::Transaction t(sdb);
@@ -172,7 +179,7 @@ QString DataService::getGantryNodeName(const QString &nodeId)
 
 QString DataService::getGantryHexNode(const QString &nodeId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT hexnode FROM t_cnfeenode WHERE nodetype = 1 AND nodeid = ?)");
 
     EasyQtSql::Transaction t(sdb);
@@ -195,7 +202,7 @@ QString DataService::getGantryHexNode(const QString &nodeId)
 
 bool DataService::getSplitOut(const QString &tradeId, QObject *obj)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT * FROM t_split_out WHERE tradeid = ? AND provincenum = 35)");
 
     EasyQtSql::Transaction t(sdb);
@@ -218,7 +225,7 @@ bool DataService::getSplitOut(const QString &tradeId, QObject *obj)
 
 QString DataService::getUserID(const QString &cardId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT userid FROM t_user WHERE isvalid = 1 AND idtcardnum = ?)");
 
     EasyQtSql::Transaction t(sdb);
@@ -241,7 +248,7 @@ QString DataService::getUserID(const QString &cardId)
 
 QString DataService::getUserName(const QString &param, int type)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT username FROM t_user WHERE isvalid = 1 AND %1 = ?)");
 
     if (type == 0) {
@@ -270,7 +277,7 @@ QString DataService::getUserName(const QString &param, int type)
 
 QString DataService::getStationIP(const QString &stationId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT ipaddr FROM t_station WHERE stationid = ? AND ipaddr NOT IN ('0000', '0.0.0.0'))");
 
     EasyQtSql::Transaction t(sdb);
@@ -293,7 +300,7 @@ QString DataService::getStationIP(const QString &stationId)
 
 QString DataService::getStationName(const QString &nodeId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT nodename FROM t_cnfeenode WHERE hexnode = ?)");
 
     EasyQtSql::Transaction t(sdb);
@@ -316,7 +323,7 @@ QString DataService::getStationName(const QString &nodeId)
 
 QString DataService::getLaneIP(const QString &stationId, int laneId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT ipaddr FROM t_lane WHERE stationid = ? AND laneid = ? AND ipaddr NOT IN ('0000', '0.0.0.0'))");
 
     EasyQtSql::Transaction t(sdb);
@@ -339,7 +346,7 @@ QString DataService::getLaneIP(const QString &stationId, int laneId)
 
 QString DataService::getGrayCardRemark(const QString &cardId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT remark FROM t_graycard  WHERE cardid = ? AND isvalid = 1)");
 
     EasyQtSql::Transaction t(sdb);
@@ -362,7 +369,7 @@ QString DataService::getGrayCardRemark(const QString &cardId)
 
 QString DataService::getGrayVehicleRemark(const QString &plate)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT remark FROM t_grayvehicle  WHERE vehplate = ? AND isvalid = 1)");
 
     EasyQtSql::Transaction t(sdb);
@@ -385,7 +392,7 @@ QString DataService::getGrayVehicleRemark(const QString &plate)
 
 int DataService::getGreenPassBanType(const QString &plate)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT bantype FROM t_greenpassban WHERE vehplate = ? AND isvalid = 1 AND CURRENT_TIMESTAMP BETWEEN starttime AND endtime)");
 
     EasyQtSql::Transaction t(sdb);
@@ -408,7 +415,7 @@ int DataService::getGreenPassBanType(const QString &plate)
 
 bool DataService::getGreenPassAppointment(const QString &plate)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT count(*) as count FROM t_appointment WHERE vehicleid = ?)");
 
     EasyQtSql::Transaction t(sdb);
@@ -532,7 +539,7 @@ bool DataService::insertSpecialCard(const T_SpecialCards &specialCard, QUrl url)
 
 QVariantList DataService::getFreeTempVehicles(const QString &plate)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT * FROM t_freetempvehicle WHERE vehplate = ? AND isvalid = 1)");
 
     EasyQtSql::Transaction t(sdb);
@@ -556,7 +563,7 @@ QVariantList DataService::getFreeTempVehicles(const QString &plate)
 
 QString DataService::getEmgcSeqNum(const QString &stationId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT kitem FROM t_emgcdict WHERE stationid = ? AND laneid = 0 AND ktype = 1)");
 
     EasyQtSql::Transaction t(sdb);
@@ -579,7 +586,7 @@ QString DataService::getEmgcSeqNum(const QString &stationId)
 
 bool DataService::updateEmgcSeqNum(const QString &stationId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql = QString("UPDATE t_emgcdict SET kitem = kitem+1 WHERE stationid = %1 AND laneid = 0 AND ktype = 1").arg(stationId);
 
     EasyQtSql::Transaction t(sdb);
@@ -598,7 +605,7 @@ bool DataService::updateEmgcSeqNum(const QString &stationId)
 
 bool DataService::insertEmgcSeqNum(const QString &stationId)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
 
     EasyQtSql::Transaction t(sdb);
     try {
@@ -1077,7 +1084,7 @@ QVariantList DataService::getExGreenPassTrades(const QString &startTime, const Q
 
 QVariantList DataService::getStationAuthorization(const QString &stationID)
 {
-    QSqlDatabase sdb = GM_INSTANCE->m_dbFactory->getDatabase("oracle");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     QString sql(R"(SELECT * FROM t_emergencyauthfunction WHERE stationid = ?)");
 
     EasyQtSql::Transaction t(sdb);
@@ -1098,4 +1105,33 @@ QVariantList DataService::getStationAuthorization(const QString &stationID)
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
         return {};
     }
+}
+
+bool DataService::testConnection() const
+{
+    if (!m_dbFactory) {
+        LOG_ERROR().noquote() << "数据库连接初始化失败: SqlFactory为空";
+        return false;
+    }
+
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
+    if (!sdb.isValid()) {
+        LOG_ERROR().noquote() << "数据库连接初始化失败: 无效的数据库连接";
+        return false;
+    }
+
+    if (!sdb.isOpen()) {
+        LOG_ERROR().noquote() << "数据库连接初始化失败:" << sdb.lastError().text();
+        return false;
+    }
+
+    QSqlQuery query(sdb);
+    QString testSql = "SELECT 1 FROM DUAL";
+    if (!query.exec(testSql)) {
+        LOG_ERROR().noquote() << "数据库连接初始化失败:" << query.lastError().text() << "\t" << testSql;
+        return false;
+    }
+
+    LOG_INFO().noquote() << "数据库连接初始化成功";
+    return true;
 }
