@@ -3,7 +3,6 @@
 #include "HttpClient/src/http.h"
 #include "Logger.h"
 #include "NlohmannJson/nlojson.hpp"
-#include "QJson/include/qobjecthelper.h"
 #include "bean/t_auditpayback.h"
 #include "bean/t_discardticketreview.h"
 #include "bean/t_etcout.h"
@@ -1377,7 +1376,7 @@ QString BizHandler::doDealCmd26(const QVariantMap &aMap)
     NloJson nloJson;
 
     T_LaneInputShift laneInputShift;
-    QJson::QObjectHelper::qvariant2qobject(aMap, &laneInputShift);
+    Utils::DataDealUtils::qvariant2qobject(aMap, &laneInputShift);
     laneInputShift.UpdateTime = QDateTime::currentDateTime();
     LOG_INFO().noquote() << "交接班数据: " << laneInputShift.toString();
 
@@ -1463,7 +1462,7 @@ QString BizHandler::doDealCmd27(const QVariantMap &aMap)
     resMap["specialType"] = specialSubType; // NOTE 特别处理
 
     T_SpecialCards specialCard;
-    QJson::QObjectHelper::qvariant2qobject(resMap, &specialCard);
+    Utils::DataDealUtils::qvariant2qobject(resMap, &specialCard);
     LOG_INFO().noquote() << "特情卡记录: " << specialCard.toString();
 
     QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationID);
@@ -2196,8 +2195,8 @@ QString BizHandler::doDealCmd34(const QVariantMap &aMap)
     QVariantList freeTempVehicles;
     foreach (auto item, tempFreeTempVehicles) {
         T_FreeTempVehicle freeTempVehicle;
-        QJson::QObjectHelper::qvariant2qobject(item.toMap(), &freeTempVehicle);
-        QVariantMap map = QJson::QObjectHelper::qobject2qvariant(&freeTempVehicle);
+        Utils::DataDealUtils::qvariant2qobject(item.toMap(), &freeTempVehicle);
+        QVariantMap map = Utils::DataDealUtils::qobject2qvariant(&freeTempVehicle);
         freeTempVehicles.append(map);
     }
 

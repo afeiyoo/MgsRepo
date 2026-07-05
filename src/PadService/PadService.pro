@@ -49,12 +49,3 @@ HEADERS += \
     core/dtpsender.h \
     core/httphandler.h \
     core/globalmanager.h
-
-# 引入第三方库
-unix:!macx|win32: LIBS += \
-    -l$$qtLibraryTargetName(QJson) \
-
-INCLUDEPATH += \
-    $$THIRD_PARTY_LIBRARY_PATH/QJson/include \
-
-copyLibsToDestdir($$qtLibraryTargetName(QJson))
