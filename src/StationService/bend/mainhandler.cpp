@@ -28,7 +28,7 @@ QString MainHandler::doMainDeal(const QByteArray &reqBody) const
 
     if (!ok) {
         LOG_ERROR().noquote() << errDesc;
-        throw BaseException(1, errDesc);
+        throw BaseException(BaseException::NORMAL, 1, errDesc);
     }
 
     QString queryType;
@@ -49,7 +49,7 @@ QString MainHandler::doMainDeal(const QByteArray &reqBody) const
     } else if (queryType.contains("queryETCBlack")) {
         dealtData = dealQueryETCBlack(aMap);
     } else {
-        throw BaseException(1, QString("未知查询类型%1").arg(queryType));
+        throw BaseException(BaseException::NORMAL, 1, QString("未知查询类型%1").arg(queryType));
     }
 
     return dealtData;
@@ -72,6 +72,9 @@ QString MainHandler::dealQueryRepeat(const QVariantMap &aMap) const
         cardId = aMap["cardId"].toString();
     if (aMap.contains("judgeTime"))
         judgeTime = aMap["judgeTime"].toInt();
+
+    if (vehPlate.isEmpty() && cardId.isEmpty())
+        throw BaseException(BaseException::QUERY_REPEAT, 0, "车牌号或者卡号为空");
 
     QVariantList trades = GM_INS->m_ds->fetchSuccessedTrades(vehicleIdentifyType, vehPlate, cardId, dataType, judgeTime);
 
@@ -113,29 +116,29 @@ QString MainHandler::dealSaveData(const QVariantMap &aMap) const
         kvs = aMap["saveData"].toMap();
 
     if (tableName.isEmpty())
-        throw BaseException(1, "saveTable为空，dealSaveData执行失败");
+        throw BaseException(BaseException::SAVE_DATA, 1, "saveTable为空，dealSaveData执行失败");
     if (tableKey.isEmpty())
-        throw BaseException(1, "tableKey为空，dealSaveData执行失败");
+        throw BaseException(BaseException::SAVE_DATA, 1, "tableKey为空，dealSaveData执行失败");
     if (kvs.isEmpty())
-        throw BaseException(1, "saveData为空，dealSaveData执行失败");
+        throw BaseException(BaseException::SAVE_DATA, 1, "saveData为空，dealSaveData执行失败");
 
     int cnt = GM_INS->m_ds->fetchRecordCnt(kvs, tableName, tableKey);
     if (cnt < 0)
-        throw BaseException(1, "查询记录是否已存在时，发生异常");
+        throw BaseException(BaseException::SAVE_DATA, 1, "查询记录是否已存在时，发生异常");
 
     QString successMessage;
     if (cnt > 0) { // 记录已存在，执行更新
         LOG_INFO().noquote() << "记录已存在，执行更新";
         bool res = GM_INS->m_ds->updateRecord(kvs, tableName, tableKey);
         if (!res)
-            throw BaseException(1, "更新记录失败");
+            throw BaseException(BaseException::SAVE_DATA, 1, "更新记录失败");
 
         successMessage = "更新记录成功";
     } else { // 记录不存在，执行插入
         LOG_INFO().noquote() << "记录不存在，执行插入";
         bool res = GM_INS->m_ds->insertRecord(kvs, tableName);
         if (!res)
-            throw BaseException(1, "插入记录失败");
+            throw BaseException(BaseException::SAVE_DATA, 1, "插入记录失败");
 
         successMessage = "插入记录成功";
     }
@@ -152,28 +155,17 @@ QString MainHandler::dealQueryXZPass(const QVariantMap &aMap) const
     if (aMap.contains("querySql"))
         querySql = aMap["querySql"].toString();
 
+    if (querySql.isEmpty())
+        throw BaseException(BaseException::QUERY_XZPASS, 1, "querySql为空，dealQueryXZPass执行失败");
+
+    int cnt = GM_INS->m_ds->fetchXZPassTimes(querySql);
+    if (cnt < 0)
+        throw BaseException(BaseException::QUERY_XZPASS, 1, "查询厦漳大桥通行趟次时，发生异常");
+
     QVariantMap resMap;
-    if (querySql.isEmpty()) {
-        resMap["errCode"] = 1;
-        resMap["returnMessage"] = "querySql为空，dealQueryXZPass执行失败";
-        return DataDealUtils::mapToJson(resMap);
-    }
+    resMap["errCode"] = 0;
+    resMap["returnMessage"] = QString::number(cnt);
 
-    bool ok = false;
-    int cnt = GM_INS->m_ds->fetchXZPassTimes(querySql, &ok);
-    if (!ok) {
-        resMap["errCode"] = 1;
-        resMap["returnMessage"] = "查询厦漳大桥通行趟次时，发生异常";
-        return DataDealUtils::mapToJson(resMap);
-    }
-
-    if (cnt > 0) {
-        resMap["errCode"] = 0;
-        resMap["returnMessage"] = QString::number(cnt);
-    } else {
-        resMap["errCode"] = 1;
-        resMap["returnMessage"] = "未查询到相关记录";
-    }
     return DataDealUtils::mapToJson(resMap);
 }
 
@@ -198,26 +190,23 @@ QString MainHandler::dealQueryShift(const QVariantMap &aMap) const
         flag = aMap["flag"].toInt();
 
     if (shiftDate.isEmpty())
-        throw BaseException(1, "shiftDate值异常，dealQueryShift执行失败");
+        throw BaseException(BaseException::QUERY_SHIFT, 1, "shiftDate值异常");
     if (shiftID == 0)
-        throw BaseException(1, "shiftId值异常，dealQueryShift执行失败");
+        throw BaseException(BaseException::QUERY_SHIFT, 1, "shiftId值异常");
     if (flag != 1 && flag != 2)
-        throw BaseException(1, "flag值异常，dealQueryShift执行失败");
+        throw BaseException(BaseException::QUERY_SHIFT, 1, "flag值异常");
     if (laneID == 0)
-        throw BaseException(1, "laneId值异常，dealQueryShift执行失败");
+        throw BaseException(BaseException::QUERY_SHIFT, 1, "laneId值异常");
 
     int cnt = GM_INS->m_ds->fetchShiftCnt(shiftDate, shiftID, laneID, flag);
 
+    if (cnt < 0)
+        throw BaseException(BaseException::QUERY_SHIFT, 1, "dealQueryShift执行异常");
+
     QVariantMap resMap;
-    if (cnt < 0) {
-        resMap["errCode"] = 1;
-        resMap["Count"] = 0;
-        resMap["errorMessage"] = "dealQueryShift执行异常";
-    } else {
-        resMap["errCode"] = 0;
-        resMap["Count"] = cnt;
-        resMap["errorMessage"] = "";
-    }
+    resMap["errCode"] = 0;
+    resMap["Count"] = cnt;
+    resMap["errorMessage"] = "";
 
     return DataDealUtils::mapToJson(resMap);
 }
@@ -227,10 +216,10 @@ QString MainHandler::dealQueryData(const QVariantMap &aMap) const
     if (GM_INS->m_conf->m_queryAuthType == 1) {
         QString authStr = aMap["queryAuth"].toString();
         if (authStr.toUpper() != DataDealUtils::cryptoMD5("fjeit" + DataDealUtils::curDateStr("yyyyMMdd")))
-            throw BaseException(1, "MD5授权校验未通过");
+            throw BaseException(BaseException::QUERY_DATA, 1, "MD5授权校验未通过");
     } else if (GM_INS->m_conf->m_queryAuthType == 2) {
         if (!GM_INS->m_conf->m_queryAuthIP.contains(m_peerIP))
-            throw BaseException(1, "IP授权校验未通过");
+            throw BaseException(BaseException::QUERY_DATA, 1, "IP授权校验未通过");
     }
 
     int dataType = 0;
@@ -241,9 +230,9 @@ QString MainHandler::dealQueryData(const QVariantMap &aMap) const
         dataType = aMap["dataType"].toInt();
 
     if (sql.isEmpty())
-        throw BaseException(1, "querySql为空，dealQueryData执行失败");
+        throw BaseException(BaseException::QUERY_DATA, 1, "querySql为空，dealQueryData执行失败");
     if (dataType < 1 || dataType > 4)
-        throw BaseException(1, "未知dataType类型，dealQueryData执行失败");
+        throw BaseException(BaseException::QUERY_DATA, 1, "未知dataType类型，dealQueryData执行失败");
 
     int errCode = 0;
     QString errorMessage;
@@ -252,31 +241,25 @@ QString MainHandler::dealQueryData(const QVariantMap &aMap) const
     if (dataType == 1) {
         QVariantMap ans = GM_INS->m_ds->queryMap(sql, &ok);
         data = ans;
-        if (!ok) {
-            errCode = 1;
-            errorMessage = "queryMap查询发生异常";
-        }
+        if (!ok)
+            throw BaseException(BaseException::QUERY_DATA, 1, "queryMap查询发生异常");
     } else if (dataType == 2) {
         int ans = GM_INS->m_ds->queryInt(sql, &ok);
         data = ans;
-        if (!ok) {
-            errCode = 1;
-            errorMessage = "queryInt查询发生异常";
-        }
+        if (!ok)
+            throw BaseException(BaseException::QUERY_DATA, 1, "queryInt查询发生异常");
     } else if (dataType == 3) {
         QString ans = GM_INS->m_ds->queryString(sql, &ok);
         data = ans;
-        if (!ok) {
-            errCode = 1;
-            errorMessage = "queryString查询发生异常";
-        }
+        if (!ok)
+            throw BaseException(BaseException::QUERY_DATA, 1, "queryString查询发生异常");
     } else if (dataType == 4) {
         QVariantList ans = GM_INS->m_ds->queryList(sql, &ok);
         data = ans;
-        if (!ok) {
-            errCode = 1;
-            errorMessage = "queryList查询发生异常";
-        }
+        if (!ok)
+            throw BaseException(BaseException::QUERY_DATA, 1, "queryList查询发生异常");
+    } else {
+        throw BaseException(BaseException::QUERY_DATA, 1, QString("未知数据类型dataType%1").arg(dataType));
     }
 
     QVariantMap resMap;
@@ -295,47 +278,36 @@ QString MainHandler::dealQueryETCBlack(const QVariantMap &aMap) const
         version = aMap["version"].toString();
 
     if (version.isEmpty())
-        throw BaseException(1, "version值为空，dealQueryETCBlack执行失败");
+        throw BaseException(BaseException::QUERY_ETC_BLACK, 3, "参数错误");
 
-    QString dealtData;
-    QString res = checkETCBlackInfo(version);
-    return res;
+    QString dealtData = checkETCBlackInfo(version);
+    return dealtData;
 }
 
 QString MainHandler::checkETCBlackInfo(const QString &version) const
 {
     QString filePath = QString("%1/download/%2/%3_queryETCBlack.json").arg(FileUtils::curApplicationDirPath(), version.left(8), version);
 
-    int queryRes = 0;
     QString result;
     FileName file = FileName::fromString(filePath);
     if (!file.exists()) {
         QString curVersion = GM_INS->getCurBlackVersion();
         if (curVersion < version) {
-            queryRes = 2;
+            throw BaseException(BaseException::QUERY_ETC_BLACK, 2, "数据未准备好");
         } else {
-            queryRes = 0;
-        }
-    } else {
-        FileReader reader;
-        QString errStr;
-        if (!reader.fetch(file.toString(), &errStr)) {
-            throw BaseException(1, QString("读取文件%1失败: %2").arg(file.fileName(), errStr));
-        }
-
-        QString jsonData = reader.data();
-        if (jsonData.isEmpty()) {
-            queryRes = 4;
-        } else { // 文件内容存在，则直接读取文件内容返回
-            return jsonData;
+            throw BaseException(BaseException::QUERY_ETC_BLACK, 0, "该版本无数据");
         }
     }
 
-    QVariantMap resMap;
-    resMap["queryResult"] = queryRes;
-    resMap["version"] = version;
-    resMap["operateTable"] = 0;
-    resMap["amount"] = 0;
+    FileReader reader;
+    QString errStr;
+    if (!reader.fetch(file.toString(), &errStr))
+        throw BaseException(BaseException::QUERY_ETC_BLACK, 4, "增量文件异常");
 
-    return DataDealUtils::mapToJson(resMap);
+    QString jsonData = reader.data();
+    if (jsonData.isEmpty())
+        throw BaseException(BaseException::QUERY_ETC_BLACK, 4, "增量文件异常");
+
+    // 文件内容存在，则直接读取文件内容返回
+    return jsonData;
 }

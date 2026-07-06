@@ -6,18 +6,24 @@
 class BaseException : public std::exception
 {
 public:
-    explicit BaseException(int status, const QString &desc);
+    // 异常类型枚举
+    enum EM_ExceptionType { QUERY_REPEAT, SAVE_DATA, QUERY_XZPASS, QUERY_SHIFT, QUERY_DATA, QUERY_ETC_BLACK, NORMAL };
+
+    explicit BaseException(EM_ExceptionType type, int errCode, const QString &errDesc);
     ~BaseException() override;
 
-    int status() const;
-    QString desc() const;
+    EM_ExceptionType type() const;
+    int errCode() const;
+    QString errDesc() const;
 
     const char *what() const noexcept override;
 
 private:
+    // 异常类型
+    EM_ExceptionType m_type;
     // 异常值
-    int m_status;
+    int m_errCode;
     // 异常描述信息
-    QString m_desc;
+    QString m_errDesc;
     mutable QByteArray m_buf;
 };
