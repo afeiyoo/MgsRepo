@@ -3,9 +3,11 @@
 #include "ConsoleAppender.h"
 #include "Logger.h"
 #include "RollingFileAppender.h"
-#include "bend/dtpsender.h"
 #include "config/config.h"
+#include "core/dtpsender.h"
+#include "dataservice/dataservice.h"
 #include "utils/fileutils.h"
+#include "utils/stdafx.h"
 
 Q_GLOBAL_STATIC(GlobalManager, ins);
 
@@ -14,19 +16,34 @@ GlobalManager::GlobalManager(QObject *parent)
 {
     m_config = new Config(this);
     m_dtpSender = new DtpSender(this);
+    m_confPath = Utils::FileUtils::curApplicationDirPath() + "/config/config.ini";
+
+    m_pictureDir = Utils::FileName::fromString(Utils::FileUtils::curApplicationDirPath() + "/pictures");
+    Utils::FileUtils::makeSureDirExist(m_pictureDir);
+
+    m_ds = new DataService();
 }
 
-GlobalManager::~GlobalManager() {}
+GlobalManager::~GlobalManager()
+{
+    SAFE_DELETE(m_ds);
+}
 
 GlobalManager *GlobalManager::instance()
 {
     return ins();
 }
 
-void GlobalManager::init()
+int GlobalManager::init()
 {
+    // 配置加载
+    Utils::FileName configPath = Utils::FileName::fromString(m_confPath);
+    if (!configPath.exists())
+        return -100;
+    m_config->loadConfig(configPath);
+
     // 日志初始化
-    ConsoleAppender *consoleAppender = new ConsoleAppender;
+    ConsoleAppender *consoleAppender = new ConsoleAppender();
     consoleAppender->setFormat(m_config->m_logConfig.format);
     cuteLogger->registerAppender(consoleAppender);
 
@@ -39,13 +56,7 @@ void GlobalManager::init()
     rollingFileAppender->setDatePattern(RollingFileAppender::DatePattern::DailyRollover);
     cuteLogger->registerAppender(rollingFileAppender);
 
-    // 配置加载
-    Utils::FileName configPath = Utils::FileName::fromString(Utils::FileUtils::curApplicationDirPath() + "/config/config.ini");
-    m_config->loadConfig(configPath);
-
     // 系统环境初始化
-    m_pictureDir = Utils::FileName::fromString(Utils::FileUtils::curApplicationDirPath() + "/pictures");
-    Utils::FileUtils::makeSureDirExist(m_pictureDir);
     QString error;
     Utils::FileUtils::autoDeleteFiles(m_pictureDir.toString(), ".jpg", 30 * 24, &error);
     if (!error.isEmpty())
@@ -57,20 +68,14 @@ void GlobalManager::init()
 
     // 数据库连接初始化
     QString dbType = m_config->m_dbConfig.type;
-    EasyQtSql::SqlFactory::DBSetting setting;
-    if (dbType == "QODBC") {
-        QString connectionString = QString("Driver={%1};DBQ=%2;UID=%3;PWD=%4")
-                                       .arg(m_config->m_dbConfig.driver, m_config->m_dbConfig.dbName, m_config->m_dbConfig.user,
-                                            m_config->m_dbConfig.password);
-        setting = EasyQtSql::SqlFactory::DBSetting(dbType, connectionString);
-    } else {
-        setting = EasyQtSql::SqlFactory::DBSetting(dbType, m_config->m_dbConfig.host, m_config->m_dbConfig.port, m_config->m_dbConfig.user,
-                                                   m_config->m_dbConfig.password, m_config->m_dbConfig.dbName);
-    }
-    m_dbFactory = EasyQtSql::SqlFactory::getInstance()->config(setting, "oracle");
+    bool dbOk = m_ds->init(dbType, m_config->m_dbConfig.driver, m_config->m_dbConfig.user, m_config->m_dbConfig.password, m_config->m_dbConfig.dbName);
+    if (!dbOk)
+        return -101;
 
     // Dtp发送对象初始化
-    m_dtpSender->initDtp("./libDtp-Client.so");
+    bool dtpOk = m_dtpSender->initDtp("./libDtp-Client.so");
+    if (!dtpOk)
+        return -102;
 
     // 云坐席台账接口URI初始化
     m_remoteURIs.insert(11, "/adminlogin/login");
@@ -103,4 +108,6 @@ void GlobalManager::init()
     m_remoteURIs.insert(101, "/rmtShiftRecord/pagn");
     m_remoteURIs.insert(102, "/rmtShiftRecord/save");
     m_remoteURIs.insert(103, "/rmtShiftRecord/getById/%1");
+
+    return 0;
 }

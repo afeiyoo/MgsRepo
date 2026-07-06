@@ -3,7 +3,6 @@
 #include "HttpClient/src/http.h"
 #include "Logger.h"
 #include "NlohmannJson/nlojson.hpp"
-#include "QJson/include/qobjecthelper.h"
 #include "bean/t_auditpayback.h"
 #include "bean/t_discardticketreview.h"
 #include "bean/t_etcout.h"
@@ -13,10 +12,11 @@
 #include "bean/t_mticketuse.h"
 #include "bean/t_specialcards.h"
 #include "bean/t_splitout.h"
-#include "bend/dtpsender.h"
-#include "config/baseexception.h"
 #include "config/config.h"
-#include "global/globalmanager.h"
+#include "core/baseexception.h"
+#include "core/dtpsender.h"
+#include "core/globalmanager.h"
+#include "dataservice/dataservice.h"
 #include "utils/bizutils.h"
 #include "utils/datadealutils.h"
 #include "utils/fileutils.h"
@@ -99,6 +99,9 @@ QString BizHandler::doMainDeal(int cmdType, const QVariantMap &dataMap, const QB
     case 40:
         dealtData = doDealCmd40(dataMap); // 云坐席台账
         break;
+    case 41:
+        dealtData = doDealCmd41(dataMap); // 权限管理
+        break;
     default:
         break;
     }
@@ -123,7 +126,7 @@ QString BizHandler::doDealCmd01(const QVariantMap &aMap)
 
     NloJson nloJson;
 
-    QString stationName = m_ds.getStationName("3501" + stationID);
+    QString stationName = GM_INSTANCE->m_ds->getStationName("3501" + stationID);
 
     QString msg = QString("%1(%2), 车道号: %3, 工号: %4").arg(stationName, stationID).arg(laneID).arg(operatorID);
     LOG_INFO().noquote() << QString("%1 稽核业务登录成功").arg(msg);
@@ -222,11 +225,11 @@ QString BizHandler::doDealCmd16(const QVariantMap &aMap)
         if (shiftNum == 0)
             throw BaseException(1, "响应失败: 班次号为空");
 
-        QString stationIP = m_ds.getStationIP(stationID);
+        QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationID);
         QString stationServiceUrl = QString("http://%1:8082").arg(stationIP);
 
         // 获取票据信息
-        QVariantMap resMap = m_ds.getTicketUseInfo(laneID, ticketNum, QUrl(stationServiceUrl));
+        QVariantMap resMap = GM_INSTANCE->m_ds->getTicketUseInfo(laneID, ticketNum, QUrl(stationServiceUrl));
 
         // 获取票据段
         int startNumFromDB = resMap["StartNum"].toInt();
@@ -270,15 +273,16 @@ QString BizHandler::doDealCmd16(const QVariantMap &aMap)
 
         // 更新LastNum
         int dataId = resMap["DataID"].toInt();
-        m_ds.updateTicketUseInfo(dataId, ticketNum.toInt(), QUrl(stationServiceUrl));
+        GM_INSTANCE->m_ds->updateTicketUseInfo(dataId, ticketNum.toInt(), QUrl(stationServiceUrl));
 
         // 更新班次表
-        if (m_ds.getOutShiftSettleCount(stationID, shiftDate, shiftNum, QUrl(stationServiceUrl)) <= 0) {
+        if (GM_INSTANCE->m_ds->getOutShiftSettleCount(stationID, shiftDate, shiftNum, QUrl(stationServiceUrl)) <= 0) {
             QString varShiftDate = QDateTime::fromString(shiftDate, "yyyy-MM-dd hh:mm:ss").toString("yyyyMMdd");
             QString varDataId = QString("%1XX%2").arg(varShiftDate).arg(Utils::DataDealUtils::padValue(shiftNum, 2));
-            QString varOperatorName = m_ds.getUserName(operatorId, 1);
+            QString varOperatorName = GM_INSTANCE->m_ds->getUserName(operatorId, 1);
             QString operatorName = varOperatorName.isEmpty() ? "稽查班" : varOperatorName;
-            if (!m_ds.insertOutShiftSettle(varDataId, shiftDate, shiftNum, stationID, operatorId, operatorName, QUrl(stationServiceUrl))) {
+            if (!GM_INSTANCE->m_ds->insertOutShiftSettle(varDataId, shiftDate, shiftNum, stationID, operatorId, operatorName,
+                                                         QUrl(stationServiceUrl))) {
                 LOG_WARNING().noquote() << "工班信息插入失败";
             }
         }
@@ -332,7 +336,7 @@ QString BizHandler::getVehicleWayFromPlate(const QString &plateNumber)
 
     ST_Node exNode;
     exNode.nodeType = 1;
-    if (m_ds.getLatestOutTradeInPlate(plateNumber, &objEtc, 0)) {
+    if (GM_INSTANCE->m_ds->getLatestOutTradeInPlate(plateNumber, &objEtc, 0)) {
         // ETC出口记录
         if (objEtc.ExShiftDate <= QDateTime::fromString("20200101", "yyyyMMdd")) {
             LOG_INFO().noquote() << QString("取消省界站前数据无效 %1").arg(objEtc.ExShiftDate.toString("yyyy-MM-dd"));
@@ -363,7 +367,7 @@ QString BizHandler::getVehicleWayFromPlate(const QString &plateNumber)
         exNode.nodeId = objEtc.CNLaneID.left(14);
         exNode.nodeName = objEtc.ExStationName;
         exNode.passTime = objEtc.ExTime.toString("yyyy-MM-dd hh:mm:ss");
-    } else if (m_ds.getLatestOutTradeInPlate(plateNumber, &objMtc, 1)) {
+    } else if (GM_INSTANCE->m_ds->getLatestOutTradeInPlate(plateNumber, &objMtc, 1)) {
         // MTC出口记录
         if (objMtc.ExShiftDate <= QDateTime::fromString("20200101", "yyyyMMdd")) {
             LOG_INFO().noquote() << QString("取消省界站前数据无效 %1").arg(objMtc.ExShiftDate.toString("yyyy-MM-dd"));
@@ -408,7 +412,7 @@ QString BizHandler::getVehicleWayFromPlate(const QString &plateNumber)
     // 查询入口信息
     ST_Node enNode;
     enNode.nodeType = 1;
-    QVariantMap enInfo = m_ds.getEnInfo(passID);
+    QVariantMap enInfo = GM_INSTANCE->m_ds->getEnInfo(passID);
     if (!enInfo.isEmpty()) {
         enNode.captureId = enInfo["TRADEID"].toString();
         enNode.passTime = enInfo["ENTIME"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
@@ -422,7 +426,7 @@ QString BizHandler::getVehicleWayFromPlate(const QString &plateNumber)
         enNode.captureId = "";
         enNode.passTime = enTime;
         enNode.nodeHex = enNetHex + enHex;
-        enNode.nodeId = m_ds.getGantryNodeID(enNode.nodeHex);
+        enNode.nodeId = GM_INSTANCE->m_ds->getGantryNodeID(enNode.nodeHex);
         enNode.nodeName = enName;
     }
     LOG_INFO().noquote() << QString("查询入口信息结果返回 passID %1, name %2").arg(passID, enNode.nodeName);
@@ -593,7 +597,7 @@ void BizHandler::getGantryNodes(const QString &passID, QStringList &nodeList)
 {
     nodeList.clear();
 
-    auto records = m_ds.getGantryInfos(passID);
+    auto records = GM_INSTANCE->m_ds->getGantryInfos(passID);
     if (records.isEmpty())
         return;
 
@@ -615,7 +619,7 @@ void BizHandler::getGantryNodeSplitOut(const QString &sTradeID, QString &tollInt
 {
     // 查t_SplitOut
     T_SplitOut splitOut;
-    if (!m_ds.getSplitOut(sTradeID, &splitOut)) {
+    if (!GM_INSTANCE->m_ds->getSplitOut(sTradeID, &splitOut)) {
         LOG_INFO().noquote() << "未查询到门架信息";
         return;
     }
@@ -670,7 +674,7 @@ QString BizHandler::getGreenVehicleInfoFromPlate(const QString &plateNumber)
 
     ST_Node exNode;
     exNode.nodeType = 1;
-    if (m_ds.getLatestOutTradeInPlate(plateNumber, &objEtc, 0)) {
+    if (GM_INSTANCE->m_ds->getLatestOutTradeInPlate(plateNumber, &objEtc, 0)) {
         // ETC出口记录
         passID = objEtc.PassID;
         tradeID = objEtc.TradeID;
@@ -698,7 +702,7 @@ QString BizHandler::getGreenVehicleInfoFromPlate(const QString &plateNumber)
         exNode.nodeId = objEtc.CNLaneID.left(14);
         exNode.nodeName = objEtc.ExStationName;
         exNode.passTime = objEtc.ExTime.toString("yyyy-MM-dd hh:mm:ss");
-    } else if (m_ds.getLatestOutTradeInPlate(plateNumber, &objMtc, 1)) {
+    } else if (GM_INSTANCE->m_ds->getLatestOutTradeInPlate(plateNumber, &objMtc, 1)) {
         // MTC出口记录
         passID = objMtc.PassID;
         tradeID = objMtc.TradeID;
@@ -739,7 +743,7 @@ QString BizHandler::getGreenVehicleInfoFromPlate(const QString &plateNumber)
     // 查询入口信息
     ST_Node enNode;
     enNode.nodeType = 1;
-    QVariantMap enInfo = m_ds.getEnInfo(passID);
+    QVariantMap enInfo = GM_INSTANCE->m_ds->getEnInfo(passID);
     if (!enInfo.isEmpty()) {
         enNode.captureId = enInfo["TRADEID"].toString();
         enNode.passTime = enInfo["ENTIME"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
@@ -753,20 +757,20 @@ QString BizHandler::getGreenVehicleInfoFromPlate(const QString &plateNumber)
         enNode.captureId = "";
         enNode.passTime = enTime;
         enNode.nodeHex = enNetHex + enHex;
-        enNode.nodeId = m_ds.getGantryNodeID(enNode.nodeHex);
+        enNode.nodeId = GM_INSTANCE->m_ds->getGantryNodeID(enNode.nodeHex);
         enNode.nodeName = enName;
     }
     LOG_INFO().noquote() << QString("查询入口信息结果返回 passID %1, name %2").arg(passID, enNode.nodeName);
 
     // 判断是否允许绿通通行
     QString greenPassMsg;
-    int banType = m_ds.getGreenPassBanType(plateNumber);
+    int banType = GM_INSTANCE->m_ds->getGreenPassBanType(plateNumber);
     if (banType == 1) {
         greenPassMsg = "存在多次绿通混装";
     } else if (banType == 2) {
         greenPassMsg = "存在多次假冒绿通";
     } else {
-        greenPassMsg = m_ds.getGreenPassAppointment(plateNumber) ? "存在绿通预约信息" : "";
+        greenPassMsg = GM_INSTANCE->m_ds->getGreenPassAppointment(plateNumber) ? "存在绿通预约信息" : "";
     }
 
     QVariantMap sendMap;
@@ -812,7 +816,7 @@ QString BizHandler::getGreenVehicleInfoFromTradeID(const QString &tradeId)
 
     ST_Node exNode;
     exNode.nodeType = 1;
-    if (m_ds.getLatestOutTradeInTradeID(tradeId, &objEtc, 0)) {
+    if (GM_INSTANCE->m_ds->getLatestOutTradeInTradeID(tradeId, &objEtc, 0)) {
         // ETC出口记录
         passID = objEtc.PassID;
         exitFeeType = objEtc.ExitFeeType;
@@ -840,7 +844,7 @@ QString BizHandler::getGreenVehicleInfoFromTradeID(const QString &tradeId)
         exNode.nodeId = objEtc.CNLaneID.left(14);
         exNode.nodeName = objEtc.ExStationName;
         exNode.passTime = objEtc.ExTime.toString("yyyy-MM-dd hh:mm:ss");
-    } else if (m_ds.getLatestOutTradeInTradeID(tradeId, &objMtc, 1)) {
+    } else if (GM_INSTANCE->m_ds->getLatestOutTradeInTradeID(tradeId, &objMtc, 1)) {
         // MTC出口记录
         passID = objMtc.PassID;
         exitFeeType = objMtc.ExitFeeType;
@@ -881,7 +885,7 @@ QString BizHandler::getGreenVehicleInfoFromTradeID(const QString &tradeId)
     // 查询入口信息
     ST_Node enNode;
     enNode.nodeType = 1;
-    QVariantMap enInfo = m_ds.getEnInfo(passID);
+    QVariantMap enInfo = GM_INSTANCE->m_ds->getEnInfo(passID);
     if (!enInfo.isEmpty()) {
         enNode.captureId = enInfo["TRADEID"].toString();
         enNode.passTime = enInfo["ENTIME"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
@@ -895,20 +899,20 @@ QString BizHandler::getGreenVehicleInfoFromTradeID(const QString &tradeId)
         enNode.captureId = "";
         enNode.passTime = enTime;
         enNode.nodeHex = enNetHex + enHex;
-        enNode.nodeId = m_ds.getGantryNodeID(enNode.nodeHex);
+        enNode.nodeId = GM_INSTANCE->m_ds->getGantryNodeID(enNode.nodeHex);
         enNode.nodeName = enName;
     }
     LOG_INFO().noquote() << QString("查询入口信息结果返回 passID %1, name %2").arg(passID, enNode.nodeName);
 
     // 判断是否允许绿通通行
     QString greenPassMsg;
-    int banType = m_ds.getGreenPassBanType(vehPlate);
+    int banType = GM_INSTANCE->m_ds->getGreenPassBanType(vehPlate);
     if (banType == 1) {
         greenPassMsg = "存在多次绿通混装";
     } else if (banType == 2) {
         greenPassMsg = "存在多次假冒绿通";
     } else {
-        greenPassMsg = m_ds.getGreenPassAppointment(vehPlate) ? "存在绿通预约信息" : "";
+        greenPassMsg = GM_INSTANCE->m_ds->getGreenPassAppointment(vehPlate) ? "存在绿通预约信息" : "";
     }
 
     QVariantMap sendMap;
@@ -961,9 +965,9 @@ QString BizHandler::getGreenVehicleWayFromScan(const QString &scan)
     ST_Node exNode;
     exNode.nodeType = 1;
     exNode.captureId = "";
-    exNode.nodeHex = m_ds.getGantryHexNode(scanInfo.exStationId);
+    exNode.nodeHex = GM_INSTANCE->m_ds->getGantryHexNode(scanInfo.exStationId);
     exNode.nodeId = scanInfo.exStationId;
-    exNode.nodeName = m_ds.getGantryNodeName(scanInfo.exStationId);
+    exNode.nodeName = GM_INSTANCE->m_ds->getGantryNodeName(scanInfo.exStationId);
     exNode.passTime = scanInfo.exTime;
 
     if (passID.isEmpty()) {
@@ -973,7 +977,7 @@ QString BizHandler::getGreenVehicleWayFromScan(const QString &scan)
     // 查询入口信息
     ST_Node enNode;
     enNode.nodeType = 1;
-    QVariantMap enInfo = m_ds.getEnInfo(passID);
+    QVariantMap enInfo = GM_INSTANCE->m_ds->getEnInfo(passID);
     if (!enInfo.isEmpty()) {
         enNode.captureId = enInfo["TRADEID"].toString();
         enNode.passTime = enInfo["ENTIME"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
@@ -986,9 +990,9 @@ QString BizHandler::getGreenVehicleWayFromScan(const QString &scan)
         LOG_INFO().noquote() << "查询入口信息为空，使用出口记录中的入口信息";
         enNode.captureId = "";
         enNode.passTime = QDateTime::fromString(scanInfo.passId.right(14), "yyyyMMddhhmmss").toString("yyyy-MM-dd hh:mm:ss");
-        enNode.nodeHex = m_ds.getGantryHexNode(scanInfo.enStationId);
-        enNode.nodeId = m_ds.getGantryNodeID(enNode.nodeHex);
-        enNode.nodeName = m_ds.getGantryNodeName(scanInfo.enStationId);
+        enNode.nodeHex = GM_INSTANCE->m_ds->getGantryHexNode(scanInfo.enStationId);
+        enNode.nodeId = GM_INSTANCE->m_ds->getGantryNodeID(enNode.nodeHex);
+        enNode.nodeName = GM_INSTANCE->m_ds->getGantryNodeName(scanInfo.enStationId);
     }
     LOG_INFO().noquote() << QString("查询入口信息结果返回 passID %1, name %2").arg(passID, enNode.nodeName);
 
@@ -1222,7 +1226,7 @@ QString BizHandler::doDealCmd23(const QVariantMap &aMap)
     QString reqBody = nloJson.serialize(aMap);
     LOG_INFO().noquote() << "车道设备控制请求: " << reqBody;
 
-    QString laneIP = m_ds.getLaneIP(stationID, laneID);
+    QString laneIP = GM_INSTANCE->m_ds->getLaneIP(stationID, laneID);
     QString devCtrlurl = QString("http://%1:13592/devCtrl").arg(laneIP);
     QUrl url(devCtrlurl);
     QByteArray result;
@@ -1262,11 +1266,11 @@ QString BizHandler::getDiscardTicketReviewImage(const QString &picName, const QS
         throw BaseException(1, "响应失败: 图片命名错误");
     }
 
-    QString stationIP = m_ds.getStationIP(stationId);
+    QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationId);
     QString stationServiceUrl = QString("http://%1:8082").arg(stationIP);
 
     QString result;
-    QVariantList resList = m_ds.getTicketReviewPic(stationId, tradeId, QUrl(stationServiceUrl));
+    QVariantList resList = GM_INSTANCE->m_ds->getTicketReviewPic(stationId, tradeId, QUrl(stationServiceUrl));
     if (!resList.isEmpty()) {
         QVariantMap resMap = resList.first().toMap();
         result = resMap["picdata"].toString();
@@ -1372,7 +1376,7 @@ QString BizHandler::doDealCmd26(const QVariantMap &aMap)
     NloJson nloJson;
 
     T_LaneInputShift laneInputShift;
-    QJson::QObjectHelper::qvariant2qobject(aMap, &laneInputShift);
+    Utils::DataDealUtils::qvariant2qobject(aMap, &laneInputShift);
     laneInputShift.UpdateTime = QDateTime::currentDateTime();
     LOG_INFO().noquote() << "交接班数据: " << laneInputShift.toString();
 
@@ -1381,7 +1385,7 @@ QString BizHandler::doDealCmd26(const QVariantMap &aMap)
     QString dtpXml = Utils::BizUtils::makeDtpXml(dtpContent, "531", fromNode, stationId, 1);
     LOG_INFO().noquote() << "交接班数据DTP报文: " << dtpXml;
 
-    QString stationIP = m_ds.getStationIP(stationId);
+    QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationId);
     int res = GM_INSTANCE->m_dtpSender->sendMsgToDtp(stationIP, 13591, "TradeQ", "", dtpXml);
 
     if (res < 0)
@@ -1450,7 +1454,7 @@ QString BizHandler::doDealCmd27(const QVariantMap &aMap)
     resMap.insert("dataID", stationID + QString("%1").arg(laneID, 2, 10, QChar('0')) + QDateTime::currentDateTime().toString("yyyyMMddhhmmss"));
     resMap.insert("cardID", specialMedium);
 
-    QString operatorName = m_ds.getUserName(userID, 1);
+    QString operatorName = GM_INSTANCE->m_ds->getUserName(userID, 1);
     resMap.insert("inputOperator", userID);
     resMap.insert("operatorName", operatorName);
     resMap.insert("inputOperatorName", operatorName);
@@ -1458,16 +1462,16 @@ QString BizHandler::doDealCmd27(const QVariantMap &aMap)
     resMap["specialType"] = specialSubType; // NOTE 特别处理
 
     T_SpecialCards specialCard;
-    QJson::QObjectHelper::qvariant2qobject(resMap, &specialCard);
+    Utils::DataDealUtils::qvariant2qobject(resMap, &specialCard);
     LOG_INFO().noquote() << "特情卡记录: " << specialCard.toString();
 
-    QString stationIP = m_ds.getStationIP(stationID);
+    QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationID);
     QString stationServiceUrl = QString("http://%1:8082").arg(stationIP);
 
-    if (m_ds.getSpecialCardExist(specialCard, QUrl(stationServiceUrl)))
+    if (GM_INSTANCE->m_ds->getSpecialCardExist(specialCard, QUrl(stationServiceUrl)))
         throw BaseException(1, "响应失败: 该特情卡记录已存在");
 
-    if (!m_ds.insertSpecialCard(specialCard, QUrl(stationServiceUrl)))
+    if (!GM_INSTANCE->m_ds->insertSpecialCard(specialCard, QUrl(stationServiceUrl)))
         throw BaseException(1, "响应失败: 录入特情卡数据失败");
 
     QVariantMap map;
@@ -1487,8 +1491,8 @@ QString BizHandler::doDealCmd28(const QVariantMap &aMap)
     if (cardId.isEmpty())
         throw BaseException(1, "响应失败: 身份卡号为空");
 
-    QString userId = m_ds.getUserID(cardId);
-    QString userName = m_ds.getUserName(cardId, 0);
+    QString userId = GM_INSTANCE->m_ds->getUserID(cardId);
+    QString userName = GM_INSTANCE->m_ds->getUserName(cardId, 0);
 
     if (userId.isEmpty() && userName.isEmpty())
         throw BaseException(1, "响应失败: 未查询到相关用户信息");
@@ -1564,8 +1568,8 @@ QString BizHandler::doDealCmd30(const QVariantMap &aMap)
         m_auditInfos.insert(id, auditInfo);
 
         // 提高返回数据可读性
-        auditMap["realEnStationName"] = enStationId.isEmpty() ? "" : m_ds.getStationName(enStationId);
-        auditMap["realExStationName"] = exStationId.isEmpty() ? "" : m_ds.getStationName(exStationId);
+        auditMap["realEnStationName"] = enStationId.isEmpty() ? "" : GM_INSTANCE->m_ds->getStationName(enStationId);
+        auditMap["realExStationName"] = exStationId.isEmpty() ? "" : GM_INSTANCE->m_ds->getStationName(exStationId);
         auditMap["isPreBlack"] = isPreBlack ? 1 : 0;
 
         var = auditMap;
@@ -1603,7 +1607,7 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
         // 第一次请求时，该字段手持机传空。此时由后端自行组装
         int tradeNumSuffix = getUniqueTradeNum(stationId) + 1000000000;
         // 更新唯一交易号
-        m_ds.updateEmgcSeqNum(stationId);
+        GM_INSTANCE->m_ds->updateEmgcSeqNum(stationId);
         tradeNum = QString("%1AD%2").arg(stationId).arg(tradeNumSuffix);
         aMap["tradeNum"] = tradeNum;
     }
@@ -1712,7 +1716,7 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
         auditPayBack.DataType = 2; // 手持机稽核
         auditPayBack.Remark = remark;
         auditPayBack.Operator = aMap["operator"].toString();
-        auditPayBack.OperatorName = m_ds.getUserName(auditPayBack.Operator, 1);
+        auditPayBack.OperatorName = GM_INSTANCE->m_ds->getUserName(auditPayBack.Operator, 1);
         auditPayBack.OperateTime = Utils::DataDealUtils::curDateTime();
         auditPayBack.Status = 2; // 已处理
         auditPayBack.PaybackUser = aMap["paybackUser"].toString();
@@ -1780,7 +1784,7 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
             for (const auto &resultId : resultIds)
                 m_auditInfos.remove(resultId.toString());
 
-            QString stationIP = m_ds.getStationIP(stationId);
+            QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationId);
             int res = GM_INSTANCE->m_dtpSender->sendMsgToDtp(stationIP, 13591, "TradeQ", "", dtpXml);
             QVariantMap map;
             if (res < 0) {
@@ -1966,7 +1970,7 @@ QVariantMap BizHandler::refund(const QString &tradeNum, const QVariantMap &aMap)
 
     int refundFee = aMap["paybackFee"].toInt();
     QString operatorId = aMap["operator"].toString();
-    QString operatorName = m_ds.getUserName(operatorId, 1);
+    QString operatorName = GM_INSTANCE->m_ds->getUserName(operatorId, 1);
     QString refundDesc = "";
     int randNum = Utils::DataDealUtils::getRandomNum(1000);
     QString cloudPayKey = GM_INSTANCE->m_config->m_baseConfig.cloudPayKey;
@@ -2003,10 +2007,10 @@ QVariantMap BizHandler::refund(const QString &tradeNum, const QVariantMap &aMap)
 
 int BizHandler::getUniqueTradeNum(const QString &stationId)
 {
-    QString seqNum = m_ds.getEmgcSeqNum(stationId);
+    QString seqNum = GM_INSTANCE->m_ds->getEmgcSeqNum(stationId);
     if (seqNum == "0") {
         // 没有站级对应的记录时，默认插入一条，并返回seqNum=1
-        m_ds.insertEmgcSeqNum(stationId);
+        GM_INSTANCE->m_ds->insertEmgcSeqNum(stationId);
         seqNum = "1";
     } else if (seqNum == "") {
         throw BaseException(1, "响应失败: 获取唯一交易号失败");
@@ -2182,7 +2186,7 @@ QString BizHandler::doDealCmd34(const QVariantMap &aMap)
     if (vehicleId.isEmpty())
         throw BaseException(1, "响应失败: 车牌号为空");
 
-    auto tempFreeTempVehicles = m_ds.getFreeTempVehicles(vehicleId);
+    auto tempFreeTempVehicles = GM_INSTANCE->m_ds->getFreeTempVehicles(vehicleId);
 
     if (tempFreeTempVehicles.isEmpty())
         throw BaseException(1, "响应失败: 未查询到相关数据");
@@ -2191,8 +2195,8 @@ QString BizHandler::doDealCmd34(const QVariantMap &aMap)
     QVariantList freeTempVehicles;
     foreach (auto item, tempFreeTempVehicles) {
         T_FreeTempVehicle freeTempVehicle;
-        QJson::QObjectHelper::qvariant2qobject(item.toMap(), &freeTempVehicle);
-        QVariantMap map = QJson::QObjectHelper::qobject2qvariant(&freeTempVehicle);
+        Utils::DataDealUtils::qvariant2qobject(item.toMap(), &freeTempVehicle);
+        QVariantMap map = Utils::DataDealUtils::qobject2qvariant(&freeTempVehicle);
         freeTempVehicles.append(map);
     }
 
@@ -2232,7 +2236,7 @@ QString BizHandler::doDealCmd37(const QVariantMap &aMap)
     if (imageBase64.isEmpty())
         throw BaseException(1, "响应失败: 图片内容为空");
 
-    QString stationIP = m_ds.getStationIP(stationID);
+    QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationID);
     QString stationServiceUrl = QString("http://%1:8082").arg(stationIP);
 
     QString dealtData;
@@ -2261,7 +2265,7 @@ QString BizHandler::doDealCmd37(const QVariantMap &aMap)
         discardTicketReview.OperateTime = Utils::DataDealUtils::curDateTime();
 
         // 图片上传
-        if (m_ds.insertTicketReviewPic(discardTicketReview, stationServiceUrl)) {
+        if (GM_INSTANCE->m_ds->insertTicketReviewPic(discardTicketReview, stationServiceUrl)) {
             LOG_INFO().noquote() << "图片上传成功";
         }
 
@@ -2305,11 +2309,11 @@ QString BizHandler::doDealCmd38(const QVariantMap &aMap)
     if (stationId.isEmpty())
         throw BaseException(1, "响应失败：站代码为空");
 
-    QString stationIP = m_ds.getStationIP(stationId);
+    QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationId);
     QString stationServiceUrl = QString("http://%1:8082").arg(stationIP);
 
     QMap<QString, QVariantMap> outTradeList;
-    QVariantList tradeRecords = m_ds.getDurationOutTrades(vehPlate, cardId, startTime, stopTime, QUrl(stationServiceUrl));
+    QVariantList tradeRecords = GM_INSTANCE->m_ds->getDurationOutTrades(vehPlate, cardId, startTime, stopTime, QUrl(stationServiceUrl));
     for (const auto &item : tradeRecords) {
         QVariantMap oneTrade = item.toMap();
         QString tradeId = oneTrade["tradeid"].toString();
@@ -2340,7 +2344,7 @@ QString BizHandler::doDealCmd38(const QVariantMap &aMap)
     }
 
     // 是否审核
-    QVariantList discardTicketRecords = m_ds.getDiscardTickets(outTradeList.keys(), QUrl(stationServiceUrl));
+    QVariantList discardTicketRecords = GM_INSTANCE->m_ds->getDiscardTickets(outTradeList.keys(), QUrl(stationServiceUrl));
     QStringList dtIds; // 后续判断补打票使用
     for (const auto &dtRec : discardTicketRecords) {
         QVariantMap discardTicket = dtRec.toMap();
@@ -2364,7 +2368,7 @@ QString BizHandler::doDealCmd38(const QVariantMap &aMap)
             evIds << tradeId;
     }
 
-    QVariantList ticketUseScrapRecords = m_ds.getTicketUseScrapInfos(outTradeList.keys(), QUrl(stationServiceUrl));
+    QVariantList ticketUseScrapRecords = GM_INSTANCE->m_ds->getTicketUseScrapInfos(outTradeList.keys(), QUrl(stationServiceUrl));
     QStringList tusIds;
     for (const auto &tusRec : ticketUseScrapRecords) { // 是否废票查询
         QVariantMap ticketUseScrap = tusRec.toMap();
@@ -2476,11 +2480,11 @@ QString BizHandler::doDealCmd39(const QVariantMap &aMap)
     if (stopTime.isEmpty())
         throw BaseException(1, "响应失败: 预约结束时间为空");
 
-    QString stationIP = m_ds.getStationIP(stationID);
+    QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationID);
     QString stationServiceUrl = QString("http://%1:8082").arg(stationIP);
 
     QVariantList greenTradeList;
-    QVariantList records = m_ds.getExGreenPassTrades(startTime, stopTime, QUrl(stationServiceUrl));
+    QVariantList records = GM_INSTANCE->m_ds->getExGreenPassTrades(startTime, stopTime, QUrl(stationServiceUrl));
     for (const auto &record : records) {
         QVariantMap recordMap = record.toMap();
 
@@ -2489,9 +2493,9 @@ QString BizHandler::doDealCmd39(const QVariantMap &aMap)
         greenTrade["passId"] = recordMap["passid"].toString();
         greenTrade["vehPlate"] = recordMap["exvehplate"].toString();
         QString enHexNode = recordMap["ennetid"].toString() + recordMap["enstation"].toString();
-        greenTrade["enStation"] = m_ds.getGantryNodeID(enHexNode);
+        greenTrade["enStation"] = GM_INSTANCE->m_ds->getGantryNodeID(enHexNode);
         QString exHexNode = recordMap["exnetid"].toString() + recordMap["exstation"].toString();
-        greenTrade["exStation"] = m_ds.getGantryNodeID(exHexNode);
+        greenTrade["exStation"] = GM_INSTANCE->m_ds->getGantryNodeID(exHexNode);
         greenTrade["exTime"] = QDateTime::fromString(recordMap["extime"].toString(), "yyyy-MM-dd hh:mm:ss").toString("yyyy-MM-ddThh:mm:ss");
         greenTrade["enWeight"] = recordMap["entotalweight"].toString();
         greenTrade["exWeight"] = recordMap["totalweight"].toString();
@@ -2622,4 +2626,39 @@ QString BizHandler::requestRemoteAPI(int type, const QString &id, const QString 
     }
 
     return result;
+}
+
+QString BizHandler::doDealCmd41(const QVariantMap &aMap)
+{
+    QString stationID;
+
+    if (aMap.contains("stationID"))
+        stationID = aMap["stationID"].toString();
+
+    if (stationID.isEmpty())
+        throw BaseException(1, "响应失败: 请求站代码为空");
+
+    QVariantList resList = GM_INSTANCE->m_ds->getStationAuthorization(stationID);
+    if (resList.isEmpty())
+        throw BaseException(1, "相应失败: 未查询到相关记录");
+
+    QVariantList authInfos;
+    for (const auto &record : resList) {
+        QVariantMap oneMap = record.toMap();
+
+        QVariantMap info;
+        info["authNo"] = oneMap["FUNID"].toInt();
+        info["authName"] = oneMap["FUNNAME"].toString();
+        authInfos.append(info);
+    }
+
+    NloJson nloJson;
+
+    QVariantMap resMap;
+    resMap["status"] = 0;
+    resMap["desc"] = QString("成功查询到%1条记录").arg(resList.size());
+    resMap["authInfo"] = authInfos;
+
+    QString dealtData = nloJson.serialize(resMap);
+    return dealtData;
 }

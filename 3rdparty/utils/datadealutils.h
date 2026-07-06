@@ -191,6 +191,13 @@ public:
     // XML转换成QVariantMap
     static QVariantMap xmlToMap(const QByteArray &data, bool *ok, QString *errDesc);
 
+    // QObject对象转换成QVariantMap,并可以指定忽略属性
+    static QVariantMap qobject2qvariant(const QObject *object,
+                                        const QStringList &ignoredProperties = QStringList(QString(QLatin1String("objectName"))));
+
+    // QVariantMap转换成QObject对象
+    static void qvariant2qobject(const QVariantMap &variant, QObject *object);
+
 private:
     static QString formatSqlValue(const QVariant &val);
 

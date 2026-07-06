@@ -23,12 +23,12 @@ include($$THIRD_PARTY_LIBRARY_PATH/NlohmannJson/NlohmannJson.pri)
 
 SOURCES += \
     bend/bizhandler.cpp \
-    bend/dataservice.cpp \
-    bend/dtpsender.cpp \
-    bend/httphandler.cpp \
-    config/baseexception.cpp \
+    dataservice/dataservice.cpp \
     config/config.cpp \
-    global/globalmanager.cpp \
+    core/baseexception.cpp \
+    core/dtpsender.cpp \
+    core/httphandler.cpp \
+    core/globalmanager.cpp \
     main.cpp
 
 HEADERS += \
@@ -42,19 +42,10 @@ HEADERS += \
     bean/t_splitout.h \
     bean/t_mticketuse.h \
     bend/bizhandler.h \
-    bend/dataservice.h \
-    bend/dtpsender.h \
-    bend/httphandler.h \
-    config/baseexception.h \
+    dataservice/dataservice.h \
     config/config.h \
     global/defs.h \
-    global/globalmanager.h
-
-# 引入第三方库
-unix:!macx|win32: LIBS += \
-    -l$$qtLibraryTargetName(QJson) \
-
-INCLUDEPATH += \
-    $$THIRD_PARTY_LIBRARY_PATH/QJson/include \
-
-copyLibsToDestdir($$qtLibraryTargetName(QJson))
+    core/baseexception.h \
+    core/dtpsender.h \
+    core/httphandler.h \
+    core/globalmanager.h

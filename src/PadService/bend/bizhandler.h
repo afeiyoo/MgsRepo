@@ -2,8 +2,6 @@
 
 #include <QObject>
 
-#include "HttpClient/src/httpreply.h"
-#include "bend/dataservice.h"
 #include "global/defs.h"
 
 class BizHandler : public QObject
@@ -120,7 +118,9 @@ private:
     // 请求云坐席台账接口
     QString requestRemoteAPI(int type, const QString &id, const QString &data, const QString &token);
 
+    // 3.3.41 权限管理
+    QString doDealCmd41(const QVariantMap &aMap);
+
 private:
-    DataService m_ds;
     static QMap<QString, ST_AuditInfo> m_auditInfos;
 };
