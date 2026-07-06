@@ -46,7 +46,7 @@ void HttpHandler::service(HttpRequest &request, HttpResponse &response)
         LOG_INFO().noquote() << QString("response size: %1 <==\n%2").arg(sendData.size()).arg(QString::fromUtf8(sendData.left(1024)));
         response.write(sendData, true);
     } catch (const BaseException &e) {
-        QString dealtData = QString::fromUtf8(R"({"status":"%1","desc":"%2"})").arg(e.status()).arg(e.desc());
+        QString dealtData = QString::fromUtf8(R"({"status":"%1","desc":"%2"})").arg(e.errCode()).arg(e.errDesc());
 
         aMap.remove("data");
         aMap.insert("data", dealtData);

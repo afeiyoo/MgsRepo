@@ -15,7 +15,7 @@ SUBDIRS += \
     PadService \
     # ETC \
     # LaneSystemMaster \
-    # StationService
+    StationService
 
 LaneSystemGUI.file = src/LaneSystemGUI/LaneSystemGUI.pro
 LaneSystemGUIDemo.file = src/LaneSystemGUIDemo/LaneSystemGUIDemo.pro

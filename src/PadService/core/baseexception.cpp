@@ -1,18 +1,18 @@
 #include "baseexception.h"
 
 BaseException::BaseException(int status, const QString &desc)
-    : m_status{status}
+    : m_errCode{status}
     , m_desc{desc}
 {}
 
 BaseException::~BaseException() {}
 
-int BaseException::status() const
+int BaseException::errCode() const
 {
-    return m_status;
+    return m_errCode;
 }
 
-QString BaseException::desc() const
+QString BaseException::errDesc() const
 {
     return m_desc;
 }

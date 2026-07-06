@@ -1,24 +1,30 @@
 #include "baseexception.h"
 
-BaseException::BaseException(int status, const QString &desc)
-    : m_status{status}
-    , m_desc{desc}
+BaseException::BaseException(EM_ExceptionType type, int errCode, const QString &errDesc)
+    : m_type{type}
+    , m_errCode{errCode}
+    , m_errDesc{errDesc}
 {}
 
 BaseException::~BaseException() {}
 
-int BaseException::status() const
+BaseException::EM_ExceptionType BaseException::type() const
 {
-    return m_status;
+    return m_type;
 }
 
-QString BaseException::desc() const
+int BaseException::errCode() const
 {
-    return m_desc;
+    return m_errCode;
+}
+
+QString BaseException::errDesc() const
+{
+    return m_errDesc;
 }
 
 const char *BaseException::what() const noexcept
 {
-    m_buf = m_desc.toUtf8();
+    m_buf = m_errDesc.toUtf8();
     return m_buf.constData();
 }
