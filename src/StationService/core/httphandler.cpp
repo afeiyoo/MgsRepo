@@ -31,8 +31,33 @@ void HttpHandler::service(stefanfrings::HttpRequest &request, stefanfrings::Http
         response.write(sendData, true);
     } catch (const BaseException &e) {
         QVariantMap resMap;
-        resMap["errCode"] = e.status();
-        resMap["errorMessage"] = e.desc();
+
+        BaseException::EM_ExceptionType type = e.type();
+        if (type == BaseException::QUERY_REPEAT) {
+            resMap["judgeResult"] = e.errCode();
+        } else if (type == BaseException::SAVE_DATA) {
+            resMap["errCode"] = e.errCode();
+            resMap["errorMessage"] = e.errDesc();
+        } else if (type == BaseException::QUERY_XZPASS) {
+            resMap["errCode"] = e.errCode();
+            resMap["returnMessage"] = e.errDesc();
+        } else if (type == BaseException::QUERY_SHIFT) {
+            resMap["errCode"] = e.errCode();
+            resMap["errorMessage"] = e.errDesc();
+            resMap["Count"] = 0;
+        } else if (type == BaseException::QUERY_DATA) {
+            resMap["errCode"] = e.errCode();
+            resMap["errorMessage"] = e.errDesc();
+        } else if (type == BaseException::QUERY_ETC_BLACK) {
+            resMap["queryResult"] = e.errCode();
+            resMap["version"] = "";
+            resMap["OperateTable"] = 0;
+            resMap["amount"] = 0;
+            resMap["errorMessage"] = e.errDesc();
+        } else {
+            resMap["errCode"] = e.errCode();
+            resMap["errorMessage"] = e.errDesc();
+        }
 
         QByteArray sendData = DataDealUtils::mapToJson(resMap);
         LOG_INFO().noquote() << QString("response size: %1 <==\n%2").arg(sendData.size()).arg(QString::fromUtf8(sendData.left(1024)));

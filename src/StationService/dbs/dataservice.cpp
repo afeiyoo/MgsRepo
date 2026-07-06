@@ -171,9 +171,8 @@ bool DataService::insertRecord(const QVariantMap &kvs, const QString &tableName)
     }
 }
 
-int DataService::fetchXZPassTimes(const QString &sql, bool *ok) const
+int DataService::fetchXZPassTimes(const QString &sql) const
 {
-    *ok = true;
     QSqlDatabase sdb = m_dbFactory->getDatabase();
 
     EasyQtSql::Transaction t(sdb);
@@ -187,7 +186,6 @@ int DataService::fetchXZPassTimes(const QString &sql, bool *ok) const
         return res.scalar<int>();
     } catch (const EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery.left(1024);
-        *ok = false;
         return -1;
     }
 }

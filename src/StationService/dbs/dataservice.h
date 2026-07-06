@@ -33,7 +33,7 @@ public:
     bool insertRecord(const QVariantMap &kvs, const QString &tableName) const;
 
     // 获取厦漳大桥交易趟次
-    int fetchXZPassTimes(const QString &sql, bool *ok) const;
+    int fetchXZPassTimes(const QString &sql) const;
 
     // 获取班次流水数量
     int fetchShiftCnt(const QString &shiftDate, int shiftID, int laneID, int flag) const;
