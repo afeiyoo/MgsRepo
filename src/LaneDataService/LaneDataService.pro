@@ -1,4 +1,4 @@
-include($$PWD/../../Public.pri)
+include($$PWD/../../Public.pri)E
 
 QT -= gui
 QT += network sql
@@ -23,6 +23,7 @@ shared|dll {
 
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
+include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 
 
 # You can make your code fail to compile if it uses deprecated APIs.
@@ -30,12 +31,18 @@ include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    config/config.cpp \
     core/globalmanager.cpp \
+    dbs/dataservice.cpp \
+    dbs/dataservicemysql.cpp \
     lanedataservice.cpp
 
 HEADERS += \
     LaneDataService_global.h \
+    config/config.h \
     core/globalmanager.h \
+    dbs/dataservice.h \
+    dbs/dataservicemysql.h \
     lanedataservice.h
 
 # Default rules for deployment.

@@ -6,4 +6,7 @@ class LANEDATASERVICE_EXPORT LaneDataService
 {
 public:
     LaneDataService();
+    ~LaneDataService();
+
+    int init();
 };
