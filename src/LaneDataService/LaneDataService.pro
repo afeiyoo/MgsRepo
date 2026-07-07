@@ -1,7 +1,7 @@
 include($$PWD/../../Public.pri)E
 
 QT -= gui
-QT += network sql
+QT += network sql xml
 
 TARGET = LaneDataService
 
@@ -34,7 +34,7 @@ SOURCES += \
     config/config.cpp \
     core/globalmanager.cpp \
     dbs/dataservice.cpp \
-    dbs/dataservicemysql.cpp \
+    dbs/sqldealer.cpp \
     lanedataservice.cpp
 
 HEADERS += \
@@ -42,7 +42,7 @@ HEADERS += \
     config/config.h \
     core/globalmanager.h \
     dbs/dataservice.h \
-    dbs/dataservicemysql.h \
+    dbs/sqldealer.h \
     lanedataservice.h
 
 # Default rules for deployment.

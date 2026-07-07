@@ -13,6 +13,7 @@ Config::Config(QObject *parent)
 
     m_logFormat = "%{time} [%{type}] [%{threadid}] %{message}\n\n";
     m_logLimits = 180;
+    m_sqlFilesDir = FileUtils::curApplicationDirPath() + "/sqls";
 }
 
 Config::~Config()

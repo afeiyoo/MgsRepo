@@ -4,7 +4,9 @@
 #include "CuteLogger/include/RollingFileAppender.h"
 #include "Logger.h"
 #include "config/config.h"
+#include "dbs/dataservice.h"
 #include "utils/fileutils.h"
+#include "utils/stdafx.h"
 
 using namespace Utils;
 
@@ -15,9 +17,13 @@ GlobalManager::GlobalManager(QObject *parent)
 {
     m_conf = new Config(this);
     m_confPath = FileUtils::curApplicationDirPath() + "/config/config.ini";
+    m_ds = new DataService();
 }
 
-GlobalManager::~GlobalManager() {}
+GlobalManager::~GlobalManager()
+{
+    SAFE_DELETE(m_ds);
+}
 
 GlobalManager *GlobalManager::instance()
 {
@@ -47,7 +53,11 @@ int GlobalManager::init()
     rollingFileAppender->setDatePattern(RollingFileAppender::DailyRollover);
     cuteLogger->registerAppender(rollingFileAppender);
 
-    // 数据库初始化
+    // 数据库操作对象初始化
+    bool dbOk = m_ds->init(m_conf->m_dbType, m_conf->m_dbHost, m_conf->m_dbPort, m_conf->m_dbUser, m_conf->m_dbPassword, m_conf->m_dbName);
+    if (!dbOk) {
+        return -101;
+    }
 
     return 0;
 }

@@ -29,6 +29,9 @@ public:
     QString m_logFormat;
     int m_logLimits;
 
+    // sql文件存储路径
+    QString m_sqlFilesDir;
+
 private:
     Utils::ConfigUtils *m_confUtil = nullptr; // 配置读取工具
 };
