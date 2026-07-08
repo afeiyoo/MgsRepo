@@ -15,6 +15,9 @@ public:
 
     Http();
 
+    // 第三方库修改 2026-07-08 新增虚析构函数
+    virtual ~Http() = default;
+
     void setRequestHeaders(const QMap<QByteArray, QByteArray> &headers);
     QMap<QByteArray, QByteArray> &getRequestHeaders();
     void addRequestHeader(const QByteArray &name, const QByteArray &value);
