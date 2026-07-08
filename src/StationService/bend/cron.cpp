@@ -238,7 +238,19 @@ int Cron::getFullFiles()
     bool startDownload = false;
     FileName infoFile = FileName::fromString(GM_INS->m_conf->m_fullSavePath + "/BlackUpdate.xml");
     if (!infoFile.exists()) {
-        LOG_INFO().noquote() << "本地BlackUpdate.xml不存在，启动全量文件下载";
+        // 保存BlackUpdate.xml
+        LOG_INFO().noquote() << "本地BlackUpdate.xml文件不存在!";
+        FileSaver saver(infoFile.toString());
+        if (!saver.write(retMsg)) {
+            LOG_ERROR().noquote() << "写入本地BlackUpdate.xml文件失败";
+            return -1;
+        }
+        if (!saver.finalize()) {
+            LOG_ERROR().noquote() << "保存本地BlackUpdate.xml文件失败";
+            return -1;
+        }
+
+        LOG_INFO().noquote() << "启动全量文件下载";
         startDownload = true;
     } else {
         FileReader reader;
