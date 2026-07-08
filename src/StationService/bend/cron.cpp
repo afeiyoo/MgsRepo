@@ -1,11 +1,13 @@
-#include "cron.h"
+﻿#include "cron.h"
 
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QTextCodec>
+#include <QTimer>
 #include <QXmlStreamWriter>
 
 #include "HttpClient/src/http.h"
@@ -21,14 +23,17 @@ Cron::Cron(QObject *parent)
     : QThread{parent}
 {
     m_delJsonTime = DataDealUtils::curUnixDateTime();
+    m_fullHttpClient = new Http();
 }
 
 Cron::~Cron()
 {
     if (isRunning()) {
         requestInterruption();
+        quit();
         wait(5000);
     }
+    delete m_fullHttpClient;
 }
 
 void Cron::checkJsonToDelete()
@@ -178,7 +183,11 @@ bool Cron::checkVersionIsValid(const QString &version) const
 
 int Cron::getFullFiles()
 {
-    // 获取远程版本号
+    if (m_fullDownloading) {
+        LOG_INFO().noquote() << "上一批次全量文件正在下载中，跳过本次全量文件版本检查";
+        return 0;
+    }
+
     LOG_INFO().noquote() << "开始请求获取远程BlackUpdate.xml: " << GM_INS->m_conf->m_fullCheckUrl;
 
     if (GM_INS->m_conf->m_fullCheckUrl.isEmpty()) {
@@ -238,7 +247,19 @@ int Cron::getFullFiles()
     bool startDownload = false;
     FileName infoFile = FileName::fromString(GM_INS->m_conf->m_fullSavePath + "/BlackUpdate.xml");
     if (!infoFile.exists()) {
-        LOG_INFO().noquote() << "本地BlackUpdate.xml不存在，启动全量文件下载";
+        // 保存BlackUpdate.xml
+        LOG_INFO().noquote() << "本地BlackUpdate.xml文件不存在!";
+        FileSaver saver(infoFile.toString());
+        if (!saver.write(retMsg)) {
+            LOG_ERROR().noquote() << "写入本地BlackUpdate.xml文件失败";
+            return -1;
+        }
+        if (!saver.finalize()) {
+            LOG_ERROR().noquote() << "保存本地BlackUpdate.xml文件失败";
+            return -1;
+        }
+
+        LOG_INFO().noquote() << "启动全量文件下载";
         startDownload = true;
     } else {
         FileReader reader;
@@ -270,79 +291,124 @@ int Cron::getFullFiles()
     }
 
     // 启动下载
-    int downloadRes = downloadFullFiles(fileList, md5List, urlList);
-    if (downloadRes < 0) {
-        return -1;
-    }
+    m_fullResMap = resMap;
+    m_fullRemoteVer = remoteVer;
 
-    // 所有全量文件下载成功，将json文件内容转换为XML文件，并保存
-    if (!saveFullXml(resMap))
-        return -1;
-
-    // 删除旧版本全量文件
-    removeOldFullFiles(remoteVer);
-
-    return 0;
+    return downloadFullFiles(fileList, md5List, urlList);
 }
 
 int Cron::downloadFullFiles(const QVariantList &fileList, const QVariantList &md5List, const QVariantList &urlList)
 {
-    Http client;
-    QStringList downloadedFiles;
+    if (m_fullDownloading) {
+        LOG_INFO().noquote() << "全量文件正在下载中...";
+        return 0;
+    }
 
-    for (int i = 0; i < urlList.size(); ++i) {
-        QString fileName = fileList.at(i).toString();
-        QUrl url(urlList.at(i).toString());
+    m_fullFileList = fileList;
+    m_fullMd5List = md5List;
+    m_fullUrlList = urlList;
 
-        QString filePath = QDir(GM_INS->m_conf->m_fullSavePath).filePath(fileName);
-        FileName file = FileName::fromString(filePath);
-        FileUtils::makeSureDirExist(file.parentDir());
+    // 标记正在下载
+    m_fullDownloadedFiles.clear();
+    m_fullDownloadIndex = 0;
+    m_fullDownloading = true;
 
-        LOG_INFO().noquote() << "开始下载全量文件:" << url.toString() << "保存路径:" << filePath;
+    downloadNextFullFile();
+    return 0;
+}
 
-        QByteArray fileData;
-        bool netOk = client.getSync(fileData, url);
-        if (!netOk) {
-            LOG_ERROR().noquote() << "下载全量文件失败:" << url.toString() << "原因:" << fileData;
-            removeDownloadedFiles(downloadedFiles);
-            return -1;
+void Cron::downloadNextFullFile()
+{
+    if (!m_fullDownloading)
+        return;
+
+    if (m_fullDownloadIndex >= m_fullUrlList.size()) {
+        // 所有全量文件已下载完成
+        finishFullDownload(true);
+        return;
+    }
+
+    const int index = m_fullDownloadIndex;
+    const QString fileName = m_fullFileList.at(index).toString();
+    const QUrl url(m_fullUrlList.at(index).toString());
+    const QString filePath = QDir(GM_INS->m_conf->m_fullSavePath).filePath(fileName);
+    const FileName file = FileName::fromString(filePath);
+
+    LOG_INFO().noquote() << "开始下载全量文件:" << url.toString() << "保存路径:" << filePath;
+
+    HttpReply *reply = m_fullHttpClient->get(url);
+    reply->onFinished([=](const HttpReply &reply) {
+        if (!m_fullDownloading || index != m_fullDownloadIndex)
+            return;
+
+        if (!reply.isSuccessful()) {
+            LOG_ERROR().noquote() << "全量文件下载失败:" << url.toString()
+                                  << "原因:" << QString("network error: %1 (%2)").arg(reply.statusCode()).arg(reply.reasonPhrase());
+            finishFullDownload(false);
+            return;
         }
 
         FileSaver saver(file.toString());
-        if (!saver.write(fileData)) {
-            LOG_ERROR().noquote() << "写入全量文件" << file.fileName() << "失败:" << saver.errorString();
-            removeDownloadedFiles(downloadedFiles);
-            return -1;
+        if (!saver.write(reply.body())) {
+            LOG_ERROR().noquote() << "写入全量文件失败:" << file.fileName() << saver.errorString();
+            finishFullDownload(false);
+            return;
         }
         if (!saver.finalize()) {
-            LOG_ERROR().noquote() << "保存全量文件" << file.fileName() << "失败:" << saver.errorString();
-            removeDownloadedFiles(downloadedFiles);
-            return -1;
+            LOG_ERROR().noquote() << "保存全量文件失败:" << file.fileName() << saver.errorString();
+            finishFullDownload(false);
+            return;
         }
 
-        downloadedFiles.append(filePath);
+        // 当前文件下载完成
+        m_fullDownloadedFiles.append(filePath);
+        ++m_fullDownloadIndex;
+        downloadNextFullFile();
+    });
+}
+
+void Cron::finishFullDownload(bool success)
+{
+    if (!success) {
+        removeDownloadedFiles(m_fullDownloadedFiles);
+        m_fullDownloading = false;
+        m_fullDownloadIndex = 0;
+        m_fullDownloadedFiles.clear();
+        return;
     }
 
-    for (int i = 0; i < downloadedFiles.size(); ++i) {
+    for (int i = 0; i < m_fullDownloadedFiles.size(); ++i) {
         bool md5Ok = false;
-        QString actualMd5 = DataDealUtils::bigFileMd5(downloadedFiles.at(i), &md5Ok);
-        QString expectedMd5 = md5List.at(i).toString().trimmed().toUpper();
+        QString actualMd5 = DataDealUtils::bigFileMd5(m_fullDownloadedFiles.at(i), &md5Ok);
+        QString expectedMd5 = m_fullMd5List.at(i).toString().trimmed().toUpper();
 
-        FileName file = FileName::fromString(downloadedFiles.at(i));
+        FileName file = FileName::fromString(m_fullDownloadedFiles.at(i));
         if (!md5Ok) {
-            LOG_ERROR().noquote() << "对全量文件" << file.fileName() << "计算MD5失败!";
-            removeDownloadedFiles(downloadedFiles);
-            return -1;
+            LOG_ERROR().noquote() << "计算全量文件MD5值失败:" << file.fileName();
+            removeDownloadedFiles(m_fullDownloadedFiles);
+            m_fullDownloading = false;
+            return;
         }
         if (actualMd5 != expectedMd5) {
             LOG_ERROR().noquote() << "全量文件MD5校验失败:" << file.fileName() << "期望:" << expectedMd5 << "实际:" << actualMd5;
-            removeDownloadedFiles(downloadedFiles);
-            return -1;
+            removeDownloadedFiles(m_fullDownloadedFiles);
+            m_fullDownloading = false;
+            return;
         }
     }
 
-    LOG_INFO().noquote() << "全量文件全部下载并校验成功, 文件数:" << downloadedFiles.size();
-    return 0;
+    LOG_INFO().noquote() << "所有全量文件已下载，并通过校验，数量:" << m_fullDownloadedFiles.size();
+    if (saveFullXml(m_fullResMap))
+        removeOldFullFiles(m_fullRemoteVer);
+
+    m_fullDownloading = false;
+    m_fullDownloadIndex = 0;
+    m_fullFileList.clear();
+    m_fullMd5List.clear();
+    m_fullUrlList.clear();
+    m_fullResMap.clear();
+    m_fullRemoteVer.clear();
+    m_fullDownloadedFiles.clear();
 }
 
 void Cron::removeDownloadedFiles(const QStringList &filePaths)
@@ -449,7 +515,12 @@ void Cron::removeOldFullFiles(const QString &ver)
 
 void Cron::run()
 {
-    while (!isInterruptionRequested()) {
+    auto tick = [this]() {
+        if (isInterruptionRequested()) {
+            quit();
+            return;
+        }
+
         // 检查过期文件，每三十分钟检查一次
         if (DataDealUtils::curUnixDateTime() - m_delJsonTime > 30 * 60) {
             m_delJsonTime = DataDealUtils::curUnixDateTime();
@@ -465,8 +536,12 @@ void Cron::run()
             m_checkFullTime = DataDealUtils::curUnixDateTime();
             getFullFiles();
         }
+    };
 
-        for (int i = 0; i < 10 && !isInterruptionRequested(); ++i)
-            QThread::sleep(1);
-    }
+    QTimer timer;
+    connect(&timer, &QTimer::timeout, tick);
+    timer.start(10 * 1000);
+    tick();
+    exec();
+    timer.stop();
 }
