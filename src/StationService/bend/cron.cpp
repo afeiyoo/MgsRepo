@@ -543,5 +543,4 @@ void Cron::run()
     timer.start(10 * 1000);
     tick();
     exec();
-    timer.stop();
 }
