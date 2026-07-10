@@ -17,11 +17,23 @@ public:
     // 数据库连接测试
     bool testConnection(const QString &sql);
 
-    // 查询String
-    QString fetchString(const QString &sql, const QString &def);
+    // 查询记录String
+    QString fetchString(const QString &sql, const QVariantMap &params, const QString &def);
 
-    // 查询int
-    int fetchInt(const QString &sql, const int def);
+    // 查询记录int
+    int fetchInt(const QString &sql, const QVariantMap &params, const int def);
+
+    // 执行更新 返回值>=0表示影响行数，<0表示执行失败
+    int updateRecords(const QString &table, const QVariantMap &updateParams, const QString &whereClause);
+
+    // 执行插入 返回值>=0表示影响行数，<0表示执行失败
+    int insertRecords(const QString &table, const QVariantMap &insertParams);
+
+    // 执行删除 返回值>=0表示影响行数，<0表示执行失败
+    int deleteRecords(const QString &table, const QString &whereClause);
+
+    // 整表删除（不删除表结构） 返回值>=0表示影响行数，<0表示执行失败
+    int truncateTable(const QString &table);
 
 protected:
     // 数据库连接池

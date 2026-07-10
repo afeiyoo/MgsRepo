@@ -56,7 +56,7 @@ bool DataService::testConnection(const QString &sql)
     return true;
 }
 
-QString DataService::fetchString(const QString &sql, const QString &def)
+QString DataService::fetchString(const QString &sql, const QVariantMap &params, const QString &def)
 {
     if (sql.isEmpty())
         return def;
@@ -64,7 +64,8 @@ QString DataService::fetchString(const QString &sql, const QString &def)
     QSqlDatabase sdb = m_dbFactory->getDatabase();
     Transaction t(sdb);
     try {
-        QueryResult res = t.execQuery(sql);
+        PreparedQuery query = t.prepare(sql);
+        QueryResult res = query.exec(params);
         LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
 
         if (!res.next())
@@ -78,7 +79,7 @@ QString DataService::fetchString(const QString &sql, const QString &def)
     }
 }
 
-int DataService::fetchInt(const QString &sql, const int def)
+int DataService::fetchInt(const QString &sql, const QVariantMap &params, const int def)
 {
     if (sql.isEmpty())
         return def;
@@ -86,7 +87,8 @@ int DataService::fetchInt(const QString &sql, const int def)
     QSqlDatabase sdb = m_dbFactory->getDatabase();
     Transaction t(sdb);
     try {
-        QueryResult res = t.execQuery(sql);
+        PreparedQuery query = t.prepare(sql);
+        QueryResult res = query.exec(params);
         LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
 
         if (!res.next())
@@ -97,5 +99,85 @@ int DataService::fetchInt(const QString &sql, const int def)
     } catch (const EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
         return def;
+    }
+}
+
+int DataService::updateRecords(const QString &table, const QVariantMap &updateParams, const QString &whereClause)
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    Transaction t(sdb);
+    try {
+        NonQueryResult res = t.update(table).set(updateParams).where(whereClause);
+        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        int affected = res.numRowsAffected();
+        if (!t.commit())
+            return -1;
+
+        return affected;
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        t.rollback();
+        return -1;
+    }
+}
+
+int DataService::insertRecords(const QString &table, const QVariantMap &insertParams)
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    Transaction t(sdb);
+    try {
+        NonQueryResult res = t.insertInto(table).values(insertParams).exec();
+        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        int affected = res.numRowsAffected();
+        if (!t.commit())
+            return -1;
+
+        return affected;
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        t.rollback();
+        return -1;
+    }
+}
+
+int DataService::deleteRecords(const QString &table, const QString &whereClause)
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    Transaction t(sdb);
+    try {
+        NonQueryResult res = t.deleteFrom(table).where(whereClause);
+        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        int affected = res.numRowsAffected();
+        if (!t.commit())
+            return -1;
+
+        return affected;
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        t.rollback();
+        return -1;
+    }
+}
+
+int DataService::truncateTable(const QString &table)
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    Transaction t(sdb);
+    try {
+        NonQueryResult res = t.deleteFrom(table).where("1=1");
+        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        int affected = res.numRowsAffected();
+        if (!t.commit())
+            return -1;
+
+        return affected;
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        t.rollback();
+        return -1;
     }
 }

@@ -32,6 +32,7 @@ include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 
 SOURCES += \
     config/config.cpp \
+    core/baseexception.cpp \
     core/gateway.cpp \
     core/globalmanager.cpp \
     dbs/dataservice.cpp \
@@ -40,6 +41,7 @@ SOURCES += \
 
 HEADERS += \
     config/config.h \
+    core/baseexception.h \
     core/gateway.h \
     core/globalmanager.h \
     dbs/dataservice.h \
