@@ -13,7 +13,7 @@ Config::Config(QObject *parent)
 
     m_logFormat = "%{time} [%{type}] [%{threadid}] %{message}\n\n";
     m_logLimits = 180;
-    m_sqlFilesDir = FileUtils::curApplicationDirPath() + "/sqls";
+    m_sqlFiles = QStringList{":/static/sqls/mtc_in.xml", ":/static/sqls/mtc_out.xml", ":/static/sqls/etc.xml"};
 }
 
 Config::~Config()

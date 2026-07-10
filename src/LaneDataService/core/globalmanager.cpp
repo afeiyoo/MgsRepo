@@ -5,6 +5,8 @@
 #include "Logger.h"
 #include "config/config.h"
 #include "dbs/dataservice.h"
+#include "dbs/sqldealer.h"
+#include "iservicehub.h"
 #include "utils/fileutils.h"
 #include "utils/stdafx.h"
 
@@ -30,7 +32,7 @@ GlobalManager *GlobalManager::instance()
     return ins();
 }
 
-int GlobalManager::init()
+int GlobalManager::init(IServiceHub *hub)
 {
     // 加载配置
     FileName confFile = FileName::fromString(m_confPath);
@@ -53,10 +55,18 @@ int GlobalManager::init()
     rollingFileAppender->setDatePattern(RollingFileAppender::DailyRollover);
     cuteLogger->registerAppender(rollingFileAppender);
 
+    // 通信类初始化
+    m_hub = hub;
+
+    // 加载sql文件
+    bool sqlOk = m_sqlDealer->loadSqlFiles();
+    if (!sqlOk)
+        return -101;
+
     // 数据库操作对象初始化
     bool dbOk = m_ds->init(m_conf->m_dbType, m_conf->m_dbHost, m_conf->m_dbPort, m_conf->m_dbUser, m_conf->m_dbPassword, m_conf->m_dbName);
     if (!dbOk) {
-        return -101;
+        return -102;
     }
 
     return 0;

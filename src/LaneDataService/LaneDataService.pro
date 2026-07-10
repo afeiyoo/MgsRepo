@@ -1,7 +1,7 @@
-include($$PWD/../../Public.pri)E
+include($$PWD/../../Public.pri)
 
 QT -= gui
-QT += network sql xml
+QT += network sql xml concurrent
 
 TARGET = LaneDataService
 
@@ -32,21 +32,35 @@ include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 
 SOURCES += \
     config/config.cpp \
+    core/gateway.cpp \
     core/globalmanager.cpp \
     dbs/dataservice.cpp \
     dbs/sqldealer.cpp \
     lanedataservice.cpp
 
 HEADERS += \
-    LaneDataService_global.h \
     config/config.h \
+    core/gateway.h \
     core/globalmanager.h \
     dbs/dataservice.h \
     dbs/sqldealer.h \
-    lanedataservice.h
+    ilanedataservice.h \
+    lanedataservice.h \
+    lanedataservice_global.h
 
 # Default rules for deployment.
 unix {
     target.path = /usr/lib
 }
 !isEmpty(target.path): INSTALLS += target
+
+INCLUDEPATH += \
+    $$MGS_INCLUDE_PATH/ServiceHub
+
+PUBLIC_HEADERS = \
+    $$PWD/ilanedataservice.h \
+    $$PWD/lanedataservice_global.h
+copyHeadersToInclude(LaneDataService, PUBLIC_HEADERS)
+
+RESOURCES += \
+    resources.qrc

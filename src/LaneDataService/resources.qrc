@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>static/sqls/mtc_in.xml</file>
+        <file>static/sqls/etc.xml</file>
+        <file>static/sqls/mtc_out.xml</file>
+    </qresource>
+</RCC>

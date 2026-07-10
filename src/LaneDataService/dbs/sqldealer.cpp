@@ -1,6 +1,8 @@
 #include "sqldealer.h"
 
 #include "Logger.h"
+#include "config/config.h"
+#include "core/globalmanager.h"
 #include "utils/fileutils.h"
 
 #include <QFile>
@@ -37,20 +39,15 @@ QString SqlDealer::buildKey(const QString &sqlNamespace, const QString &id) cons
     return sqlNamespace + "::" + id;
 }
 
-bool SqlDealer::loadSqlFiles(const QString &sqlFilesDir)
+bool SqlDealer::loadSqlFiles()
 {
-    FileNameList sqlFiles = FileUtils::getFilesWithSuffix(FileName::fromString(sqlFilesDir), ".xml");
-
-    foreach (auto sqlFile, sqlFiles) {
+    foreach (auto str, GM_INS->m_conf->m_sqlFiles) {
+        FileName sqlFile = FileName::fromString(str);
         LOG_INFO().noquote() << QString("加载 SQL 文件: %1").arg(sqlFile.fileName());
 
-        QFile file(sqlFile.toString());
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            LOG_ERROR().noquote() << QString("打开 SQL 文件失败: %1, %2").arg(file.fileName()).arg(file.errorString());
-            return false;
-        }
-
         sqlNamespace.clear();
+
+        QFile file(sqlFile.toString());
         QXmlStreamReader reader(&file);
 
         while (!reader.atEnd()) {

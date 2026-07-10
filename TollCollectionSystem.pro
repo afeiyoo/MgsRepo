@@ -8,18 +8,16 @@ SUBDIRS += \
     # Jcon \
     # QJson \
     # QSimpleUpdater \
-    # LaneSystemGUI \
-    # LaneSystemGUIDemo \
+    LaneMaster \
     # MgsToolsKit \
     # SmartLaneController \
     LaneDataService \
-    PadService \
+    # PadService \
     # ETC \
-    # LaneSystemMaster \
-    StationService
+    # StationService \
+    ServiceHub
 
-LaneSystemGUI.file = src/LaneSystemGUI/LaneSystemGUI.pro
-LaneSystemGUIDemo.file = src/LaneSystemGUIDemo/LaneSystemGUIDemo.pro
+LaneMaster.file = src/LaneMaster/LaneMaster.pro
 MgsToolsKit.file = src/MgsToolsKit/MgsToolsKit.pro
 SmartLaneController.file = src/SmartLaneController/SmartLaneController.pro
 PadService.file = src/PadService/PadService.pro
@@ -28,11 +26,7 @@ HttpServer.file = 3rdparty/HttpServer/HttpServer.pro
 Jcon.file = 3rdparty/Jcon/Jcon.pro
 QJson.file = 3rdparty/QJson/QJson.pro
 QSimpleUpdater.file = 3rdparty/QSimpleUpdater/QSimpleUpdater.pro
-LaneSystemMaster.file = src/LaneSystemMaster/LaneSystemMaster.pro
 StationService.file = src/StationService/StationService.pro
 ETC.file = src/ETC/ETC.pro
 LaneDataService.file = src/LaneDataService/LaneDataService.pro
-
-LaneSystemGUIDemo.depends = LaneSystemGUI
-ETC.depends = LaneSystemGUI
-LaneSystemMaster.depends = LaneSystemGUI ETC
+ServiceHub.file = src/ServiceHub/ServiceHub.pro

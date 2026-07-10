@@ -1,12 +1,21 @@
 #pragma once
 
-#include "LaneDataService_global.h"
+#include <QObject>
 
-class LANEDATASERVICE_EXPORT LaneDataService
+#include "ilanedataservice.h"
+
+class IServiceHub;
+class LaneDataService : public QObject, public ILaneDataService
 {
+    Q_OBJECT
 public:
-    LaneDataService();
-    ~LaneDataService();
+    LaneDataService(IServiceHub *hub);
+    ~LaneDataService() override;
 
-    int init();
+    int init() override;
+
+    Q_INVOKABLE QByteArray queryInt(const QByteArray &json);
+
+private:
+    IServiceHub *m_hub = nullptr;
 };

@@ -2,45 +2,33 @@
 
 #include "EasyQtSql.h"
 #include "Logger.h"
-#include "config/config.h"
 #include "core/globalmanager.h"
-#include "sqldealer.h"
-#include "utils/fileutils.h"
-#include "utils/stdafx.h"
+#include "utils/datadealutils.h"
 
-using namespace EasyQtSql;
 using namespace Utils;
+using namespace EasyQtSql;
 
-DataService::DataService()
-{
-    m_sqlDealer = new SqlDealer();
-}
+DataService::DataService() {}
 
-DataService::~DataService()
-{
-    SAFE_DELETE(m_sqlDealer);
-}
+DataService::~DataService() {}
 
 bool DataService::init(uint type, const QString &host, int port, const QString &userName, const QString &passWord, const QString &dbName)
 {
-    // 加载sql文件
-    FileUtils::makeSureDirExist(FileName::fromString(GM_INS->m_conf->m_sqlFilesDir));
-    bool sqlOk = m_sqlDealer->loadSqlFiles(GM_INS->m_conf->m_sqlFilesDir);
-    if (!sqlOk)
-        return false;
-
     // 建立连接
     SqlFactory::DBSetting setting;
+    QString testSql;
     if (type == 1) {
         setting = SqlFactory::DBSetting("QMYSQL", host, port, userName, passWord, dbName);
+        testSql = "SELECT 1;";
     } else {
         setting = SqlFactory::DBSetting("QODBC", host, port, userName, passWord, dbName);
+        testSql = "SELECT 1 FROM DUAL;";
     }
     m_dbFactory = SqlFactory::getInstance()->config(setting);
-    return testConnection();
+    return testConnection(testSql);
 }
 
-bool DataService::testConnection()
+bool DataService::testConnection(const QString &sql)
 {
     if (!m_dbFactory) {
         LOG_ERROR().noquote() << "数据库连接初始化失败: SqlFactory为空";
@@ -59,9 +47,8 @@ bool DataService::testConnection()
     }
 
     QSqlQuery query(sdb);
-    QString testSql = getTestSql();
-    if (!query.exec(testSql)) {
-        LOG_ERROR().noquote() << "数据库连接初始化失败:" << query.lastError().text() << "\t" << testSql;
+    if (!query.exec(sql)) {
+        LOG_ERROR().noquote() << "数据库连接初始化失败:" << query.lastError().text() << "\t" << sql;
         return false;
     }
 
@@ -69,7 +56,46 @@ bool DataService::testConnection()
     return true;
 }
 
-QString DataService::getTestSql() const
+QString DataService::fetchString(const QString &sql, const QString &def)
 {
-    return QString("SELECT 1;");
+    if (sql.isEmpty())
+        return def;
+
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    Transaction t(sdb);
+    try {
+        QueryResult res = t.execQuery(sql);
+        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        if (!res.next())
+            return def;
+
+        QString ans = res.scalar<QString>();
+        return ans;
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        return def;
+    }
+}
+
+int DataService::fetchInt(const QString &sql, const int def)
+{
+    if (sql.isEmpty())
+        return def;
+
+    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    Transaction t(sdb);
+    try {
+        QueryResult res = t.execQuery(sql);
+        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        if (!res.next())
+            return def;
+
+        int ans = res.scalar<int>();
+        return ans;
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        return def;
+    }
 }
