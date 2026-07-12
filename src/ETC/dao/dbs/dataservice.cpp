@@ -137,7 +137,7 @@ QString DataService::getStationIP(const QString &stationID) const
         if (!res.next())
             return QStringLiteral("");
 
-        QString data = res.value("IPADDR").toString();
+        QString data = res.value("ipaddr").toString();
         return data;
     } catch (const DBException &e) {
         LOG_CERROR("db").noquote() << e.lastError.text() << "\t" << e.lastQuery;
@@ -164,7 +164,7 @@ bool DataService::isHolidayFreeVehClass(uint vehClass, bool checkVehClass) const
         if (!res.next())
             return false;
 
-        int data = res.value("CNT").toInt();
+        int data = res.value("cnt").toInt();
         return data > 0;
     } catch (const DBException &e) {
         LOG_CERROR("db").noquote() << e.lastError.text() << "\t" << e.lastQuery;

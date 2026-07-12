@@ -414,11 +414,11 @@ QString BizHandler::getVehicleWayFromPlate(const QString &plateNumber)
     enNode.nodeType = 1;
     QVariantMap enInfo = GM_INSTANCE->m_ds->getEnInfo(passID);
     if (!enInfo.isEmpty()) {
-        enNode.captureId = enInfo["TRADEID"].toString();
-        enNode.passTime = enInfo["ENTIME"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
-        enNode.nodeHex = enInfo["ENSTATION"].toString();
-        enNode.nodeName = enInfo["STATIONNAME"].toString();
-        enNode.nodeId = enInfo["CNLANEID"].toString().left(14);
+        enNode.captureId = enInfo["tradeid"].toString();
+        enNode.passTime = enInfo["entime"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        enNode.nodeHex = enInfo["enstation"].toString();
+        enNode.nodeName = enInfo["stationname"].toString();
+        enNode.nodeId = enInfo["cnlaneid"].toString().left(14);
     }
 
     if (enInfo.isEmpty() || enNode.captureId.isEmpty()) {
@@ -603,14 +603,14 @@ void BizHandler::getGantryNodes(const QString &passID, QStringList &nodeList)
 
     ST_Node node;
     for (const auto &record : records) {
-        if (record["ERRORCODE"].toString() != "")
+        if (record["errorcode"].toString() != "")
             continue;
         node.nodeType = 0;
         node.captureId = "";
-        node.nodeHex = record["FLAGID"].toString();
-        node.nodeId = record["GANTRYID"].toString();
-        node.nodeName = record["FLAGNAME"].toString();
-        node.passTime = record["TRADETIME"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        node.nodeHex = record["flagid"].toString();
+        node.nodeId = record["gantryid"].toString();
+        node.nodeName = record["flagname"].toString();
+        node.passTime = record["tradetime"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
         nodeList.append(packNode(node));
     }
 }
@@ -745,11 +745,11 @@ QString BizHandler::getGreenVehicleInfoFromPlate(const QString &plateNumber)
     enNode.nodeType = 1;
     QVariantMap enInfo = GM_INSTANCE->m_ds->getEnInfo(passID);
     if (!enInfo.isEmpty()) {
-        enNode.captureId = enInfo["TRADEID"].toString();
-        enNode.passTime = enInfo["ENTIME"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
-        enNode.nodeHex = enInfo["ENSTATION"].toString();
-        enNode.nodeName = enInfo["STATIONNAME"].toString();
-        enNode.nodeId = enInfo["CNLANEID"].toString().left(14);
+        enNode.captureId = enInfo["tradeid"].toString();
+        enNode.passTime = enInfo["entime"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        enNode.nodeHex = enInfo["enstation"].toString();
+        enNode.nodeName = enInfo["stationname"].toString();
+        enNode.nodeId = enInfo["cnlaneid"].toString().left(14);
     }
 
     if (enInfo.isEmpty() || enNode.captureId.isEmpty()) {
@@ -887,11 +887,11 @@ QString BizHandler::getGreenVehicleInfoFromTradeID(const QString &tradeId)
     enNode.nodeType = 1;
     QVariantMap enInfo = GM_INSTANCE->m_ds->getEnInfo(passID);
     if (!enInfo.isEmpty()) {
-        enNode.captureId = enInfo["TRADEID"].toString();
-        enNode.passTime = enInfo["ENTIME"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
-        enNode.nodeHex = enInfo["ENSTATION"].toString();
-        enNode.nodeName = enInfo["STATIONNAME"].toString();
-        enNode.nodeId = enInfo["CNLANEID"].toString().left(14);
+        enNode.captureId = enInfo["tradeid"].toString();
+        enNode.passTime = enInfo["entime"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        enNode.nodeHex = enInfo["enstation"].toString();
+        enNode.nodeName = enInfo["stationname"].toString();
+        enNode.nodeId = enInfo["cnlaneid"].toString().left(14);
     }
 
     if (enInfo.isEmpty() || enNode.captureId.isEmpty()) {
@@ -979,11 +979,11 @@ QString BizHandler::getGreenVehicleWayFromScan(const QString &scan)
     enNode.nodeType = 1;
     QVariantMap enInfo = GM_INSTANCE->m_ds->getEnInfo(passID);
     if (!enInfo.isEmpty()) {
-        enNode.captureId = enInfo["TRADEID"].toString();
-        enNode.passTime = enInfo["ENTIME"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
-        enNode.nodeHex = enInfo["ENSTATION"].toString();
-        enNode.nodeName = enInfo["STATIONNAME"].toString();
-        enNode.nodeId = enInfo["CNLANEID"].toString().left(14);
+        enNode.captureId = enInfo["tradeid"].toString();
+        enNode.passTime = enInfo["entime"].toDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        enNode.nodeHex = enInfo["enstation"].toString();
+        enNode.nodeName = enInfo["stationname"].toString();
+        enNode.nodeId = enInfo["cnlaneid"].toString().left(14);
     }
 
     if (enInfo.isEmpty() || enNode.captureId.isEmpty()) {
@@ -2647,8 +2647,8 @@ QString BizHandler::doDealCmd41(const QVariantMap &aMap)
         QVariantMap oneMap = record.toMap();
 
         QVariantMap info;
-        info["authNo"] = oneMap["FUNID"].toInt();
-        info["authName"] = oneMap["FUNNAME"].toString();
+        info["authNo"] = oneMap["funid"].toInt();
+        info["authName"] = oneMap["funname"].toString();
         authInfos.append(info);
     }
 

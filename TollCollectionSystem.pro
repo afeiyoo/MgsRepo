@@ -14,7 +14,7 @@ SUBDIRS += \
     LaneDataService \
     PadService \
     # ETC \
-    # StationService \
+    StationService \
     ServiceHub
 
 LaneMaster.file = src/LaneMaster/LaneMaster.pro

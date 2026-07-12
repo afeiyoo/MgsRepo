@@ -146,7 +146,7 @@ QString DataService::getGantryNodeID(const QString &nodeHex)
         if (!res.next())
             return "";
 
-        QString data = res.value("NODEID").toString();
+        QString data = res.value("nodeid").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -169,7 +169,7 @@ QString DataService::getGantryNodeName(const QString &nodeId)
         if (!res.next())
             return "";
 
-        QString data = res.value("NODENAME").toString();
+        QString data = res.value("nodename").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -192,7 +192,7 @@ QString DataService::getGantryHexNode(const QString &nodeId)
         if (!res.next())
             return "";
 
-        QString data = res.value("HEXNODE").toString();
+        QString data = res.value("hexnode").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -238,7 +238,7 @@ QString DataService::getUserID(const QString &cardId)
         if (!res.next())
             return "";
 
-        QString data = res.value("USERID").toString();
+        QString data = res.value("userid").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -267,7 +267,7 @@ QString DataService::getUserName(const QString &param, int type)
         if (!res.next())
             return "";
 
-        QString data = res.value("USERNAME").toString();
+        QString data = res.value("username").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -290,7 +290,7 @@ QString DataService::getStationIP(const QString &stationId)
         if (!res.next())
             return "";
 
-        QString data = res.value("IPADDR").toString();
+        QString data = res.value("ipaddr").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -313,7 +313,7 @@ QString DataService::getStationName(const QString &nodeId)
         if (!res.next())
             return "";
 
-        QString data = res.value("NODENAME").toString();
+        QString data = res.value("nodename").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -336,7 +336,7 @@ QString DataService::getLaneIP(const QString &stationId, int laneId)
         if (!res.next())
             return "";
 
-        QString data = res.value("IPADDR").toString();
+        QString data = res.value("ipaddr").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -359,7 +359,7 @@ QString DataService::getGrayCardRemark(const QString &cardId)
         if (!res.next())
             return "";
 
-        QString data = res.value("REMARK").toString();
+        QString data = res.value("remark").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -382,7 +382,7 @@ QString DataService::getGrayVehicleRemark(const QString &plate)
         if (!res.next())
             return "";
 
-        QString data = res.value("REMARK").toString();
+        QString data = res.value("remark").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -405,7 +405,7 @@ int DataService::getGreenPassBanType(const QString &plate)
         if (!res.next())
             return -1;
 
-        int data = res.value("BANTYPE").toInt();
+        int data = res.value("bantype").toInt();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -428,7 +428,7 @@ bool DataService::getGreenPassAppointment(const QString &plate)
         if (!res.next())
             return false;
 
-        int data = res.value("COUNT").toInt();
+        int data = res.value("count").toInt();
         return data > 0;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
@@ -576,7 +576,7 @@ QString DataService::getEmgcSeqNum(const QString &stationId)
         if (!res.next())
             return "0";
 
-        QString data = res.value("KITEM").toString();
+        QString data = res.value("kitem").toString();
         return data;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);

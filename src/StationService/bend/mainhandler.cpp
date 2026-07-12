@@ -88,12 +88,12 @@ QString MainHandler::dealQueryRepeat(const QVariantMap &aMap) const
         for (const auto &trade : trades) {
             QVariantMap detail;
             QVariantMap oneMap = trade.toMap();
-            detail["tradeId"] = oneMap["TRADEID"].toString();
-            detail["laneID"] = oneMap["LANEID"].toString();
-            detail["tradeTime"] = oneMap["TRADETIME"].toString();
-            detail["vehplate"] = oneMap["VEHPLATE"].toString();
-            detail["cardId"] = oneMap["CARDID"].toString();
-            detail["fee"] = oneMap["FEE"].toString();
+            detail["tradeId"] = oneMap["tradeid"].toString();
+            detail["laneID"] = oneMap["laneid"].toString();
+            detail["tradeTime"] = oneMap["tradetime"].toString();
+            detail["vehplate"] = oneMap["vehplate"].toString();
+            detail["cardId"] = oneMap["cardid"].toString();
+            detail["fee"] = oneMap["fee"].toString();
 
             judgeDetails.append(detail);
         }
