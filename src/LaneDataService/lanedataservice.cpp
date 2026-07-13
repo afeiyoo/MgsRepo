@@ -22,7 +22,7 @@ LaneDataService::~LaneDataService() {}
 
 int LaneDataService::init()
 {
-    return GM_INS->init(m_hub);
+    return GM_INS->init();
 }
 
 QByteArray LaneDataService::fetchString(const QByteArray &json)

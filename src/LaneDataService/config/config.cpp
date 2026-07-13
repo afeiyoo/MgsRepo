@@ -15,7 +15,6 @@ Config::Config(QObject *parent)
     m_logLimits = 180;
     m_sqlFiles = QStringList{":/static/sqls/mtc_in.xml", ":/static/sqls/mtc_out.xml", ":/static/sqls/etc.xml"};
 }
-
 Config::~Config()
 {
     SAFE_DELETE(m_confUtil);
@@ -37,4 +36,12 @@ void Config::loadConfig(const Utils::FileName &path)
     // 日志配置
     m_logFormat = m_confUtil->getValue("Log/format", "%{time} [%{type}] [%{threadid}] %{message}\n\n").toString();
     m_logLimits = m_confUtil->getValue("Log/limit", 180).toUInt();
+
+    // 全量状态配置
+#ifdef Q_OS_WIN32
+    m_fullBlackPath = m_confUtil->getValue("FullBlack/BlackListPath", "D://fjeit//DtpAgent32//BlackList").toString();
+#else
+    // TODO
+#endif
+    m_fullBatchNo = m_confUtil->getValue("FullBlack/BatchNo", 0).toInt();
 }

@@ -5,17 +5,18 @@
 namespace EasyQtSql {
 class SqlFactory;
 }
-class DataService
+class DataService : QObject
 {
+    Q_OBJECT
 public:
-    DataService();
-    virtual ~DataService();
+    explicit DataService(QObject *parent = nullptr);
+    ~DataService() override;
 
-    // 数据库连接初始化
+    // 车道数据库连接初始化
     bool init(uint type, const QString &host, int port, const QString &userName, const QString &passWord, const QString &dbName);
 
     // 数据库连接测试
-    bool testConnection(const QString &sql);
+    bool testConnection(const QString &connName, const QString &sql);
 
     // 查询记录String
     QString fetchString(const QString &sql, const QVariantMap &params, const QString &def);
@@ -35,7 +36,13 @@ public:
     // 整表删除（不删除表结构） 返回值>=0表示影响行数，<0表示执行失败
     int truncateTable(const QString &table);
 
-protected:
+public slots:
+    // 全量数据库连接初始化
+    void onLoadFullBlack(const QString &path, int batchNo);
+
+private:
     // 数据库连接池
     EasyQtSql::SqlFactory *m_dbFactory = nullptr;
+    // 当前全量连接名
+    QString m_fullBlackConnName;
 };

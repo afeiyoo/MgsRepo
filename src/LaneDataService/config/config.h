@@ -32,6 +32,10 @@ public:
     // sql文件存储路径
     QStringList m_sqlFiles;
 
+    // 全量状态
+    QString m_fullBlackPath;
+    int m_fullBatchNo = 0;
+
 private:
     Utils::ConfigUtils *m_confUtil = nullptr; // 配置读取工具
 };

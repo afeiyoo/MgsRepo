@@ -8,14 +8,14 @@ SUBDIRS += \
     # Jcon \
     # QJson \
     # QSimpleUpdater \
-    LaneMaster \
+    # LaneMaster \
     # MgsToolsKit \
     # SmartLaneController \
     LaneDataService \
-    PadService \
+    # PadService \
     # ETC \
-    StationService \
-    ServiceHub
+    # StationService \
+    # ServiceHub
 
 LaneMaster.file = src/LaneMaster/LaneMaster.pro
 MgsToolsKit.file = src/MgsToolsKit/MgsToolsKit.pro

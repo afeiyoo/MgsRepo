@@ -1,12 +1,16 @@
 #include "globalmanager.h"
 
+#include <QThread>
+#include <QTimer>
+
 #include "CuteLogger/include/ConsoleAppender.h"
 #include "CuteLogger/include/RollingFileAppender.h"
 #include "Logger.h"
+#include "bend/fullblackchecker.h"
 #include "config/config.h"
 #include "dbs/dataservice.h"
 #include "dbs/sqldealer.h"
-#include "iservicehub.h"
+#include "signalmanager.h"
 #include "utils/fileutils.h"
 #include "utils/stdafx.h"
 
@@ -19,12 +23,21 @@ GlobalManager::GlobalManager(QObject *parent)
 {
     m_conf = new Config(this);
     m_confPath = FileUtils::curApplicationDirPath() + "/config/config.ini";
-    m_ds = new DataService();
+    m_ds = new DataService(this);
+    m_sigMan = new SignalManager(this);
+
+    m_fullBlackTimer = new QTimer(this);
+    m_fullBlackChecker = new FullBlackChecker();
+
+    m_sqlDealer = new SqlDealer();
 }
 
 GlobalManager::~GlobalManager()
 {
-    SAFE_DELETE(m_ds);
+    m_fullBlackTimer->stop();
+
+    SAFE_DELETE(m_fullBlackChecker);
+    SAFE_DELETE(m_sqlDealer);
 }
 
 GlobalManager *GlobalManager::instance()
@@ -32,7 +45,7 @@ GlobalManager *GlobalManager::instance()
     return ins();
 }
 
-int GlobalManager::init(IServiceHub *hub)
+int GlobalManager::init()
 {
     // 加载配置
     FileName confFile = FileName::fromString(m_confPath);
@@ -46,17 +59,23 @@ int GlobalManager::init(IServiceHub *hub)
     consoleAppender->setFormat(m_conf->m_logFormat);
     cuteLogger->registerAppender(consoleAppender);
 
-    FileName logPath = FileName::fromString(FileUtils::curApplicationDirPath() + "/logs/LaneDataService.log");
-    FileUtils::makeSureDirExist(logPath.parentDir());
-    RollingFileAppender *rollingFileAppender = new RollingFileAppender(FileUtils::canonicalPath(logPath).toString());
-    rollingFileAppender->setFormat(m_conf->m_logFormat);
-    rollingFileAppender->setLogFilesLimit(m_conf->m_logLimits);
-    rollingFileAppender->setFlushOnWrite(true);
-    rollingFileAppender->setDatePattern(RollingFileAppender::DailyRollover);
-    cuteLogger->registerAppender(rollingFileAppender);
+    FileName mainLogPath = FileName::fromString(FileUtils::curApplicationDirPath() + "/logs/LaneDataService.log");
+    FileUtils::makeSureDirExist(mainLogPath.parentDir());
+    RollingFileAppender *mainRollingFileAppender = new RollingFileAppender(FileUtils::canonicalPath(mainLogPath).toString());
+    mainRollingFileAppender->setFormat(m_conf->m_logFormat);
+    mainRollingFileAppender->setLogFilesLimit(m_conf->m_logLimits);
+    mainRollingFileAppender->setFlushOnWrite(true);
+    mainRollingFileAppender->setDatePattern(RollingFileAppender::DailyRollover);
+    cuteLogger->registerAppender(mainRollingFileAppender);
 
-    // 通信类初始化
-    m_hub = hub;
+    FileName cronLogPath = FileName::fromString(FileUtils::curApplicationDirPath() + "/logs/CronDataService.log");
+    FileUtils::makeSureDirExist(cronLogPath.parentDir());
+    RollingFileAppender *cronRollingFileAppender = new RollingFileAppender(FileUtils::canonicalPath(cronLogPath).toString());
+    cronRollingFileAppender->setFormat(m_conf->m_logFormat);
+    cronRollingFileAppender->setLogFilesLimit(m_conf->m_logLimits);
+    cronRollingFileAppender->setFlushOnWrite(true);
+    cronRollingFileAppender->setDatePattern(RollingFileAppender::DailyRollover);
+    cuteLogger->registerCategoryAppender("cron", cronRollingFileAppender);
 
     // 加载sql文件
     bool sqlOk = m_sqlDealer->loadSqlFiles();
@@ -65,9 +84,16 @@ int GlobalManager::init(IServiceHub *hub)
 
     // 数据库操作对象初始化
     bool dbOk = m_ds->init(m_conf->m_dbType, m_conf->m_dbHost, m_conf->m_dbPort, m_conf->m_dbUser, m_conf->m_dbPassword, m_conf->m_dbName);
-    if (!dbOk) {
+    if (!dbOk)
         return -102;
-    }
+
+    // 全量检查工作线程初始化
+    m_fullBlackChecker->init();
+
+    m_fullBlackTimer->setInterval(30 * 60 * 1000);
+    connect(m_fullBlackTimer, &QTimer::timeout, this, [this]() { emit m_sigMan->sigCheckFullBlack(); });
+    m_fullBlackTimer->start();
+    emit m_sigMan->sigCheckFullBlack(); // 程序启动立刻初始化全量
 
     return 0;
 }

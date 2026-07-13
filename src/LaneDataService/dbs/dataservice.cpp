@@ -8,7 +8,9 @@
 using namespace Utils;
 using namespace EasyQtSql;
 
-DataService::DataService() {}
+DataService::DataService(QObject *parent)
+    : QObject(parent)
+{}
 
 DataService::~DataService() {}
 
@@ -24,35 +26,35 @@ bool DataService::init(uint type, const QString &host, int port, const QString &
         setting = SqlFactory::DBSetting("QODBC", host, port, userName, passWord, dbName);
         testSql = "SELECT 1 FROM DUAL;";
     }
-    m_dbFactory = SqlFactory::getInstance()->config(setting);
-    return testConnection(testSql);
+    m_dbFactory = SqlFactory::getInstance()->config(setting, "main");
+    return testConnection("main", testSql);
 }
 
-bool DataService::testConnection(const QString &sql)
+bool DataService::testConnection(const QString &connName, const QString &sql)
 {
     if (!m_dbFactory) {
-        LOG_ERROR().noquote() << "数据库连接初始化失败: SqlFactory为空";
+        LOG_ERROR().noquote() << QString("数据库连接 %1 初始化失败: SqlFactory为空").arg(connName);
         return false;
     }
 
-    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    QSqlDatabase sdb = m_dbFactory->getDatabase(connName);
     if (!sdb.isValid()) {
-        LOG_ERROR().noquote() << "数据库连接初始化失败: 无效的数据库连接";
+        LOG_ERROR().noquote() << QString("数据库连接 %1 初始化失败: 无效的数据库连接").arg(connName);
         return false;
     }
 
     if (!sdb.isOpen()) {
-        LOG_ERROR().noquote() << "数据库连接初始化失败:" << sdb.lastError().text();
+        LOG_ERROR().noquote() << QString("数据库连接 %1 初始化失败:").arg(connName) << sdb.lastError().text();
         return false;
     }
 
     QSqlQuery query(sdb);
     if (!query.exec(sql)) {
-        LOG_ERROR().noquote() << "数据库连接初始化失败:" << query.lastError().text() << "\t" << sql;
+        LOG_ERROR().noquote() << QString("数据库连接 %1 初始化失败:").arg(connName) << query.lastError().text() << "\t" << sql;
         return false;
     }
 
-    LOG_INFO().noquote() << "数据库连接初始化成功";
+    LOG_INFO().noquote() << QString("数据库连接 %1 初始化成功").arg(connName);
     return true;
 }
 
@@ -61,7 +63,7 @@ QString DataService::fetchString(const QString &sql, const QVariantMap &params, 
     if (sql.isEmpty())
         return def;
 
-    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
     Transaction t(sdb);
     try {
         PreparedQuery query = t.prepare(sql);
@@ -84,7 +86,7 @@ int DataService::fetchInt(const QString &sql, const QVariantMap &params, const i
     if (sql.isEmpty())
         return def;
 
-    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
     Transaction t(sdb);
     try {
         PreparedQuery query = t.prepare(sql);
@@ -104,7 +106,7 @@ int DataService::fetchInt(const QString &sql, const QVariantMap &params, const i
 
 int DataService::updateRecords(const QString &table, const QVariantMap &updateParams, const QString &whereClause)
 {
-    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
     Transaction t(sdb);
     try {
         NonQueryResult res = t.update(table).set(updateParams).where(whereClause);
@@ -124,7 +126,7 @@ int DataService::updateRecords(const QString &table, const QVariantMap &updatePa
 
 int DataService::insertRecords(const QString &table, const QVariantMap &insertParams)
 {
-    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
     Transaction t(sdb);
     try {
         NonQueryResult res = t.insertInto(table).values(insertParams).exec();
@@ -144,7 +146,7 @@ int DataService::insertRecords(const QString &table, const QVariantMap &insertPa
 
 int DataService::deleteRecords(const QString &table, const QString &whereClause)
 {
-    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
     Transaction t(sdb);
     try {
         NonQueryResult res = t.deleteFrom(table).where(whereClause);
@@ -164,7 +166,7 @@ int DataService::deleteRecords(const QString &table, const QString &whereClause)
 
 int DataService::truncateTable(const QString &table)
 {
-    QSqlDatabase sdb = m_dbFactory->getDatabase();
+    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
     Transaction t(sdb);
     try {
         NonQueryResult res = t.deleteFrom(table).where("1=1");
@@ -180,4 +182,16 @@ int DataService::truncateTable(const QString &table)
         t.rollback();
         return -1;
     }
+}
+
+void DataService::onLoadFullBlack(const QString &path, int batchNo)
+{
+    LOG_CINFO("cron").noquote() << "开始加载全量文件:" << path << "版本:" << batchNo;
+
+    m_fullBlackConnName = "fb_" + QString::number(batchNo);
+
+    SqlFactory::DBSetting setting;
+    setting = SqlFactory::DBSetting("QSQLITE", path);
+    m_dbFactory = SqlFactory::getInstance()->config(setting, m_fullBlackConnName);
+    bool ok = testConnection(m_fullBlackConnName, "SELECT 1;")
 }

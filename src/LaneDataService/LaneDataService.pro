@@ -31,19 +31,23 @@ include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    bend/fullblackchecker.cpp \
     config/config.cpp \
     core/baseexception.cpp \
     core/gateway.cpp \
     core/globalmanager.cpp \
+    core/signalmanager.cpp \
     dbs/dataservice.cpp \
     dbs/sqldealer.cpp \
     lanedataservice.cpp
 
 HEADERS += \
+    bend/fullblackchecker.h \
     config/config.h \
     core/baseexception.h \
     core/gateway.h \
     core/globalmanager.h \
+    core/signalmanager.h \
     dbs/dataservice.h \
     dbs/sqldealer.h \
     ilanedataservice.h \
