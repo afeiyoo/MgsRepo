@@ -1,11 +1,10 @@
 #pragma once
 
-#include "utils/optional.h"
 #include <QObject>
+#include <QTimer>
 
-namespace EasyQtSql {
-class SqlFactory;
-}
+class FullBlackWorker;
+class QThread;
 
 class FullBlackChecker : public QObject
 {
@@ -17,17 +16,15 @@ public:
     void init();
 
 public slots:
-    // 检查全量
-    void onCheckFullBlack();
+    // 更新全量状态 0 全量状态正常 -1 全量状态异常
+    void onUpdateFullBlackStatus(int status);
 
-private:
-    // 获取最新全量版本
-    Utils::optional<int> getMaxBatchNoFromFiles();
-    // 加载新全量文件
-    bool loadNewFile(const QString &filePath);
-    // 清理过期全量文件
-    void pruneFiles(const QString &excludeFile);
+public:
+    // 全量状态
+    int m_fullBlackStatus = -1;
 
 private:
     QThread *m_td = nullptr;
+    FullBlackWorker *m_worker = nullptr;
+    QTimer *m_timer = nullptr;
 };

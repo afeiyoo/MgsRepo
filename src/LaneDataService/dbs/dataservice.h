@@ -1,11 +1,12 @@
 #pragma once
 
 #include <QObject>
+#include <QReadWriteLock>
 
 namespace EasyQtSql {
 class SqlFactory;
 }
-class DataService : QObject
+class DataService : public QObject
 {
     Q_OBJECT
 public:
@@ -36,13 +37,22 @@ public:
     // 整表删除（不删除表结构） 返回值>=0表示影响行数，<0表示执行失败
     int truncateTable(const QString &table);
 
+    // 根据全量，检查是否黑名单
+    bool isBlack(const QString &cardID);
+
 public slots:
-    // 全量数据库连接初始化
+    // 加载全量文件
     void onLoadFullBlack(const QString &path, int batchNo);
+
+private:
+    QString getActiveFBConnName();
+    void setActiveFBConnName(const QString &name);
 
 private:
     // 数据库连接池
     EasyQtSql::SqlFactory *m_dbFactory = nullptr;
-    // 当前全量连接名
-    QString m_fullBlackConnName;
+    // 当前活跃全量连接名
+    QString m_activeFBConnName;
+    // 保护活动连接名的读取和发布
+    QReadWriteLock m_activeFBConnLock;
 };

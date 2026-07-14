@@ -3,6 +3,7 @@
 #include "EasyQtSql.h"
 #include "Logger.h"
 #include "core/globalmanager.h"
+#include "core/signalmanager.h"
 #include "utils/datadealutils.h"
 
 using namespace Utils;
@@ -16,6 +17,8 @@ DataService::~DataService() {}
 
 bool DataService::init(uint type, const QString &host, int port, const QString &userName, const QString &passWord, const QString &dbName)
 {
+    connect(GM_INS->m_sigMan, &SignalManager::sigLoadFullBlack, this, &DataService::onLoadFullBlack);
+
     // 建立连接
     SqlFactory::DBSetting setting;
     QString testSql;
@@ -184,14 +187,52 @@ int DataService::truncateTable(const QString &table)
     }
 }
 
+bool DataService::isBlack(const QString &cardID)
+{
+    QString activeConnName = getActiveFBConnName();
+    QSqlDatabase sdb = m_dbFactory->getDatabase(activeConnName);
+    Transaction t(sdb);
+    try {
+    } catch (const EasyQtSql::DBException &e) {
+    }
+}
+
 void DataService::onLoadFullBlack(const QString &path, int batchNo)
 {
-    LOG_CINFO("cron").noquote() << "开始加载全量文件:" << path << "版本:" << batchNo;
+    const QString newConnName = QString("fb_%1").arg(batchNo);
+    // 避免重复连接
+    if (!getActiveFBConnName().isEmpty() && getActiveFBConnName() == newConnName) {
+        emit GM_INS->m_sigMan->sigLoadFullBlackRes(true, batchNo);
+        return;
+    }
 
-    m_fullBlackConnName = "fb_" + QString::number(batchNo);
+    SqlFactory::DBSetting setting("QSQLITE", path);
+    m_dbFactory = SqlFactory::getInstance()->config(setting, newConnName);
+    if (!testConnection(newConnName, "SELECT 1")) {
+        emit GM_INS->m_sigMan->sigLoadFullBlackRes(false, batchNo);
+        m_dbFactory->removeDataBase(newConnName); // 删除缓存连接
+        return;
+    }
 
-    SqlFactory::DBSetting setting;
-    setting = SqlFactory::DBSetting("QSQLITE", path);
-    m_dbFactory = SqlFactory::getInstance()->config(setting, m_fullBlackConnName);
-    bool ok = testConnection(m_fullBlackConnName, "SELECT 1;")
+    // TODO 验证
+
+    // 删除旧连接
+    const QString oldConnName = getActiveFBConnName();
+    setActiveFBConnName(newConnName);
+    if (!oldConnName.isEmpty())
+        m_dbFactory->removeDataBase(oldConnName);
+
+    emit GM_INS->m_sigMan->sigLoadFullBlackRes(true, batchNo);
+}
+
+QString DataService::getActiveFBConnName()
+{
+    QReadLocker locker(&m_activeFBConnLock);
+    return m_activeFBConnName;
+}
+
+void DataService::setActiveFBConnName(const QString &name)
+{
+    QWriteLocker locker(&m_activeFBConnLock);
+    m_activeFBConnName = name;
 }

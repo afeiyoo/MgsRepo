@@ -45,3 +45,9 @@ void Config::loadConfig(const Utils::FileName &path)
 #endif
     m_fullBatchNo = m_confUtil->getValue("FullBlack/BatchNo", 0).toInt();
 }
+
+void Config::setFullBatchNo(int batchNo)
+{
+    m_confUtil->setValue("FullBlack/BatchNo", batchNo);
+    m_fullBatchNo = batchNo;
+}

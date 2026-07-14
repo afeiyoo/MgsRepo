@@ -26,17 +26,13 @@ GlobalManager::GlobalManager(QObject *parent)
     m_ds = new DataService(this);
     m_sigMan = new SignalManager(this);
 
-    m_fullBlackTimer = new QTimer(this);
-    m_fullBlackChecker = new FullBlackChecker();
+    m_fullBlackChecker = new FullBlackChecker(this);
 
     m_sqlDealer = new SqlDealer();
 }
 
 GlobalManager::~GlobalManager()
 {
-    m_fullBlackTimer->stop();
-
-    SAFE_DELETE(m_fullBlackChecker);
     SAFE_DELETE(m_sqlDealer);
 }
 
@@ -49,9 +45,9 @@ int GlobalManager::init()
 {
     // 加载配置
     FileName confFile = FileName::fromString(m_confPath);
-    if (!confFile.exists()) {
+    if (!confFile.exists())
         return -100;
-    }
+
     m_conf->loadConfig(confFile);
 
     // 日志初始化
@@ -68,15 +64,6 @@ int GlobalManager::init()
     mainRollingFileAppender->setDatePattern(RollingFileAppender::DailyRollover);
     cuteLogger->registerAppender(mainRollingFileAppender);
 
-    FileName cronLogPath = FileName::fromString(FileUtils::curApplicationDirPath() + "/logs/CronDataService.log");
-    FileUtils::makeSureDirExist(cronLogPath.parentDir());
-    RollingFileAppender *cronRollingFileAppender = new RollingFileAppender(FileUtils::canonicalPath(cronLogPath).toString());
-    cronRollingFileAppender->setFormat(m_conf->m_logFormat);
-    cronRollingFileAppender->setLogFilesLimit(m_conf->m_logLimits);
-    cronRollingFileAppender->setFlushOnWrite(true);
-    cronRollingFileAppender->setDatePattern(RollingFileAppender::DailyRollover);
-    cuteLogger->registerCategoryAppender("cron", cronRollingFileAppender);
-
     // 加载sql文件
     bool sqlOk = m_sqlDealer->loadSqlFiles();
     if (!sqlOk)
@@ -89,11 +76,6 @@ int GlobalManager::init()
 
     // 全量检查工作线程初始化
     m_fullBlackChecker->init();
-
-    m_fullBlackTimer->setInterval(30 * 60 * 1000);
-    connect(m_fullBlackTimer, &QTimer::timeout, this, [this]() { emit m_sigMan->sigCheckFullBlack(); });
-    m_fullBlackTimer->start();
-    emit m_sigMan->sigCheckFullBlack(); // 程序启动立刻初始化全量
 
     return 0;
 }

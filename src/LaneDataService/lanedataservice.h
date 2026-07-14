@@ -27,6 +27,8 @@ public:
     Q_INVOKABLE QByteArray deleteRecord(const QByteArray &json);
     // 整表删除
     Q_INVOKABLE QByteArray truncateTable(const QByteArray &json);
+    // 检查是否黑名单
+    Q_INVOKABLE QByteArray isFullBlackOk(const QByteArray &json);
 
 private:
     IServiceHub *m_hub = nullptr;

@@ -15,6 +15,7 @@ public:
     ~Config() override;
 
     void loadConfig(const Utils::FileName &path);
+    void setFullBatchNo(int batchNo);
 
 public:
     // 数据库配置

@@ -2,6 +2,8 @@
 
 #include <QVariantMap>
 
+#include "bend/fullblackchecker.h"
+#include "config/config.h"
 #include "core/baseexception.h"
 #include "core/globalmanager.h"
 #include "dbs/dataservice.h"
@@ -254,6 +256,19 @@ QByteArray LaneDataService::truncateTable(const QByteArray &json)
         resMap["desc"] = e.desc();
         return DataDealUtils::mapToJson(resMap);
     }
+}
+
+QByteArray LaneDataService::isFullBlackOk(const QByteArray &json)
+{
+    QVariantMap resMap;
+    resMap["status"] = GM_INS->m_fullBlackChecker->m_fullBlackStatus;
+    if (GM_INS->m_fullBlackChecker->m_fullBlackStatus == 0) {
+        resMap["desc"] = "全量状态正常";
+    } else {
+        resMap["desc"] = "全量状态异常";
+    }
+    resMap["data"] = GM_INS->m_conf->m_fullBatchNo;
+    return DataDealUtils::mapToJson(resMap);
 }
 
 ILaneDataService *createLaneDataService(IServiceHub *hub)

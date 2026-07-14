@@ -21,6 +21,9 @@ public:
 
     static GlobalManager *instance();
 
+    // -100:配置文件不存在
+    // -101:SQL文件加载失败
+    // -102:数据库连接初始化失败
     int init();
 
 public:
@@ -34,9 +37,6 @@ public:
     DataService *m_ds = nullptr;
     // 全局信号管理器
     SignalManager *m_sigMan = nullptr;
-
-private:
     // 全量状态检查对象
-    QTimer *m_fullBlackTimer = nullptr;
     FullBlackChecker *m_fullBlackChecker = nullptr;
 };

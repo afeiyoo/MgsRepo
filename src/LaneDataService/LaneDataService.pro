@@ -32,6 +32,7 @@ include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 
 SOURCES += \
     bend/fullblackchecker.cpp \
+    bend/fullblackworker.cpp \
     config/config.cpp \
     core/baseexception.cpp \
     core/gateway.cpp \
@@ -43,6 +44,7 @@ SOURCES += \
 
 HEADERS += \
     bend/fullblackchecker.h \
+    bend/fullblackworker.h \
     config/config.h \
     core/baseexception.h \
     core/gateway.h \
