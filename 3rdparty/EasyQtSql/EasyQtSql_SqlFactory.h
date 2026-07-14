@@ -111,6 +111,28 @@ public:
             }
         }
 
+        // 2026-07-14 第三方库修改 删除连接，避免缓存
+        bool removeConnection(const QString &connectionName)
+        {
+            auto it = m_connNameMap.find(connectionName);
+            if (it == m_connNameMap.end())
+                return false;
+            const QString uniqueConnectionName = it.value();
+
+            // 先删除逻辑名称映射。
+            m_connNameMap.erase(it);
+
+            // QSqlDatabase局部副本必须先离开作用域。
+            {
+                QSqlDatabase db = QSqlDatabase::database(uniqueConnectionName, false);
+                if (db.isValid() && db.isOpen())
+                    db.close();
+            }
+            QSqlDatabase::removeDatabase(uniqueConnectionName);
+
+            return true;
+        }
+
         bool connectionExists(const QString &connectionName) const
         {
             return m_connNameMap.contains(connectionName);
@@ -176,6 +198,26 @@ public:
         }
 
         return QSqlDatabase();
+    }
+
+    // 2026-07-14 第三方库修改 删除连接，避免缓存
+    bool removeDataBase(const QString &connectionName)
+    {
+        QMutexLocker locker(&mutex);
+
+        bool removed = false;
+
+        // 只能删除调用线程自己的实际连接，不能删除其他线程池中的同名连接
+        if (m_dbPool.hasLocalData()) {
+            ThreadDBPool *pool = m_dbPool.localData();
+            if (pool) {
+                removed = pool->removeConnection(connectionName);
+            }
+        }
+
+        // 同时删除配置，保证下次必须重新config。
+        m_settings.remove(connectionName);
+        return removed;
     }
 
 private:
