@@ -1,11 +1,18 @@
 #pragma once
 
 #include <QObject>
+#include <QReadWriteLock>
 
 namespace Utils {
 class FileName;
 class ConfigUtils;
 } // namespace Utils
+
+// 快照
+struct ST_ConfigSnapshot
+{
+    int fullBatchNo = 0;
+};
 
 class Config : public QObject
 {
@@ -15,9 +22,13 @@ public:
     ~Config() override;
 
     void loadConfig(const Utils::FileName &path);
+
+    ST_ConfigSnapshot getSnapshot() const;
     void setFullBatchNo(int batchNo);
 
 public:
+    // 启动加载后，不会再被修改的配置
+
     // 数据库配置
     uint m_dbType;
     QString m_dbHost;
@@ -30,13 +41,19 @@ public:
     QString m_logFormat;
     int m_logLimits;
 
-    // sql文件存储路径
-    QStringList m_sqlFiles;
+    // sql配置
+    QStringList m_sqlFiles; // sql文件存储路径
 
-    // 全量状态
-    QString m_fullBlackPath;
-    int m_fullBatchNo = 0;
+    // 全量配置
+    QString m_fullBlackPath; // 全量文件所在路径
 
 private:
+    // 启动加载后，还有可能被修改的配置
+
+    // 全量配置
+    int m_fullBatchNo = 0; // 当前全量批次
+
+private:
+    mutable QReadWriteLock m_lock;
     Utils::ConfigUtils *m_confUtil = nullptr; // 配置读取工具
 };

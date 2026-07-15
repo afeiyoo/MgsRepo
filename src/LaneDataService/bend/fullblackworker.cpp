@@ -37,22 +37,23 @@ void FullBlackWorker::onCheckFullBlack(bool isFirst, bool curFullBlackOk)
 
     const int batchNo = result.value();
     const QString filePath = GM_INS->m_conf->m_fullBlackPath + QString("/ETCBlackCard_%1.db").arg(batchNo);
+    ST_ConfigSnapshot snap = GM_INS->m_conf->getSnapshot();
 
     // 批次检查
-    if (batchNo < GM_INS->m_conf->m_fullBatchNo) {
-        LOG_WARNING().noquote() << "全量文件批次低于当前批次，拒绝回退: 当前批次" << GM_INS->m_conf->m_fullBatchNo << "全量文件最大批次" << batchNo;
+    if (batchNo < snap.fullBatchNo) {
+        LOG_WARNING().noquote() << "全量文件批次低于当前批次，拒绝回退: 当前批次" << snap.fullBatchNo << "全量文件最大批次" << batchNo;
         emit GM_INS->m_sigMan->sigUpdateFullBlackStatus(false, "非最新批次全量文件!");
         return;
     }
 
-    if (!isFirst && batchNo == GM_INS->m_conf->m_fullBatchNo) {
+    if (!isFirst && batchNo == snap.fullBatchNo) {
         if (!curFullBlackOk) {
             LOG_INFO().noquote() << "尝试重新加载全量文件:" << batchNo;
             m_loading = true;
             m_pendingBatchNo = batchNo;
             emit GM_INS->m_sigMan->sigLoadFullBlack(filePath, batchNo);
         } else {
-            LOG_WARNING().noquote() << "未发现新批次全量文件: 当前批次" << GM_INS->m_conf->m_fullBatchNo << "全量文件最大批次" << batchNo;
+            LOG_WARNING().noquote() << "未发现新批次全量文件: 当前批次" << snap.fullBatchNo << "全量文件最大批次" << batchNo;
         }
         return;
     }

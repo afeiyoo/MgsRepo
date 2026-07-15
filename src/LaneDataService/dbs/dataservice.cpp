@@ -233,7 +233,8 @@ void DataService::onLoadFullBlack(const QString &path, int batchNo)
     }
 
     // 更新全量时，需要删除旧全量信息
-    if (batchNo > GM_INS->m_conf->m_fullBatchNo) {
+    ST_ConfigSnapshot snap = GM_INS->m_conf->getSnapshot();
+    if (batchNo > snap.fullBatchNo) {
         int affected = truncateETCBlackCard(cleanTable, newConnName);
         if (affected < 0) {
             LOG_ERROR().noquote() << "更新全量时，清除" << cleanTable << "失败";

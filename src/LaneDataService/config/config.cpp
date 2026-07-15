@@ -43,11 +43,24 @@ void Config::loadConfig(const Utils::FileName &path)
 #else
     // TODO
 #endif
-    m_fullBatchNo = m_confUtil->getValue("FullBlack/BatchNo", 0).toInt();
+    int batchNo = m_confUtil->getValue("FullBlack/BatchNo", 0).toInt();
+    {
+        QWriteLocker locker(&m_lock);
+        m_fullBatchNo = batchNo;
+    }
+}
+
+ST_ConfigSnapshot Config::getSnapshot() const
+{
+    QReadLocker locker(&m_lock);
+    ST_ConfigSnapshot snap;
+    snap.fullBatchNo = m_fullBatchNo;
+    return snap;
 }
 
 void Config::setFullBatchNo(int batchNo)
 {
+    QWriteLocker locker(&m_lock);
     m_confUtil->setValue("FullBlack/BatchNo", batchNo);
     m_fullBatchNo = batchNo;
 }
