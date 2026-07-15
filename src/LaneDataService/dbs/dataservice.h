@@ -47,12 +47,17 @@ public slots:
 private:
     QString getActiveFBConnName();
     void setActiveFBConnName(const QString &name);
+    // 获取全量信息
+    QVariantMap fetchFullBlackInfo(int batchNo, const QString &connName);
+    // 删除旧全量信息
+    int truncateETCBlackCard(const QString &table, const QString &connName);
 
 private:
     // 数据库连接池
     EasyQtSql::SqlFactory *m_dbFactory = nullptr;
     // 当前活跃全量连接名
     QString m_activeFBConnName;
+    qint64 m_fbConnSeq = 0;
     // 保护活动连接名的读取和发布
     QReadWriteLock m_activeFBConnLock;
 };

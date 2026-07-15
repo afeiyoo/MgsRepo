@@ -16,12 +16,16 @@ public:
     void init();
 
 public slots:
-    // 更新全量状态 0 全量状态正常 -1 全量状态异常
-    void onUpdateFullBlackStatus(int status);
+    // 更新全量的可用状态 true:全量正常 false:全量异常
+    void onUpdateFullBlackStatus(bool status, const QString &desc);
+    void onUpdateFullBlackVersion(const QString &version);
 
 public:
     // 全量状态
-    int m_fullBlackStatus = -1;
+    bool m_fullBlackStatus = false;
+    QString m_fullBlackDesc;
+    // 全量版本
+    QString m_fullBlackVersion = 0;
 
 private:
     QThread *m_td = nullptr;
