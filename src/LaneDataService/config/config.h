@@ -3,16 +3,12 @@
 #include <QObject>
 #include <QReadWriteLock>
 
+#include "defs/defines.h"
+
 namespace Utils {
 class FileName;
 class ConfigUtils;
 } // namespace Utils
-
-// 快照
-struct ST_ConfigSnapshot
-{
-    int fullBatchNo = 0;
-};
 
 class Config : public QObject
 {

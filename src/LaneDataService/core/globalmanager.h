@@ -10,7 +10,7 @@ class DataService;
 class IMessageBus;
 class SqlDealer;
 class SignalManager;
-class FullBlackChecker;
+class FullBlackMaster;
 
 class GlobalManager : public QObject
 {
@@ -37,6 +37,6 @@ public:
     DataService *m_ds = nullptr;
     // 全局信号管理器
     SignalManager *m_sigMan = nullptr;
-    // 全量状态检查对象
-    FullBlackChecker *m_fullBlackChecker = nullptr;
+    // 全量检查对象
+    FullBlackMaster *m_fbMaster = nullptr;
 };

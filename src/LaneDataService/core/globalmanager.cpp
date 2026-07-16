@@ -6,7 +6,7 @@
 #include "CuteLogger/include/ConsoleAppender.h"
 #include "CuteLogger/include/RollingFileAppender.h"
 #include "Logger.h"
-#include "bend/fullblackchecker.h"
+#include "bend/fullblackmaster.h"
 #include "config/config.h"
 #include "dbs/dataservice.h"
 #include "dbs/sqldealer.h"
@@ -25,8 +25,7 @@ GlobalManager::GlobalManager(QObject *parent)
     m_confPath = FileUtils::curApplicationDirPath() + "/config/config.ini";
     m_ds = new DataService(this);
     m_sigMan = new SignalManager(this);
-
-    m_fullBlackChecker = new FullBlackChecker(this);
+    m_fbMaster = new FullBlackMaster(this);
 
     m_sqlDealer = new SqlDealer();
 }
@@ -74,8 +73,8 @@ int GlobalManager::init()
     if (!dbOk)
         return -102;
 
-    // 全量检查工作线程初始化
-    m_fullBlackChecker->init();
+    // 启动全量检查
+    m_fbMaster->init();
 
     return 0;
 }

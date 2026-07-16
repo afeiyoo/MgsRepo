@@ -1,96 +1,136 @@
 #include "fullblackworker.h"
 
+#include <QMetaObject>
 #include <QRegularExpression>
-#include <QThread>
+#include <QSqlError>
 
+#include "EasyQtSql.h"
 #include "Logger.h"
 #include "config/config.h"
 #include "core/globalmanager.h"
 #include "core/signalmanager.h"
+#include "dbs/dataservice.h"
+#include "utils/datadealutils.h"
 #include "utils/fileutils.h"
 
+using namespace EasyQtSql;
 using namespace Utils;
 
 FullBlackWorker::FullBlackWorker(QObject *parent)
     : QObject{parent}
-{
-    connect(GM_INS->m_sigMan, &SignalManager::sigCheckFullBlack, this, &FullBlackWorker::onCheckFullBlack);
-    connect(GM_INS->m_sigMan, &SignalManager::sigLoadFullBlackRes, this, &FullBlackWorker::onLoadFullBlackRes);
-}
+{}
 
-FullBlackWorker::~FullBlackWorker() {}
-
-void FullBlackWorker::onCheckFullBlack(bool isFirst, bool curFullBlackOk)
+FullBlackWorker::~FullBlackWorker()
 {
-    if (m_loading) {
-        LOG_INFO().noquote() << "全量文件正在加载，跳过本次新批次检查，待加载批次:" << m_pendingBatchNo;
-        return;
+    QString connectionNames[2];
+    for (int i = 0; i < 2; ++i) {
+        connectionNames[i] = m_dao[i].connectionName();
+        if (m_dao[i].isOpen())
+            m_dao[i].close();
     }
 
-    LOG_INFO().noquote() << "开始检查并加载全量文件...";
+    // 先释放所有QSqlDatabase句柄
+    m_dao[0] = QSqlDatabase();
+    m_dao[1] = QSqlDatabase();
+    for (const QString &name : connectionNames) {
+        if (!name.isEmpty())
+            QSqlDatabase::removeDatabase(name);
+    }
+}
+
+void FullBlackWorker::onCheckFullBlack()
+{
+    LOG_INFO().noquote() << "开始检查全量...";
     auto result = getMaxBatchNoFromFiles(GM_INS->m_conf->m_fullBlackPath);
     if (!result) {
-        LOG_WARNING().noquote() << "在" << GM_INS->m_conf->m_fullBlackPath << "下，未找到全量文件";
-        emit GM_INS->m_sigMan->sigUpdateFullBlackStatus(false, "全量文件未找到!");
-        return;
-    }
-
-    const int batchNo = result.value();
-    const QString filePath = GM_INS->m_conf->m_fullBlackPath + QString("/ETCBlackCard_%1.db").arg(batchNo);
-    ST_ConfigSnapshot snap = GM_INS->m_conf->getSnapshot();
-
-    // 批次检查
-    if (batchNo < snap.fullBatchNo) {
-        LOG_WARNING().noquote() << "全量文件批次低于当前批次，拒绝回退: 当前批次" << snap.fullBatchNo << "全量文件最大批次" << batchNo;
-        emit GM_INS->m_sigMan->sigUpdateFullBlackStatus(false, "非最新批次全量文件!");
-        return;
-    }
-
-    if (!isFirst && batchNo == snap.fullBatchNo) {
-        if (!curFullBlackOk) {
-            LOG_INFO().noquote() << "尝试重新加载全量文件:" << batchNo;
-            m_loading = true;
-            m_pendingBatchNo = batchNo;
-            emit GM_INS->m_sigMan->sigLoadFullBlack(filePath, batchNo);
-        } else {
-            LOG_WARNING().noquote() << "未发现新批次全量文件: 当前批次" << snap.fullBatchNo << "全量文件最大批次" << batchNo;
+        if (m_isFirst) {
+            LOG_ERROR().noquote() << "程序启动，未找到全量文件 => 全量异常";
+            setStatus(false, -1);
+            m_isFirst = false;
+            return;
         }
+
+        if (m_isValid) {
+            LOG_INFO().noquote() << "程序运行中，未找到全量文件。上次检查全量正常 => 全量正常";
+        } else {
+            LOG_ERROR().noquote() << "程序运行中，未找到全量文件。上次检查全量异常 => 全量异常";
+        }
+        setStatus(m_isValid, -2);
         return;
     }
 
-    m_loading = true;
-    m_pendingBatchNo = batchNo;
-    emit GM_INS->m_sigMan->sigLoadFullBlack(filePath, batchNo);
+    const int fileBatchNo = result.value();
+    const int curBatchNo = GM_INS->m_conf->getSnapshot().fullBatchNo;
+
+    const QString filePath = GM_INS->m_conf->m_fullBlackPath + QString("/ETCBlackCard_%1.db").arg(fileBatchNo);
+
+    // 全量批次检查
+    if (fileBatchNo < curBatchNo) {
+        if (m_isFirst) {
+            LOG_ERROR().noquote() << "程序启动，未找到当前批次全量文件: 当前批次" << curBatchNo << "文件最大批次" << fileBatchNo << "=> 全量异常";
+            setStatus(false, -3);
+            m_isFirst = false;
+            return;
+        }
+
+        if (m_isValid) {
+            LOG_ERROR().noquote() << "程序运行中，未找到当前批次全量文件: 当前批次" << curBatchNo << "文件最大批次" << fileBatchNo
+                                  << "上次检查全量正常 => 全量正常";
+        } else {
+            LOG_ERROR().noquote() << "程序运行中，未找到当前批次全量文件: 当前批次" << curBatchNo << "文件最大批次" << fileBatchNo
+                                  << "上次检查全量异常 => 全量异常";
+        }
+        setStatus(m_isValid, -4);
+        return;
+    }
+
+    if (!m_isFirst && fileBatchNo == curBatchNo) {
+        if (m_isValid) {
+            LOG_INFO().noquote() << "未发现新批次全量文件: 当前批次" << curBatchNo << "全量文件最大批次" << fileBatchNo
+                                 << "上次检查全量正常 => 全量正常";
+            return;
+        }
+        LOG_INFO().noquote() << "上次全量加载失败，尝试重新加载全量文件，批次:" << fileBatchNo;
+    }
+
+    // 加载全量
+    if (!loadFullBlack(fileBatchNo, filePath)) {
+        if (m_isFirst) {
+            LOG_ERROR().noquote() << "程序启动，全量加载失败: 批次" << fileBatchNo << "=> 全量异常";
+            setStatus(false, -5);
+            m_isFirst = false;
+            return;
+        }
+
+        if (m_isValid) {
+            LOG_ERROR().noquote() << "程序运行中，全量加载失败: 批次" << fileBatchNo << "上次检查全量正常 => 全量正常";
+        } else {
+            LOG_ERROR().noquote() << "程序运行中，全量加载失败: 批次" << fileBatchNo << "上次检查全量异常 => 全量异常";
+        }
+        setStatus(m_isValid, -6);
+        return;
+    }
+
+    m_isFirst = false;
+    LOG_INFO().noquote() << "全量加载成功: 批次" << fileBatchNo;
+    setStatus(true, 0);
+    pruneOldFiles(fileBatchNo);
 }
 
-void FullBlackWorker::onLoadFullBlackRes(bool ok, int batchNo, const QString &version)
+void FullBlackWorker::onInit()
 {
-    if (!m_loading || batchNo != m_pendingBatchNo) {
-        LOG_ERROR().noquote() << "忽略不匹配的全量加载结果，返回批次:" << batchNo << "待加载批次:" << m_pendingBatchNo;
-        return;
+    for (int i = 0; i < 2; ++i) {
+        const QString connName = QString("fb_%1").arg(i, 2, 10, QChar('0'));
+        m_dao[i] = QSqlDatabase::addDatabase("QSQLITE", connName);
     }
 
-    m_loading = false;
-    m_pendingBatchNo = 0;
-
-    if (!ok) {
-        LOG_ERROR().noquote() << QString("%1批次全量文件加载失败").arg(batchNo);
-        emit GM_INS->m_sigMan->sigUpdateFullBlackStatus(false, QString("%1批次全量文件加载失败").arg(batchNo));
-        return;
-    }
-
-    // 发布全量新版本
-    LOG_INFO().noquote() << QString("%1批次全量文件加载成功").arg(batchNo);
-    emit GM_INS->m_sigMan->sigUpdateFullBlackStatus(true, QString("%1批次全量文件加载成功").arg(batchNo));
-    emit GM_INS->m_sigMan->sigUpdateFullBlackVersion(version);
-
-    // 全量加载成功后，删除旧版本全量文件
-    pruneOldFiles(batchNo);
+    // 程序加载时，立即进行全量检查
+    onCheckFullBlack();
 }
 
-Utils::optional<int> FullBlackWorker::getMaxBatchNoFromFiles(const QString &fullBlackPath) const
+Utils::optional<int> FullBlackWorker::getMaxBatchNoFromFiles(const QString &path) const
 {
-    const FileName dirPath = FileName::fromString(fullBlackPath);
+    const FileName dirPath = FileName::fromString(path);
     const FileNameList fileList = FileUtils::getFilesWithSuffix(dirPath, ".db");
 
     if (fileList.isEmpty())
@@ -148,5 +188,98 @@ void FullBlackWorker::pruneOldFiles(int batchNo)
             }
             LOG_INFO().noquote() << "删除旧批次全量文件成功:" << file.fileName();
         }
+    }
+}
+
+void FullBlackWorker::setStatus(bool isValid, int status)
+{
+    m_isValid = isValid;
+    m_curStatus = status;
+
+    // 主线程缓存状态
+    ST_FullBlackStatus st;
+    st.lastCheckStatus = m_curStatus;
+    st.isValid = m_isValid;
+    st.activeVersion = m_version;
+    emit GM_INS->m_sigMan->sigUpdateFullBlackStatus(st);
+}
+
+bool FullBlackWorker::loadFullBlack(int batchNo, const QString &path)
+{
+    LOG_INFO().noquote() << "加载全量文件:" << path << "批次:" << batchNo;
+
+    m_dao[1].setDatabaseName(path);
+
+    if (!m_dao[1].open()) {
+        LOG_ERROR().noquote() << "全量文件打开失败:" << m_dao[1].lastError().text();
+        m_dao[1].close();
+        return false;
+    }
+
+    // 核验全量文件
+    LOG_INFO().noquote() << "开始校核全量文件...";
+    QString candidateVersion;
+    QString candidateCleanTable;
+    if (!validateFullBlack(m_dao[1], batchNo, &candidateVersion, &candidateCleanTable)) {
+        LOG_ERROR().noquote() << "全量文件校核失败!";
+        m_dao[1].close();
+        return false;
+    }
+    LOG_INFO().noquote() << "全量文件校核成功";
+
+    // 清理ETCBlackCard表
+    const int curBatchNo = GM_INS->m_conf->getSnapshot().fullBatchNo;
+    bool cleanOk = false;
+    if (batchNo > curBatchNo && !candidateCleanTable.isEmpty()) {
+        const bool invoked = QMetaObject::invokeMethod(GM_INS->m_ds, "cleanETCBlackCard", Qt::BlockingQueuedConnection, Q_RETURN_ARG(bool, cleanOk),
+                                                       Q_ARG(QString, candidateCleanTable));
+        if (!invoked || !cleanOk) {
+            LOG_ERROR().noquote() << "清理表" << candidateCleanTable << "失败";
+            m_dao[1].close();
+            return false;
+        }
+    }
+
+    // 全量核验通过，发布连接
+    std::swap(m_dao[0], m_dao[1]);
+    if (m_dao[1].isOpen())
+        m_dao[1].close();
+
+    m_version = candidateVersion;
+    m_cleanTable = candidateCleanTable;
+
+    GM_INS->m_conf->setFullBatchNo(batchNo);
+    return true;
+}
+
+bool FullBlackWorker::validateFullBlack(const QSqlDatabase &db, int batchNo, QString *version, QString *cleanTable)
+{
+    const QString sql = "SELECT version, cleantable FROM t_operatectrl WHERE paramtype = ? AND batchno = ?";
+
+    Transaction t(db);
+    try {
+        PreparedQuery query = t.prepare(sql);
+        QueryResult res = query.exec(515, batchNo);
+
+        LOG_INFO().noquote() << "执行SQL语句:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        if (!res.next()) {
+            LOG_ERROR().noquote() << "未查询到全量元数据, 批次" << batchNo;
+            return false;
+        }
+
+        const QString candidateVersion = res.value("version").toString();
+        const QString candidateCleanTable = res.value("cleantable").toString();
+        if (candidateVersion.isEmpty() || candidateCleanTable.isEmpty()) {
+            LOG_ERROR().noquote() << "全量version或cleantable为空";
+            return false;
+        }
+
+        *version = candidateVersion;
+        *cleanTable = candidateCleanTable;
+        return true;
+    } catch (const DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        return false;
     }
 }

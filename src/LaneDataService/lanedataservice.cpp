@@ -2,8 +2,7 @@
 
 #include <QVariantMap>
 
-#include "bend/fullblackchecker.h"
-#include "config/config.h"
+#include "bend/fullblackmaster.h"
 #include "core/baseexception.h"
 #include "core/globalmanager.h"
 #include "dbs/dataservice.h"
@@ -55,12 +54,12 @@ QByteArray LaneDataService::fetchString(const QByteArray &json)
         QString sql = GM_INS->m_sqlDealer->getSql(sqlNamespace, sqlID);
 
         QString ans = GM_INS->m_ds->fetchString(sql, params, def);
-        resMap["status"] = 0;
+        resMap["code"] = 0;
         resMap["desc"] = "";
         resMap["data"] = ans;
         return DataDealUtils::mapToJson(resMap);
     } catch (const BaseException &e) {
-        resMap["status"] = e.status();
+        resMap["code"] = e.code();
         resMap["desc"] = e.desc();
         return DataDealUtils::mapToJson(resMap);
     }
@@ -125,12 +124,12 @@ QByteArray LaneDataService::updateRecord(const QByteArray &json)
         if (affected < 0)
             throw BaseException(-1, "更新记录失败");
 
-        resMap["status"] = 0;
+        resMap["code"] = 0;
         resMap["desc"] = "";
         resMap["data"] = affected;
         return DataDealUtils::mapToJson(resMap);
     } catch (const BaseException &e) {
-        resMap["status"] = e.status();
+        resMap["code"] = e.code();
         resMap["desc"] = e.desc();
         return DataDealUtils::mapToJson(resMap);
     }
@@ -172,12 +171,12 @@ QByteArray LaneDataService::insertRecord(const QByteArray &json)
         if (affected < 0)
             throw BaseException(-1, "插入记录失败");
 
-        resMap["status"] = 0;
+        resMap["code"] = 0;
         resMap["desc"] = "";
         resMap["data"] = affected;
         return DataDealUtils::mapToJson(resMap);
     } catch (const BaseException &e) {
-        resMap["status"] = e.status();
+        resMap["code"] = e.code();
         resMap["desc"] = e.desc();
         return DataDealUtils::mapToJson(resMap);
     }
@@ -212,12 +211,12 @@ QByteArray LaneDataService::deleteRecord(const QByteArray &json)
         if (affected < 0)
             throw BaseException(-1, "删除记录失败");
 
-        resMap["status"] = 0;
+        resMap["code"] = 0;
         resMap["desc"] = "";
         resMap["data"] = affected;
         return DataDealUtils::mapToJson(resMap);
     } catch (const BaseException &e) {
-        resMap["status"] = e.status();
+        resMap["code"] = e.code();
         resMap["desc"] = e.desc();
         return DataDealUtils::mapToJson(resMap);
     }
@@ -247,12 +246,12 @@ QByteArray LaneDataService::truncateTable(const QByteArray &json)
         if (affected < 0)
             throw BaseException(-1, "清空表内容失败");
 
-        resMap["status"] = 0;
+        resMap["code"] = 0;
         resMap["desc"] = "";
         resMap["data"] = affected;
         return DataDealUtils::mapToJson(resMap);
     } catch (const BaseException &e) {
-        resMap["status"] = e.status();
+        resMap["code"] = e.code();
         resMap["desc"] = e.desc();
         return DataDealUtils::mapToJson(resMap);
     }
@@ -261,10 +260,19 @@ QByteArray LaneDataService::truncateTable(const QByteArray &json)
 QByteArray LaneDataService::getFullBlackStatus(const QByteArray &json)
 {
     Q_UNUSED(json);
+
+    const ST_FullBlackStatus st = GM_INS->m_fbMaster->fullBlackStatus();
+
+    QVariantMap data;
+    data["isValid"] = st.isValid;
+    data["status"] = st.lastCheckStatus;
+    data["version"] = st.activeVersion;
+
     QVariantMap resMap;
-    resMap["status"] = GM_INS->m_fullBlackChecker->m_fullBlackStatus;
-    resMap["desc"] = GM_INS->m_fullBlackChecker->m_fullBlackDesc;
-    resMap["data"] = GM_INS->m_fullBlackChecker->m_fullBlackVersion;
+    resMap["code"] = 0; // 接口调用成功
+    resMap["desc"] = "";
+    resMap["data"] = data;
+
     return DataDealUtils::mapToJson(resMap);
 }
 

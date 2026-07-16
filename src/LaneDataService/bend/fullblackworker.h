@@ -2,6 +2,7 @@
 
 #include "utils/optional.h"
 #include <QObject>
+#include <QSqlDatabase>
 
 class FullBlackWorker : public QObject
 {
@@ -11,16 +12,38 @@ public:
     ~FullBlackWorker() override;
 
 public slots:
-    void onCheckFullBlack(bool isFirst, bool curFullBlackOk);
-    void onLoadFullBlackRes(bool ok, int batchNo, const QString &version);
+    void onCheckFullBlack();
+    void onInit();
 
 private:
-    // 获取全量目录下的全量最大版本号
-    Utils::optional<int> getMaxBatchNoFromFiles(const QString &fullBlackPath) const;
-    // 删除旧版本全量文件
+    // 获取全量目录下全量文件的最大批次
+    Utils::optional<int> getMaxBatchNoFromFiles(const QString &path) const;
+    // 清理全量目录下批次小于batchNo的全量文件
     void pruneOldFiles(int batchNo);
+    // 更新当前全量状态
+    void setStatus(bool isValid, int status);
+    // 加载全量
+    bool loadFullBlack(int batchNo, const QString &path);
+    // 校验全量数据库
+    bool validateFullBlack(const QSqlDatabase &db, int batchNo, QString *version, QString *cleanTable);
 
-    // 同一时间只允许加载一个全量文件；用于过滤重复检查和过期的加载结果
-    bool m_loading = false;
-    int m_pendingBatchNo = 0;
+private:
+    // 当前全量是否正常 true:全量正常 false:全量异常
+    bool m_isValid = false;
+    // 0: 全量文件加载成功 => 全量正常
+    // -1：程序启动，未找到全量文件 => 全量异常
+    // -2: 检查全量时，未找到全量文件 => 取决上一次的全量状态
+    // -3：程序启动，未找到当前批次全量文件 => 全量异常
+    // -4: 检查全量时，未找到当前批次全量文件 => 取决上一次的全量状态
+    // -5：程序启动，全量加载失败 => 全量异常
+    // -6: 检查全量时，全量加载失败 => 取决上一次的全量状态
+    int m_curStatus = -1;
+    // 全量版本
+    QString m_version;
+    // 待清理全量表
+    QString m_cleanTable;
+    // 是否首次加载
+    bool m_isFirst = true;
+    // 数据库连接 [0]: 活动连接 [1]: 候选连接，非加载期间处于关闭状态
+    QSqlDatabase m_dao[2];
 };
