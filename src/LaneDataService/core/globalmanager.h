@@ -8,7 +8,6 @@
 class Config;
 class DataService;
 class IMessageBus;
-class SqlDealer;
 class SignalManager;
 class FullBlackMaster;
 class Environment;
@@ -32,8 +31,6 @@ public:
     QString m_confPath;
     // 配置管理对象
     Config *m_conf = nullptr;
-    // Sql语句管理对象
-    SqlDealer *m_sqlDealer = nullptr;
     // 数据库操作对象(包括全量与增量)
     DataService *m_ds = nullptr;
     // 全局信号管理器

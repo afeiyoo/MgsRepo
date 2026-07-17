@@ -3,7 +3,9 @@
 #include "EasyQtSql.h"
 #include "Logger.h"
 #include "core/globalmanager.h"
+#include "sqldealer.h"
 #include "utils/datadealutils.h"
+#include "utils/stdafx.h"
 
 using namespace Utils;
 using namespace EasyQtSql;
@@ -12,10 +14,19 @@ DataService::DataService(QObject *parent)
     : QObject(parent)
 {}
 
-DataService::~DataService() {}
+DataService::~DataService()
+{
+    SAFE_DELETE(m_sql);
+}
 
 bool DataService::init(uint type, const QString &host, int port, const QString &userName, const QString &passWord, const QString &dbName)
 {
+    m_sql = new SqlDealer();
+    // 加载sql文件
+    bool sqlOk = m_sql->loadSqlFiles();
+    if (!sqlOk)
+        return false;
+
     // 建立连接
     SqlFactory::DBSetting setting;
     QString testSql;
@@ -58,8 +69,9 @@ bool DataService::testConnection(const QString &connName, const QString &sql)
     return true;
 }
 
-QString DataService::fetchString(const QString &sql, const QVariantMap &params, const QString &def)
+QString DataService::fetchString(const QString &sqlNamespace, const QString &sqlID, const QVariantMap &params, const QString &def)
 {
+    QString sql = m_sql->getSql(sqlNamespace, sqlID);
     if (sql.isEmpty())
         return def;
 
@@ -192,12 +204,6 @@ bool DataService::cleanETCBlackCard(const QString &table)
 
 QString DataService::getIncrementBlackVersion()
 {
-    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
-    Transaction t(sdb);
-    try {
-        // TODO
-    } catch (const EasyQtSql::DBException &e) {
-        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
-        return "";
-    }
+    // TODO 获取增量版本
+    return "";
 }

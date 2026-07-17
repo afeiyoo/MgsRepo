@@ -51,9 +51,7 @@ QByteArray LaneDataService::fetchString(const QByteArray &json)
         QString def = oneMap["def"].toString();
         QVariantMap params = oneMap["params"].toMap();
 
-        QString sql = GM_INS->m_sqlDealer->getSql(sqlNamespace, sqlID);
-
-        QString ans = GM_INS->m_ds->fetchString(sql, params, def);
+        QString ans = GM_INS->m_ds->fetchString(sqlNamespace, sqlID, params, def);
         resMap["code"] = 0;
         resMap["desc"] = "";
         resMap["data"] = ans;

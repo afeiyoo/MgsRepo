@@ -9,11 +9,9 @@
 #include "bend/fullblackmaster.h"
 #include "config/config.h"
 #include "dbs/dataservice.h"
-#include "dbs/sqldealer.h"
 #include "env/environment.h"
 #include "signalmanager.h"
 #include "utils/fileutils.h"
-#include "utils/stdafx.h"
 
 using namespace Utils;
 
@@ -28,14 +26,10 @@ GlobalManager::GlobalManager(QObject *parent)
     m_sigMan = new SignalManager(this);
     m_fbMaster = new FullBlackMaster(this);
 
-    m_sqlDealer = new SqlDealer();
     m_env = new Environment(this);
 }
 
-GlobalManager::~GlobalManager()
-{
-    SAFE_DELETE(m_sqlDealer);
-}
+GlobalManager::~GlobalManager() {}
 
 GlobalManager *GlobalManager::instance()
 {
@@ -64,11 +58,6 @@ int GlobalManager::init()
     mainRollingFileAppender->setFlushOnWrite(true);
     mainRollingFileAppender->setDatePattern(RollingFileAppender::DailyRollover);
     cuteLogger->registerAppender(mainRollingFileAppender);
-
-    // 加载sql文件
-    bool sqlOk = m_sqlDealer->loadSqlFiles();
-    if (!sqlOk)
-        return -101;
 
     // 数据库操作对象初始化
     bool dbOk = m_ds->init(m_conf->m_dbType, m_conf->m_dbHost, m_conf->m_dbPort, m_conf->m_dbUser, m_conf->m_dbPassword, m_conf->m_dbName);

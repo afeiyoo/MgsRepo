@@ -6,6 +6,8 @@
 namespace EasyQtSql {
 class SqlFactory;
 }
+class SqlDealer;
+
 class DataService : public QObject
 {
     Q_OBJECT
@@ -20,7 +22,7 @@ public:
     bool testConnection(const QString &connName, const QString &sql);
 
     // 查询记录String
-    QString fetchString(const QString &sql, const QVariantMap &params, const QString &def);
+    QString fetchString(const QString &sqlNamespace, const QString &sqlID, const QVariantMap &params, const QString &def);
 
     // 查询记录int
     int fetchInt(const QString &sql, const QVariantMap &params, const int def);
@@ -44,4 +46,6 @@ public slots:
 private:
     // 数据库连接池
     EasyQtSql::SqlFactory *m_dbFactory = nullptr;
+    // SQL语句获取器
+    SqlDealer *m_sql = nullptr;
 };
