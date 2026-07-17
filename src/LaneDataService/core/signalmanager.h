@@ -1,6 +1,6 @@
 #pragma once
 
-#include "defs/defines.h"
+#include "env/defines.h"
 #include <QObject>
 
 class SignalManager : public QObject

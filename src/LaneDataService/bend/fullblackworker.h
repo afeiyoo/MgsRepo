@@ -3,6 +3,7 @@
 #include "utils/optional.h"
 #include <QObject>
 #include <QSqlDatabase>
+#include <QTimer>
 
 class FullBlackWorker : public QObject
 {
@@ -44,6 +45,8 @@ private:
     QString m_cleanTable;
     // 是否首次加载
     bool m_isFirst = true;
-    // 数据库连接 [0]: 活动连接 [1]: 候选连接，非加载期间处于关闭状态
+    // 全量数据库连接 [0]: 活动连接 [1]: 候选连接，非加载期间处于关闭状态
     QSqlDatabase m_dao[2];
+    // 定时器
+    QTimer *m_timer = nullptr;
 };

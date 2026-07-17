@@ -10,6 +10,7 @@
 #include "config/config.h"
 #include "dbs/dataservice.h"
 #include "dbs/sqldealer.h"
+#include "env/environment.h"
 #include "signalmanager.h"
 #include "utils/fileutils.h"
 #include "utils/stdafx.h"
@@ -28,6 +29,7 @@ GlobalManager::GlobalManager(QObject *parent)
     m_fbMaster = new FullBlackMaster(this);
 
     m_sqlDealer = new SqlDealer();
+    m_env = new Environment(this);
 }
 
 GlobalManager::~GlobalManager()

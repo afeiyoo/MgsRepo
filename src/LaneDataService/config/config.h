@@ -3,7 +3,7 @@
 #include <QObject>
 #include <QReadWriteLock>
 
-#include "defs/defines.h"
+#include "env/defines.h"
 
 namespace Utils {
 class FileName;

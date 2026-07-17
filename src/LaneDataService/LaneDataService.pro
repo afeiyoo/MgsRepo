@@ -33,6 +33,8 @@ include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 SOURCES += \
     bend/fullblackmaster.cpp \
     bend/fullblackworker.cpp \
+    bend/growthblackmaster.cpp \
+    bend/growthblackworker.cpp \
     config/config.cpp \
     core/baseexception.cpp \
     core/gateway.cpp \
@@ -40,11 +42,14 @@ SOURCES += \
     core/signalmanager.cpp \
     dbs/dataservice.cpp \
     dbs/sqldealer.cpp \
+    env/environment.cpp \
     lanedataservice.cpp
 
 HEADERS += \
     bend/fullblackmaster.h \
     bend/fullblackworker.h \
+    bend/growthblackmaster.h \
+    bend/growthblackworker.h \
     config/config.h \
     core/baseexception.h \
     core/gateway.h \
@@ -52,7 +57,8 @@ HEADERS += \
     core/signalmanager.h \
     dbs/dataservice.h \
     dbs/sqldealer.h \
-    defs/defines.h \
+    env/defines.h \
+    env/environment.h \
     ilanedataservice.h \
     lanedataservice.h \
     lanedataservice_global.h

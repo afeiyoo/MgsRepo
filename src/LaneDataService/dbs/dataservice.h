@@ -39,6 +39,7 @@ public:
 
 public slots:
     bool cleanETCBlackCard(const QString &table);
+    QString getIncrementBlackVersion();
 
 private:
     // 数据库连接池

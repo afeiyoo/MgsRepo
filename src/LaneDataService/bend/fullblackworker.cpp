@@ -18,7 +18,9 @@ using namespace Utils;
 
 FullBlackWorker::FullBlackWorker(QObject *parent)
     : QObject{parent}
-{}
+{
+    m_timer = new QTimer(this);
+}
 
 FullBlackWorker::~FullBlackWorker()
 {
@@ -36,6 +38,7 @@ FullBlackWorker::~FullBlackWorker()
         if (!name.isEmpty())
             QSqlDatabase::removeDatabase(name);
     }
+    m_timer->stop();
 }
 
 void FullBlackWorker::onCheckFullBlack()
@@ -119,13 +122,20 @@ void FullBlackWorker::onCheckFullBlack()
 
 void FullBlackWorker::onInit()
 {
+    // 全量数据库连接初始化
     for (int i = 0; i < 2; ++i) {
         const QString connName = QString("fb_%1").arg(i, 2, 10, QChar('0'));
         m_dao[i] = QSqlDatabase::addDatabase("QSQLITE", connName);
     }
 
+    // 每隔10分钟检查一次全量
+    m_timer->setInterval(10 * 60 * 1000);
+    connect(m_timer, &QTimer::timeout, this, &FullBlackWorker::onCheckFullBlack);
+
     // 程序加载时，立即进行全量检查
     onCheckFullBlack();
+
+    m_timer->start();
 }
 
 Utils::optional<int> FullBlackWorker::getMaxBatchNoFromFiles(const QString &path) const

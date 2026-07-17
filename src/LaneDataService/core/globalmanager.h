@@ -11,6 +11,7 @@ class IMessageBus;
 class SqlDealer;
 class SignalManager;
 class FullBlackMaster;
+class Environment;
 
 class GlobalManager : public QObject
 {
@@ -39,4 +40,6 @@ public:
     SignalManager *m_sigMan = nullptr;
     // 全量检查对象
     FullBlackMaster *m_fbMaster = nullptr;
+    // 全局环境变量
+    Environment *m_env = nullptr;
 };

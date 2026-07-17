@@ -189,3 +189,15 @@ bool DataService::cleanETCBlackCard(const QString &table)
     int affected = truncateTable(table);
     return affected >= 0;
 }
+
+QString DataService::getIncrementBlackVersion()
+{
+    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
+    Transaction t(sdb);
+    try {
+        // TODO
+    } catch (const EasyQtSql::DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        return "";
+    }
+}
