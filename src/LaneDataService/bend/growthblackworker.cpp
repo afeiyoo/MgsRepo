@@ -4,6 +4,7 @@
 #include "Logger.h"
 #include "config/config.h"
 #include "core/globalmanager.h"
+#include "env/defines.h"
 #include "env/environment.h"
 #include "utils/datadealutils.h"
 #include "utils/stdafx.h"
@@ -51,7 +52,7 @@ QByteArray GrowthBlackWorker::getGrowthBlackJson()
 {
     // TODO 获取当前增量版本（数据库查询）
     QString curGrowthBlackVersion;
-    QString curFullBlackVersion = GM_INS->m_env->fullBlackVersion();
+    QString curFullBlackVersion = GM_INS->m_env->getEnvSnap().fullBlackVersion;
 
     if (curGrowthBlackVersion.isEmpty() && curFullBlackVersion.isEmpty()) {
         LOG_ERROR().noquote() << "当前全量版本和增量版本都为空，无法确定增量版本";
@@ -82,9 +83,9 @@ QByteArray GrowthBlackWorker::getGrowthBlackJson()
     QByteArray reqJson = DataDealUtils::mapToJson(reqMap);
 
     QByteArray resp;
-    bool netOk = m_client->postSync(resp, QUrl(GM_INS->m_conf->m_stationServiceURL), reqJson, "application/json");
+    bool netOk = m_client->postSync(resp, QUrl(GM_INS->m_conf->getConfigSnap().stationServiceURL), reqJson, "application/json");
     if (!netOk) {
-        LOG_ERROR().noquote() << "向" << GM_INS->m_conf->m_stationServiceURL << "请求增量失败: 版本" << version << "原因" << resp;
+        LOG_ERROR().noquote() << "向" << GM_INS->m_conf->getConfigSnap().stationServiceURL << "请求增量失败: 版本" << version << "原因" << resp;
         return "";
     }
     if (resp.isEmpty()) {

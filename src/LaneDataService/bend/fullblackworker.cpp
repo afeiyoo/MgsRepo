@@ -9,6 +9,7 @@
 #include "config/config.h"
 #include "core/globalmanager.h"
 #include "dbs/dataservice.h"
+#include "env/defines.h"
 #include "env/environment.h"
 #include "utils/datadealutils.h"
 #include "utils/fileutils.h"
@@ -43,8 +44,10 @@ FullBlackWorker::~FullBlackWorker()
 
 void FullBlackWorker::onCheckFullBlack()
 {
+    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
+
     LOG_INFO().noquote() << "开始检查全量...";
-    auto result = getMaxBatchNoFromFiles(GM_INS->m_conf->m_fullBlackPath);
+    auto result = getMaxBatchNoFromFiles(snap.fullBlackPath);
     if (!result) {
         if (m_isFirst) {
             LOG_ERROR().noquote() << "程序启动，未找到全量文件 => 全量异常";
@@ -63,9 +66,9 @@ void FullBlackWorker::onCheckFullBlack()
     }
 
     const int fileBatchNo = result.value();
-    const int curBatchNo = GM_INS->m_conf->fullBatchNo();
+    const int curBatchNo = snap.fullBatchNo;
 
-    const QString filePath = GM_INS->m_conf->m_fullBlackPath + QString("/ETCBlackCard_%1.db").arg(fileBatchNo);
+    const QString filePath = snap.fullBlackPath + QString("/ETCBlackCard_%1.db").arg(fileBatchNo);
 
     // 全量批次检查
     if (fileBatchNo < curBatchNo) {
@@ -171,7 +174,7 @@ Utils::optional<int> FullBlackWorker::getMaxBatchNoFromFiles(const QString &path
 
 void FullBlackWorker::pruneOldFiles(int batchNo)
 {
-    const FileName dirPath = FileName::fromString(GM_INS->m_conf->m_fullBlackPath);
+    const FileName dirPath = FileName::fromString(GM_INS->m_conf->getConfigSnap().fullBlackPath);
     if (!dirPath.exists())
         return;
 
@@ -232,7 +235,7 @@ bool FullBlackWorker::loadFullBlack(int batchNo, const QString &path)
     LOG_INFO().noquote() << "全量文件校核成功";
 
     // 清理ETCBlackCard表
-    const int curBatchNo = GM_INS->m_conf->fullBatchNo();
+    const int curBatchNo = GM_INS->m_conf->getConfigSnap().fullBatchNo;
     bool cleanOk = false;
     if (batchNo > curBatchNo && !candidateCleanTable.isEmpty()) {
         const bool invoked = QMetaObject::invokeMethod(GM_INS->m_ds, "cleanETCBlackCard", Qt::BlockingQueuedConnection, Q_RETURN_ARG(bool, cleanOk),

@@ -3,6 +3,7 @@
 #include "Logger.h"
 #include "config/config.h"
 #include "core/globalmanager.h"
+#include "env/defines.h"
 #include "utils/fileutils.h"
 
 #include <QFile>
@@ -41,7 +42,7 @@ QString SqlDealer::buildKey(const QString &sqlNamespace, const QString &id) cons
 
 bool SqlDealer::loadSqlFiles()
 {
-    foreach (auto str, GM_INS->m_conf->m_sqlFiles) {
+    foreach (auto str, GM_INS->m_conf->getConfigSnap().sqlFiles) {
         FileName sqlFile = FileName::fromString(str);
         LOG_INFO().noquote() << QString("加载 SQL 文件: %1").arg(sqlFile.fileName());
 

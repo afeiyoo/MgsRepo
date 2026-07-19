@@ -9,6 +9,7 @@
 #include "bend/fullblackmaster.h"
 #include "config/config.h"
 #include "dbs/dataservice.h"
+#include "env/defines.h"
 #include "env/environment.h"
 #include "signalmanager.h"
 #include "utils/fileutils.h"
@@ -25,7 +26,6 @@ GlobalManager::GlobalManager(QObject *parent)
     m_ds = new DataService(this);
     m_sigMan = new SignalManager(this);
     m_fbMaster = new FullBlackMaster(this);
-
     m_env = new Environment(this);
 }
 
@@ -44,23 +44,24 @@ int GlobalManager::init()
         return -100;
 
     m_conf->loadConfig(confFile);
+    ST_ConfigSnap snap = m_conf->getConfigSnap();
 
     // 日志初始化
     ConsoleAppender *consoleAppender = new ConsoleAppender();
-    consoleAppender->setFormat(m_conf->m_logFormat);
+    consoleAppender->setFormat(snap.logFormat);
     cuteLogger->registerAppender(consoleAppender);
 
     FileName mainLogPath = FileName::fromString(FileUtils::curApplicationDirPath() + "/logs/LaneDataService.log");
     FileUtils::makeSureDirExist(mainLogPath.parentDir());
     RollingFileAppender *mainRollingFileAppender = new RollingFileAppender(FileUtils::canonicalPath(mainLogPath).toString());
-    mainRollingFileAppender->setFormat(m_conf->m_logFormat);
-    mainRollingFileAppender->setLogFilesLimit(m_conf->m_logLimits);
+    mainRollingFileAppender->setFormat(snap.logFormat);
+    mainRollingFileAppender->setLogFilesLimit(snap.logLimits);
     mainRollingFileAppender->setFlushOnWrite(true);
     mainRollingFileAppender->setDatePattern(RollingFileAppender::DailyRollover);
     cuteLogger->registerAppender(mainRollingFileAppender);
 
     // 数据库操作对象初始化
-    bool dbOk = m_ds->init(m_conf->m_dbType, m_conf->m_dbHost, m_conf->m_dbPort, m_conf->m_dbUser, m_conf->m_dbPassword, m_conf->m_dbName);
+    bool dbOk = m_ds->init(snap.dbType, snap.dbHost, snap.dbPort, snap.dbUser, snap.dbPassword, snap.dbName);
     if (!dbOk)
         return -102;
 

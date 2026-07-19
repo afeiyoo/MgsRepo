@@ -3,13 +3,12 @@
 #include <QObject>
 #include <QReadWriteLock>
 
-#include "env/defines.h"
-
 namespace Utils {
 class FileName;
 class ConfigUtils;
 } // namespace Utils
 
+struct ST_ConfigSnap;
 class Config : public QObject
 {
     Q_OBJECT
@@ -19,12 +18,11 @@ public:
 
     void loadConfig(const Utils::FileName &path);
 
-    int fullBatchNo() const;
+    ST_ConfigSnap getConfigSnap() const;
+
     void setFullBatchNo(int batchNo);
 
-public:
-    // 启动加载后，不会再被修改的配置
-
+private:
     // 数据库配置
     uint m_dbType;
     QString m_dbHost;
@@ -35,22 +33,17 @@ public:
 
     // 日志配置
     QString m_logFormat;
-    int m_logLimits;
+    int m_logLimits = 180;
 
     // sql配置
     QStringList m_sqlFiles; // sql文件存储路径
 
     // 全量配置
     QString m_fullBlackPath; // 全量文件所在路径
+    int m_fullBatchNo = 0;   // 当前全量批次（可变）
 
     // 服务配置
     QString m_stationServiceURL; // 站级服务
-
-private:
-    // 启动加载后，还有可能被修改的配置
-
-    // 全量配置
-    int m_fullBatchNo = 0; // 当前全量批次
 
 private:
     mutable QReadWriteLock m_lock;

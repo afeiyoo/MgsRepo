@@ -5,7 +5,6 @@
 #include "core/baseexception.h"
 #include "core/globalmanager.h"
 #include "dbs/dataservice.h"
-#include "env/environment.h"
 #include "iservicehub.h"
 #include "utils/datadealutils.h"
 
@@ -290,6 +289,7 @@ QByteArray LaneDataService::getBlackStatus(const QByteArray &json)
     return "";
 }
 
+// --------------------------------------------------------
 ILaneDataService *createLaneDataService(IServiceHub *hub)
 {
     return new LaneDataService(hub);
