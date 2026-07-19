@@ -1,9 +1,6 @@
 #include "growthblackmaster.h"
 
-#include <QThread>
-
 #include "growthblackworker.h"
-#include "utils/stdafx.h"
 
 GrowthBlackMaster::GrowthBlackMaster(QObject *parent)
     : QObject{parent}
@@ -20,7 +17,6 @@ GrowthBlackMaster::~GrowthBlackMaster()
             m_td->wait(1000);
         }
     }
-    SAFE_DELETE(m_td);
 }
 
 void GrowthBlackMaster::init()

@@ -1,7 +1,12 @@
 <RCC>
     <qresource prefix="/">
-        <file>static/sqls/mtc_in.xml</file>
-        <file>static/sqls/etc.xml</file>
-        <file>static/sqls/mtc_out.xml</file>
+        <file>static/sqls/mtcin_mysql.xml</file>
+        <file>static/sqls/etc_mysql.xml</file>
+        <file>static/sqls/mtcout_mysql.xml</file>
+        <file>static/sqls/common_dameng.xml</file>
+        <file>static/sqls/common_mysql.xml</file>
+        <file>static/sqls/etc_dameng.xml</file>
+        <file>static/sqls/mtcin_dameng.xml</file>
+        <file>static/sqls/mtcout_dameng.xml</file>
     </qresource>
 </RCC>

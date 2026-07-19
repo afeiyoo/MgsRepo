@@ -5,7 +5,8 @@
 
 namespace EasyQtSql {
 class SqlFactory;
-}
+class Database;
+} // namespace EasyQtSql
 class SqlDealer;
 
 class DataService : public QObject
@@ -39,9 +40,16 @@ public:
     // 整表删除（不删除表结构） 返回值>=0表示影响行数，<0表示执行失败
     int truncateTable(const QString &table);
 
+    // 获取增量状态名单版本号
+    QString getGrowthBlackVersion();
+
 public slots:
     bool cleanETCBlackCard(const QString &table);
-    QString getIncrementBlackVersion();
+
+private:
+    int updateRecordsImpl(EasyQtSql::Database &db, const QString &table, const QVariantMap &updateParams, const QString &whereClause);
+    int insertRecordsImpl(EasyQtSql::Database &db, const QString &table, const QVariantMap &insertParams);
+    int deleteRecordsImpl(EasyQtSql::Database &db, const QString &table, const QString &whereClause);
 
 private:
     // 数据库连接池

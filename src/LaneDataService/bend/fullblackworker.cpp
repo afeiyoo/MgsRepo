@@ -8,8 +8,8 @@
 #include "Logger.h"
 #include "config/config.h"
 #include "core/globalmanager.h"
-#include "core/signalmanager.h"
 #include "dbs/dataservice.h"
+#include "env/environment.h"
 #include "utils/datadealutils.h"
 #include "utils/fileutils.h"
 
@@ -63,7 +63,7 @@ void FullBlackWorker::onCheckFullBlack()
     }
 
     const int fileBatchNo = result.value();
-    const int curBatchNo = GM_INS->m_conf->getSnapshot().fullBatchNo;
+    const int curBatchNo = GM_INS->m_conf->fullBatchNo();
 
     const QString filePath = GM_INS->m_conf->m_fullBlackPath + QString("/ETCBlackCard_%1.db").arg(fileBatchNo);
 
@@ -205,13 +205,7 @@ void FullBlackWorker::setStatus(bool isValid, int status)
 {
     m_isValid = isValid;
     m_curStatus = status;
-
-    // 主线程缓存状态
-    ST_FullBlackStatus st;
-    st.lastCheckStatus = m_curStatus;
-    st.isValid = m_isValid;
-    st.activeVersion = m_version;
-    emit GM_INS->m_sigMan->sigUpdateFullBlackStatus(st);
+    GM_INS->m_env->updateFullBlackEnvs(m_isValid, m_curStatus, m_version);
 }
 
 bool FullBlackWorker::loadFullBlack(int batchNo, const QString &path)
@@ -238,7 +232,7 @@ bool FullBlackWorker::loadFullBlack(int batchNo, const QString &path)
     LOG_INFO().noquote() << "全量文件校核成功";
 
     // 清理ETCBlackCard表
-    const int curBatchNo = GM_INS->m_conf->getSnapshot().fullBatchNo;
+    const int curBatchNo = GM_INS->m_conf->fullBatchNo();
     bool cleanOk = false;
     if (batchNo > curBatchNo && !candidateCleanTable.isEmpty()) {
         const bool invoked = QMetaObject::invokeMethod(GM_INS->m_ds, "cleanETCBlackCard", Qt::BlockingQueuedConnection, Q_RETURN_ARG(bool, cleanOk),

@@ -24,6 +24,7 @@ shared|dll {
 include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
+include($$THIRD_PARTY_LIBRARY_PATH/HttpClient/HttpClient.pri)
 
 
 # You can make your code fail to compile if it uses deprecated APIs.

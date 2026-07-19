@@ -37,8 +37,8 @@ bool DataService::init(uint type, const QString &host, int port, const QString &
         setting = SqlFactory::DBSetting("QODBC", host, port, userName, passWord, dbName);
         testSql = "SELECT 1 FROM DUAL;";
     }
-    m_dbFactory = SqlFactory::getInstance()->config(setting, "main");
-    return testConnection("main", testSql);
+    m_dbFactory = SqlFactory::getInstance()->config(setting, "tolllanedb");
+    return testConnection("tolllanedb", testSql);
 }
 
 bool DataService::testConnection(const QString &connName, const QString &sql)
@@ -75,7 +75,7 @@ QString DataService::fetchString(const QString &sqlNamespace, const QString &sql
     if (sql.isEmpty())
         return def;
 
-    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("tolllanedb");
     Transaction t(sdb);
     try {
         PreparedQuery query = t.prepare(sql);
@@ -98,7 +98,7 @@ int DataService::fetchInt(const QString &sql, const QVariantMap &params, const i
     if (sql.isEmpty())
         return def;
 
-    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("tolllanedb");
     Transaction t(sdb);
     try {
         PreparedQuery query = t.prepare(sql);
@@ -118,81 +118,74 @@ int DataService::fetchInt(const QString &sql, const QVariantMap &params, const i
 
 int DataService::updateRecords(const QString &table, const QVariantMap &updateParams, const QString &whereClause)
 {
-    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
-    Transaction t(sdb);
+    QSqlDatabase sdb = m_dbFactory->getDatabase("tolllanedb");
+
     try {
-        NonQueryResult res = t.update(table).set(updateParams).where(whereClause);
-        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
-
-        int affected = res.numRowsAffected();
-        if (!t.commit())
-            return -1;
-
-        return affected;
+        Database db(sdb);
+        return updateRecordsImpl(db, table, updateParams, whereClause);
     } catch (const EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
-        t.rollback();
         return -1;
     }
 }
 
 int DataService::insertRecords(const QString &table, const QVariantMap &insertParams)
 {
-    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
-    Transaction t(sdb);
+    QSqlDatabase sdb = m_dbFactory->getDatabase("tolllanedb");
+
     try {
-        NonQueryResult res = t.insertInto(table).values(insertParams).exec();
-        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
-
-        int affected = res.numRowsAffected();
-        if (!t.commit())
-            return -1;
-
-        return affected;
+        Database db(sdb);
+        return insertRecordsImpl(db, table, insertParams);
     } catch (const EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
-        t.rollback();
         return -1;
     }
 }
 
 int DataService::deleteRecords(const QString &table, const QString &whereClause)
 {
-    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
-    Transaction t(sdb);
+    QSqlDatabase sdb = m_dbFactory->getDatabase("tolllanedb");
+
     try {
-        NonQueryResult res = t.deleteFrom(table).where(whereClause);
-        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
-
-        int affected = res.numRowsAffected();
-        if (!t.commit())
-            return -1;
-
-        return affected;
+        Database db(sdb);
+        return deleteRecordsImpl(db, table, whereClause);
     } catch (const EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
-        t.rollback();
         return -1;
     }
 }
 
 int DataService::truncateTable(const QString &table)
 {
-    QSqlDatabase sdb = m_dbFactory->getDatabase("main");
-    Transaction t(sdb);
+    QSqlDatabase sdb = m_dbFactory->getDatabase("tolllanedb");
+
     try {
-        NonQueryResult res = t.deleteFrom(table).where("1=1");
-        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
-
-        int affected = res.numRowsAffected();
-        if (!t.commit())
-            return -1;
-
-        return affected;
+        Database db;
+        return deleteRecordsImpl(db, table, "1=1");
     } catch (const EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
-        t.rollback();
         return -1;
+    }
+}
+
+QString DataService::getGrowthBlackVersion()
+{
+    const QString sql = m_sql->getSql("Common", "select_0001");
+    QSqlDatabase sdb = m_dbFactory->getDatabase("tolllanedb");
+    try {
+        Database db;
+        PreparedQuery query = db.prepare(sql);
+        QueryResult res = query.exec(513, 1);
+        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+
+        if (!res.next())
+            return "";
+
+        QString version = res.scalar<QString>();
+        return version;
+    } catch (const DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        return "";
     }
 }
 
@@ -202,8 +195,23 @@ bool DataService::cleanETCBlackCard(const QString &table)
     return affected >= 0;
 }
 
-QString DataService::getIncrementBlackVersion()
+int DataService::updateRecordsImpl(EasyQtSql::Database &db, const QString &table, const QVariantMap &updateParams, const QString &whereClause)
 {
-    // TODO 获取增量版本
-    return "";
+    NonQueryResult res = db.update(table).set(updateParams).where(whereClause);
+    LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+    return res.numRowsAffected();
+}
+
+int DataService::insertRecordsImpl(EasyQtSql::Database &db, const QString &table, const QVariantMap &insertParams)
+{
+    NonQueryResult res = db.insertInto(table).values(insertParams).exec();
+    LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+    return res.numRowsAffected();
+}
+
+int DataService::deleteRecordsImpl(EasyQtSql::Database &db, const QString &table, const QString &whereClause)
+{
+    NonQueryResult res = db.deleteFrom(table).where(whereClause);
+    LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+    return res.numRowsAffected();
 }

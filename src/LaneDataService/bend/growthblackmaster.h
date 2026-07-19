@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QThread>
 
 class GrowthBlackWorker;
 class GrowthBlackMaster : public QObject

@@ -19,7 +19,7 @@ public:
 
     void loadConfig(const Utils::FileName &path);
 
-    ST_ConfigSnapshot getSnapshot() const;
+    int fullBatchNo() const;
     void setFullBatchNo(int batchNo);
 
 public:
@@ -42,6 +42,9 @@ public:
 
     // 全量配置
     QString m_fullBlackPath; // 全量文件所在路径
+
+    // 服务配置
+    QString m_stationServiceURL; // 站级服务
 
 private:
     // 启动加载后，还有可能被修改的配置

@@ -2,11 +2,10 @@
 
 #include <QVariantMap>
 
-#include "bend/fullblackmaster.h"
 #include "core/baseexception.h"
 #include "core/globalmanager.h"
 #include "dbs/dataservice.h"
-#include "dbs/sqldealer.h"
+#include "env/environment.h"
 #include "iservicehub.h"
 #include "utils/datadealutils.h"
 
@@ -255,40 +254,40 @@ QByteArray LaneDataService::truncateTable(const QByteArray &json)
     }
 }
 
-QByteArray LaneDataService::getFullBlackStatus(const QByteArray &json)
+QByteArray LaneDataService::getBlackStatus(const QByteArray &json)
 {
     Q_UNUSED(json);
 
-    const ST_FullBlackStatus st = GM_INS->m_fbMaster->fullBlackStatus();
+    // QVariantMap data;
+    // data["isValid"] = GM_INS->m_env->isFullBlackValid();
+    // data["version"] = GM_INS->m_env->fullBlackVersion();
+    // int status = GM_INS->m_env->fullBlackStatus();
+    // data["status"] = status;
+    // QString desc;
+    // if (status == 0) {
+    //     desc = "全量文件加载成功";
+    // } else if (status == -1) {
+    //     desc = "程序启动，未找到全量文件";
+    // } else if (status == -2) {
+    //     desc = "检查全量时，未找到全量文件";
+    // } else if (status == -3) {
+    //     desc = "程序启动，未找到当前批次全量文件";
+    // } else if (status == -4) {
+    //     desc = "检查全量时，未找到当前批次全量文件";
+    // } else if (status == -5) {
+    //     desc = "程序启动，全量文件加载失败";
+    // } else {
+    //     desc = "检查全量时，全量文件加载失败";
+    // }
+    // data["desc"] = desc;
 
-    QVariantMap data;
-    data["isValid"] = st.isValid;
-    data["version"] = st.activeVersion;
-    data["status"] = st.lastCheckStatus;
-    QString desc;
-    if (st.lastCheckStatus == 0) {
-        desc = "全量文件加载成功";
-    } else if (st.lastCheckStatus == -1) {
-        desc = "程序启动，未找到全量文件";
-    } else if (st.lastCheckStatus == -2) {
-        desc = "检查全量时，未找到全量文件";
-    } else if (st.lastCheckStatus == -3) {
-        desc = "程序启动，未找到当前批次全量文件";
-    } else if (st.lastCheckStatus == -4) {
-        desc = "检查全量时，未找到当前批次全量文件";
-    } else if (st.lastCheckStatus == -5) {
-        desc = "程序启动，全量文件加载失败";
-    } else {
-        desc = "检查全量时，全量文件加载失败";
-    }
-    data["desc"] = desc;
+    // QVariantMap resMap;
+    // resMap["code"] = 0; // 接口调用成功
+    // resMap["desc"] = "";
+    // resMap["data"] = data;
 
-    QVariantMap resMap;
-    resMap["code"] = 0; // 接口调用成功
-    resMap["desc"] = "";
-    resMap["data"] = data;
-
-    return DataDealUtils::mapToJson(resMap);
+    // return DataDealUtils::mapToJson(resMap);
+    return "";
 }
 
 ILaneDataService *createLaneDataService(IServiceHub *hub)

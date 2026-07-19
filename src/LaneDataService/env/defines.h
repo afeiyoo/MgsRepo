@@ -2,17 +2,12 @@
 
 #include <QObject>
 
-// 全量状态
-struct ST_FullBlackStatus
+struct ST_EnvSnap
 {
-    bool isValid = false;
-    int lastCheckStatus = -1; // 上一次检查全量状态
-    QString activeVersion;    // 当前使用全量版本
-};
-Q_DECLARE_METATYPE(ST_FullBlackStatus);
+    bool isGrowthBlackVersion;  // 当前增量是否可用
+    QString growthBlackVersion; // 增量版本
 
-// 配置快照
-struct ST_ConfigSnapshot
-{
-    int fullBatchNo = 0;
+    bool isFullBlackValid = false; // 当前全量是否可用
+    int fullBlackStatus = -1;      // 全量状态
+    QString fullBlackVersion;      // 全量版本
 };

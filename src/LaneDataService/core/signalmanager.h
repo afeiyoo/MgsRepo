@@ -1,6 +1,5 @@
 #pragma once
 
-#include "env/defines.h"
 #include <QObject>
 
 class SignalManager : public QObject
@@ -10,5 +9,4 @@ public:
     explicit SignalManager(QObject *parent = nullptr);
 
 signals:
-    void sigUpdateFullBlackStatus(const ST_FullBlackStatus &st);
 };

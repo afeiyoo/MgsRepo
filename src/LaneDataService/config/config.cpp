@@ -13,8 +13,8 @@ Config::Config(QObject *parent)
 
     m_logFormat = "%{time} [%{type}] [%{threadid}] %{message}\n\n";
     m_logLimits = 180;
-    m_sqlFiles = QStringList{":/static/sqls/mtc_in.xml", ":/static/sqls/mtc_out.xml", ":/static/sqls/etc.xml"};
 }
+
 Config::~Config()
 {
     SAFE_DELETE(m_confUtil);
@@ -33,34 +33,44 @@ void Config::loadConfig(const Utils::FileName &path)
     m_dbUser = m_confUtil->getValue("DataBase/dbUser", "tsman").toString();
     m_dbPassword = m_confUtil->getValue("DataBase/dbPassword", "ds18fjeit").toString();
 
+    // sql文件路径
+    if (m_dbType == 1) {
+        m_sqlFiles = QStringList{":/static/sqls/common_mysql.xml", ":/static/sqls/mtcin_mysql.xml", ":/static/sqls/mtcout_mysql.xml",
+                                 ":/static/sqls/etc_mysql.xml"};
+    } else {
+        m_sqlFiles = QStringList{":/static/sqls/common_dameng.xml", ":/static/sqls/etc_dameng.xml", ":/static/sqls/mtcin_dameng.xml",
+                                 ":/static/sqls/mtcout_dameng.xml"};
+    }
+
     // 日志配置
     m_logFormat = m_confUtil->getValue("Log/format", "%{time} [%{type}] [%{threadid}] %{message}\n\n").toString();
     m_logLimits = m_confUtil->getValue("Log/limit", 180).toUInt();
 
+    // URL配置
+    m_stationServiceURL = m_confUtil->getValue("URL/stationService", "").toString();
+
     // 全量状态配置
 #ifdef Q_OS_WIN32
-    m_fullBlackPath = m_confUtil->getValue("FullBlack/BlackListPath", "D://fjeit//DtpAgent32//BlackList").toString();
+    m_fullBlackPath = m_confUtil->getValue("FullBlack/blackListPath", "D://fjeit//DtpAgent32//BlackList").toString();
 #else
     // TODO
 #endif
-    int batchNo = m_confUtil->getValue("FullBlack/BatchNo", 0).toInt();
+    int batchNo = m_confUtil->getValue("FullBlack/batchNo", 0).toInt();
     {
         QWriteLocker locker(&m_lock);
         m_fullBatchNo = batchNo;
     }
 }
 
-ST_ConfigSnapshot Config::getSnapshot() const
-{
-    QReadLocker locker(&m_lock);
-    ST_ConfigSnapshot snap;
-    snap.fullBatchNo = m_fullBatchNo;
-    return snap;
-}
-
 void Config::setFullBatchNo(int batchNo)
 {
     QWriteLocker locker(&m_lock);
-    m_confUtil->setValue("FullBlack/BatchNo", batchNo);
+    m_confUtil->setValue("FullBlack/batchNo", batchNo);
     m_fullBatchNo = batchNo;
+}
+
+int Config::fullBatchNo() const
+{
+    QReadLocker locker(&m_lock);
+    return m_fullBatchNo;
 }
