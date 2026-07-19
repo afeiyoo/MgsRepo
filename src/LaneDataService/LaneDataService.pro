@@ -38,7 +38,6 @@ SOURCES += \
     bend/growthblackworker.cpp \
     config/config.cpp \
     core/baseexception.cpp \
-    core/gateway.cpp \
     core/globalmanager.cpp \
     core/signalmanager.cpp \
     dbs/dataservice.cpp \
@@ -53,7 +52,6 @@ HEADERS += \
     bend/growthblackworker.h \
     config/config.h \
     core/baseexception.h \
-    core/gateway.h \
     core/globalmanager.h \
     core/signalmanager.h \
     dbs/dataservice.h \
