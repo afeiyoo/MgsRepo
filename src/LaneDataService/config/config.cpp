@@ -48,13 +48,18 @@ void Config::loadConfig(const Utils::FileName &path)
     // URL配置
     m_stationServiceURL = m_confUtil->getValue("URL/stationService", "").toString();
 
-    // 全量状态配置
+    // 状态名单配置
 #ifdef Q_OS_WIN32
-    m_fullBlackPath = m_confUtil->getValue("FullBlack/blackListPath", "D://fjeit//DtpAgent32//BlackList").toString();
+    m_fullBlackPath = m_confUtil->getValue("BlackList/fullBlackPath", "D://fjeit//DtpAgent32//BlackList").toString();
+    m_deltaBlackPath = m_confUtil->getValue("BlackList/deltaBlackPath", "").toString();
+    if (m_deltaBlackPath.isEmpty()) {
+        m_deltaBlackPath = FileUtils::curApplicationDirPath() + "/deltaBlack";
+    }
 #else
     // TODO
 #endif
-    m_fullBatchNo = m_confUtil->getValue("FullBlack/batchNo", 0).toInt();
+    m_fullBatchNo = m_confUtil->getValue("BlackList/fullBatchNo", "").toString();
+    m_deltaBatchNo = m_confUtil->getValue("BlackList/deltaBatchNo", "").toString();
 }
 
 ST_ConfigSnap Config::getConfigSnap() const
@@ -76,15 +81,24 @@ ST_ConfigSnap Config::getConfigSnap() const
 
     snap.fullBlackPath = m_fullBlackPath;
     snap.fullBatchNo = m_fullBatchNo;
+    snap.deltaBlackPath = m_deltaBlackPath;
+    snap.deltaBatchNo = m_deltaBatchNo;
 
     snap.stationServiceURL = m_stationServiceURL;
 
     return snap;
 }
 
-void Config::setFullBatchNo(int batchNo)
+void Config::setFullBatchNo(QString batchNo)
 {
     QWriteLocker locker(&m_lock);
-    m_confUtil->setValue("FullBlack/batchNo", batchNo);
+    m_confUtil->setValue("BlackList/fullBatchNo", batchNo);
     m_fullBatchNo = batchNo;
+}
+
+void Config::setDeltaBatchNo(QString batchNo)
+{
+    QWriteLocker locker(&m_lock);
+    m_confUtil->setValue("BlackList/deltaBatchNo", batchNo);
+    m_deltaBatchNo = batchNo;
 }

@@ -21,9 +21,9 @@ GrowthBlackMaster::~GrowthBlackMaster()
 
 void GrowthBlackMaster::init()
 {
-    m_worker = new GrowthBlackWorker();
-    connect(m_td, &QThread::finished, m_worker, &GrowthBlackWorker::deleteLater);
-    connect(m_td, &QThread::started, m_worker, &GrowthBlackWorker::onInit);
+    m_worker = new DeltaBlackWorker();
+    connect(m_td, &QThread::finished, m_worker, &DeltaBlackWorker::deleteLater);
+    connect(m_td, &QThread::started, m_worker, &DeltaBlackWorker::onInit);
 
     m_worker->moveToThread(m_td);
     m_td->start();

@@ -40,9 +40,9 @@ QString SqlDealer::buildKey(const QString &sqlNamespace, const QString &id) cons
     return sqlNamespace + "::" + id;
 }
 
-bool SqlDealer::loadSqlFiles()
+bool SqlDealer::loadSqlFiles(const QStringList &sqlFiles)
 {
-    foreach (auto str, GM_INS->m_conf->getConfigSnap().sqlFiles) {
+    foreach (auto str, sqlFiles) {
         FileName sqlFile = FileName::fromString(str);
         LOG_INFO().noquote() << QString("加载 SQL 文件: %1").arg(sqlFile.fileName());
 

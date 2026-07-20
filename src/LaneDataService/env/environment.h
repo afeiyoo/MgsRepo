@@ -18,10 +18,13 @@ public:
 
     void updateFullBlackEnvs(bool isValid, int status, const QString &version);
 
+    void updateDeltaBlackEnvs(bool isValid, int status, const QString &version);
+
 private:
     mutable QReadWriteLock m_lock;
-    bool m_isGrowthBlackVersion;  // 当前增量是否可用
-    QString m_growthBlackVersion; // 增量版本
+    bool m_isDeltaBlackValid = false; // 当前增量是否可用
+    int m_deltaBlackStatus = -1;      // 增量状态
+    QString m_deltaBlackVersion;      // 增量版本
 
     bool m_isFullBlackValid = false; // 当前全量是否可用
     int m_fullBlackStatus = -1;      // 全量状态

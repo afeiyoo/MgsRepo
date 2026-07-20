@@ -9,10 +9,12 @@
 #include "bend/fullblackmaster.h"
 #include "config/config.h"
 #include "dbs/dataservice.h"
+#include "dbs/sqldealer.h"
 #include "env/defines.h"
 #include "env/environment.h"
 #include "signalmanager.h"
 #include "utils/fileutils.h"
+#include "utils/stdafx.h"
 
 using namespace Utils;
 
@@ -27,9 +29,13 @@ GlobalManager::GlobalManager(QObject *parent)
     m_sigMan = new SignalManager(this);
     m_fbMaster = new FullBlackMaster(this);
     m_env = new Environment(this);
+    m_sql = new SqlDealer();
 }
 
-GlobalManager::~GlobalManager() {}
+GlobalManager::~GlobalManager()
+{
+    SAFE_DELETE(m_sql);
+}
 
 GlobalManager *GlobalManager::instance()
 {
@@ -59,6 +65,10 @@ int GlobalManager::init()
     mainRollingFileAppender->setFlushOnWrite(true);
     mainRollingFileAppender->setDatePattern(RollingFileAppender::DailyRollover);
     cuteLogger->registerAppender(mainRollingFileAppender);
+
+    // Sql语句加载
+    if (!m_sql->loadSqlFiles(snap.sqlFiles))
+        return -101;
 
     // 数据库操作对象初始化
     bool dbOk = m_ds->init(snap.dbType, snap.dbHost, snap.dbPort, snap.dbUser, snap.dbPassword, snap.dbName);

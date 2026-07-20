@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<sqls namespace="COMMON">
-    <sql id="testConnection">
-        SELECT 1;
+<sqls namespace="Common">
+    <sql id="s_0001">
+        select concat(year(updatedate), lpad(version, 8, 0)) from t_paramupdatectrl where businessid = :businessid and updatetype = :updatetype
     </sql>
 </sqls>

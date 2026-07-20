@@ -66,7 +66,7 @@ void FullBlackWorker::onCheckFullBlack()
     }
 
     const int fileBatchNo = result.value();
-    const int curBatchNo = snap.fullBatchNo;
+    const int curBatchNo = snap.fullBatchNo.toInt();
 
     const QString filePath = snap.fullBlackPath + QString("/ETCBlackCard_%1.db").arg(fileBatchNo);
 
@@ -235,7 +235,7 @@ bool FullBlackWorker::loadFullBlack(int batchNo, const QString &path)
     LOG_INFO().noquote() << "全量文件校核成功";
 
     // 清理ETCBlackCard表
-    const int curBatchNo = GM_INS->m_conf->getConfigSnap().fullBatchNo;
+    const int curBatchNo = GM_INS->m_conf->getConfigSnap().fullBatchNo.toInt();
     bool cleanOk = false;
     if (batchNo > curBatchNo && !candidateCleanTable.isEmpty()) {
         const bool invoked = QMetaObject::invokeMethod(GM_INS->m_ds, "cleanETCBlackCard", Qt::BlockingQueuedConnection, Q_RETURN_ARG(bool, cleanOk),

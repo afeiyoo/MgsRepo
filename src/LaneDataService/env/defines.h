@@ -4,8 +4,9 @@
 
 struct ST_EnvSnap
 {
-    bool isGrowthBlackVersion;  // 当前增量是否可用
-    QString growthBlackVersion; // 增量版本
+    bool isDeltaBlackValid;    // 当前增量是否可用
+    int deltaBlackStatus = -1; // 增量状态
+    QString deltaBlackVersion; // 增量版本
 
     bool isFullBlackValid = false; // 当前全量是否可用
     int fullBlackStatus = -1;      // 全量状态
@@ -26,8 +27,10 @@ struct ST_ConfigSnap
 
     QStringList sqlFiles; // sql文件存储路径
 
-    QString fullBlackPath; // 全量文件所在路径
-    int fullBatchNo = 0;   // 当前全量批次
+    QString fullBlackPath;  // 全量文件所在路径
+    QString fullBatchNo;    // 当前全量批次
+    QString deltaBlackPath; // 增量文件所在路径
+    QString deltaBatchNo;   // 当前增量批次
 
     QString stationServiceURL; // 站级服务URL
 };

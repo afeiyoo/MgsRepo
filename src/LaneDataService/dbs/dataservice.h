@@ -40,9 +40,6 @@ public:
     // 整表删除（不删除表结构） 返回值>=0表示影响行数，<0表示执行失败
     int truncateTable(const QString &table);
 
-    // 获取增量状态名单版本号
-    QString getGrowthBlackVersion();
-
 public slots:
     bool cleanETCBlackCard(const QString &table);
 
@@ -54,6 +51,4 @@ private:
 private:
     // 数据库连接池
     EasyQtSql::SqlFactory *m_dbFactory = nullptr;
-    // SQL语句获取器
-    SqlDealer *m_sql = nullptr;
 };

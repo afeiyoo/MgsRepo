@@ -3,9 +3,7 @@
 #include "EasyQtSql.h"
 #include "Logger.h"
 #include "core/globalmanager.h"
-#include "sqldealer.h"
 #include "utils/datadealutils.h"
-#include "utils/stdafx.h"
 
 using namespace Utils;
 using namespace EasyQtSql;
@@ -14,28 +12,19 @@ DataService::DataService(QObject *parent)
     : QObject(parent)
 {}
 
-DataService::~DataService()
-{
-    SAFE_DELETE(m_sql);
-}
+DataService::~DataService() {}
 
 bool DataService::init(uint type, const QString &host, int port, const QString &userName, const QString &passWord, const QString &dbName)
 {
-    m_sql = new SqlDealer();
-    // 加载sql文件
-    bool sqlOk = m_sql->loadSqlFiles();
-    if (!sqlOk)
-        return false;
-
     // 建立连接
     SqlFactory::DBSetting setting;
     QString testSql;
     if (type == 1) {
         setting = SqlFactory::DBSetting("QMYSQL", host, port, userName, passWord, dbName);
-        testSql = "SELECT 1;";
+        testSql = "select 1";
     } else {
         setting = SqlFactory::DBSetting("QODBC", host, port, userName, passWord, dbName);
-        testSql = "SELECT 1 FROM DUAL;";
+        testSql = "select 1 from dual";
     }
     m_dbFactory = SqlFactory::getInstance()->config(setting, "tolllanedb");
     return testConnection("tolllanedb", testSql);
@@ -165,27 +154,6 @@ int DataService::truncateTable(const QString &table)
     } catch (const EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
         return -1;
-    }
-}
-
-QString DataService::getGrowthBlackVersion()
-{
-    const QString sql = m_sql->getSql("Common", "select_0001");
-    QSqlDatabase sdb = m_dbFactory->getDatabase("tolllanedb");
-    try {
-        Database db;
-        PreparedQuery query = db.prepare(sql);
-        QueryResult res = query.exec(513, 1);
-        LOG_INFO().noquote() << "执行SQL:" << DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
-
-        if (!res.next())
-            return "";
-
-        QString version = res.scalar<QString>();
-        return version;
-    } catch (const DBException &e) {
-        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
-        return "";
     }
 }
 

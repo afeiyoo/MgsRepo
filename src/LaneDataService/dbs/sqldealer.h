@@ -29,7 +29,7 @@ public:
     ~SqlDealer();
 
     QString getSql(const QString &sqlNamespace, const QString &sqlId);
-    bool loadSqlFiles();
+    bool loadSqlFiles(const QStringList &sqlFiles);
 
 private:
     QString buildKey(const QString &sqlNamespace, const QString &id) const;
