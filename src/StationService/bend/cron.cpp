@@ -11,6 +11,7 @@
 #include <QXmlStreamWriter>
 
 #include "HttpClient/src/http.h"
+#include "HttpClient/src/httpdownloadreply.h"
 #include "Logger.h"
 #include "config/config.h"
 #include "core/globalmanager.h"
@@ -24,6 +25,7 @@ Cron::Cron(QObject *parent)
 {
     m_delJsonTime = DataDealUtils::curUnixDateTime();
     m_fullHttpClient = new Http();
+    m_fullHttpClient->setReadTimeout(60 * 1000);
 }
 
 Cron::~Cron()
@@ -322,35 +324,22 @@ void Cron::downloadNextFullFile()
     const QString fileName = m_fullFileList.at(index).toString();
     const QUrl url(m_fullUrlList.at(index).toString());
     const QString filePath = QDir(GM_INS->m_conf->m_fullSavePath).filePath(fileName);
-    const FileName file = FileName::fromString(filePath);
 
     LOG_INFO().noquote() << "开始下载全量文件:" << url.toString() << "保存路径:" << filePath;
 
-    HttpReply *reply = m_fullHttpClient->get(url);
-    reply->onFinished([=](const HttpReply &reply) {
+    HttpDownloadReply *reply = m_fullHttpClient->download(url, filePath);
+    connect(reply, &HttpDownloadReply::finished, reply, [=](const HttpDownloadReply &reply) {
         if (!m_fullDownloading || index != m_fullDownloadIndex)
             return;
 
         if (!reply.isSuccessful()) {
-            LOG_ERROR().noquote() << "全量文件下载失败:" << url.toString()
-                                  << "原因:" << QString("network error: %1 (%2)").arg(reply.statusCode()).arg(reply.reasonPhrase());
-            finishFullDownload(false);
-            return;
-        }
-
-        FileSaver saver(file.toString());
-        if (!saver.write(reply.body())) {
-            LOG_ERROR().noquote() << "写入全量文件失败:" << file.fileName() << saver.errorString();
-            finishFullDownload(false);
-            return;
-        }
-        if (!saver.finalize()) {
-            LOG_ERROR().noquote() << "保存全量文件失败:" << file.fileName() << saver.errorString();
+            LOG_ERROR().noquote() << "全量文件下载失败:" << url.toString() << "原因:" << reply.errorString();
             finishFullDownload(false);
             return;
         }
 
         // 当前文件下载完成
+        LOG_INFO().noquote() << "全量文件下载完成:" << fileName << "文件大小:" << reply.bytesReceived();
         m_fullDownloadedFiles.append(filePath);
         ++m_fullDownloadIndex;
         downloadNextFullFile();
@@ -516,8 +505,8 @@ void Cron::run()
             m_delJsonTime = DataDealUtils::curUnixDateTime();
             checkJsonToDelete();
         }
-        // 检查增量文件，每2.5分钟检查一次
-        if (DataDealUtils::curUnixDateTime() - m_checkIncrementTime > 2 * 60 + 30) {
+        // 检查增量文件，每1分钟检查一次
+        if (DataDealUtils::curUnixDateTime() - m_checkIncrementTime > 60) {
             m_checkIncrementTime = DataDealUtils::curUnixDateTime();
             getIncrementFiles();
         }
