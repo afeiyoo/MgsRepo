@@ -45,9 +45,9 @@ FullBlackWorker::~FullBlackWorker()
 
 void FullBlackWorker::onCheckFullBlack()
 {
-    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
-
     LOG_INFO().noquote() << "开始检查全量...";
+
+    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
     auto result = getMaxBatchNoFromFiles(snap.fullBlackPath);
     if (!result) {
         if (m_isFirst) {
@@ -139,7 +139,7 @@ void FullBlackWorker::onInit()
 
     // 全量数据库连接初始化
     for (int i = 0; i < 2; ++i) {
-        const QString connName = QString("fb_%1").arg(i, 2, 10, QChar('0'));
+        const QString connName = QString("fullBlack_%1").arg(i, 2, 10, QChar('0'));
         m_dao[i] = QSqlDatabase::addDatabase("QSQLITE", connName);
     }
 

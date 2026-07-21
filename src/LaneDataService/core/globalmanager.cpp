@@ -22,7 +22,7 @@ GlobalManager::GlobalManager(QObject *parent)
     : QObject{parent}
 {
     m_conf = new Config(this);
-    m_confPath = FileUtils::curApplicationDirPath() + "/config/config.ini";
+    m_confPath = FileUtils::curApplicationDirPath() + "/config/dataservice.ini";
     m_ds = new DataService(this);
     m_sigMan = new SignalManager(this);
     m_fbMaster = new FullBlackMaster(this);
