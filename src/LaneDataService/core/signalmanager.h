@@ -9,4 +9,5 @@ public:
     explicit SignalManager(QObject *parent = nullptr);
 
 signals:
+    void sigFullBlackFirstCheckFinished();
 };

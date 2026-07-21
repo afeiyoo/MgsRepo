@@ -8,6 +8,7 @@
 #include "Logger.h"
 #include "config/config.h"
 #include "core/globalmanager.h"
+#include "core/signalmanager.h"
 #include "dbs/dataservice.h"
 #include "env/defines.h"
 #include "env/environment.h"
@@ -52,7 +53,7 @@ void FullBlackWorker::onCheckFullBlack()
         if (m_isFirst) {
             LOG_ERROR().noquote() << "程序启动，未找到全量文件 => 全量异常";
             setStatus(false, -1);
-            m_isFirst = false;
+            finishFirstCheck();
             return;
         }
 
@@ -75,7 +76,7 @@ void FullBlackWorker::onCheckFullBlack()
         if (m_isFirst) {
             LOG_ERROR().noquote() << "程序启动，未找到当前批次全量文件: 当前批次" << curBatchNo << "文件最大批次" << fileBatchNo << "=> 全量异常";
             setStatus(false, -3);
-            m_isFirst = false;
+            finishFirstCheck();
             return;
         }
 
@@ -104,7 +105,7 @@ void FullBlackWorker::onCheckFullBlack()
         if (m_isFirst) {
             LOG_ERROR().noquote() << "程序启动，全量加载失败: 批次" << fileBatchNo << "=> 全量异常";
             setStatus(false, -5);
-            m_isFirst = false;
+            finishFirstCheck();
             return;
         }
 
@@ -117,10 +118,19 @@ void FullBlackWorker::onCheckFullBlack()
         return;
     }
 
-    m_isFirst = false;
     LOG_INFO().noquote() << "全量加载成功: 批次" << fileBatchNo;
     setStatus(true, 0);
     pruneOldFiles(fileBatchNo);
+    finishFirstCheck();
+}
+
+void FullBlackWorker::finishFirstCheck()
+{
+    if (!m_isFirst)
+        return;
+
+    m_isFirst = false;
+    emit GM_INS->m_sigMan->sigFullBlackFirstCheckFinished();
 }
 
 void FullBlackWorker::onInit()

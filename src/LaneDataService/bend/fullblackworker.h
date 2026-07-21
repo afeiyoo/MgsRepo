@@ -17,6 +17,8 @@ public slots:
     void onInit();
 
 private:
+    // 标记首次全量检查完成并发送一次通知
+    void finishFirstCheck();
     // 获取全量目录下全量文件的最大批次
     Utils::optional<int> getMaxBatchNoFromFiles(const QString &path) const;
     // 清理全量目录下批次小于batchNo的全量文件

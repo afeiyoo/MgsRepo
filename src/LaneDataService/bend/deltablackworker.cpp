@@ -7,6 +7,7 @@
 #include "T_ETCBlackCardList_2.h"
 #include "config/config.h"
 #include "core/globalmanager.h"
+#include "core/signalmanager.h"
 #include "env/defines.h"
 #include "env/environment.h"
 #include "utils/datadealutils.h"
@@ -47,8 +48,8 @@ void DeltaBlackWorker::onInit()
     m_timer->setInterval(5 * 60 * 1000);
     connect(m_timer, &QTimer::timeout, this, &DeltaBlackWorker::onCheckDeltaBlack);
 
-    // 程序加载时，立即进行增量检查
-    onCheckDeltaBlack();
+    // 首次全量检查完成后，立即进行增量检查
+    connect(GM_INS->m_sigMan, &SignalManager::sigFullBlackFirstCheckFinished, this, &DeltaBlackWorker::onCheckDeltaBlack);
 
     m_timer->start();
 }
@@ -169,9 +170,11 @@ void DeltaBlackWorker::onCheckDeltaBlack()
 
 QByteArray DeltaBlackWorker::getDeltaBlackJson()
 {
-    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
-    QString curFullBlackVersion = snap.fullBatchNo;        // 获取当前全量版本
-    QString curDeltaBlackVersion = getDeltaBlackVersion(); // 获取当前增量版本
+    QString curFullBlackVersion = GM_INS->m_env->getEnvSnap().fullBlackVersion; // 获取当前全量版本
+    QString curDeltaBlackVersion = getDeltaBlackVersion();                      // 获取当前增量版本
+
+    if (!curDeltaBlackVersion.isEmpty())
+        m_version = curDeltaBlackVersion;
 
     LOG_INFO().noquote() << "当前全量版本号:" << curFullBlackVersion << "当前增量版本号:" << curDeltaBlackVersion;
 
@@ -201,6 +204,8 @@ QByteArray DeltaBlackWorker::getDeltaBlackJson()
     reqMap["version"] = reqDeltaBlackVersion;
     reqMap["queryType"] = "queryETCBlack";
     QByteArray reqData = DataDealUtils::mapToJson(reqMap);
+
+    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
     LOG_INFO().noquote() << "请求获取增量数据:" << snap.stationServiceURL << "版本:" << reqDeltaBlackVersion;
 
     QByteArray resp;
@@ -252,6 +257,15 @@ bool DeltaBlackWorker::saveDeltaBlackJson(const QByteArray &data)
     LOG_INFO().noquote() << "下载得到的增量数据: version" << version << "amount:" << amount << "operateTable:" << operateTable
                          << "errorMessage:" << errMsg;
 
+    if (queryRes == 2) { // 增量已追平，等待下一版本
+        setStatus(true, 0);
+        return false;
+    }
+    if (queryRes != 1) {
+        LOG_ERROR().noquote() << "增量异常: 返回增量状态查询结果" << queryRes << errMsg;
+        setStatus(m_isValid, -6);
+        return false;
+    }
     if (version.isEmpty()) {
         LOG_ERROR().noquote() << "增量异常: 返回version为空";
         setStatus(m_isValid, -5);
@@ -260,11 +274,6 @@ bool DeltaBlackWorker::saveDeltaBlackJson(const QByteArray &data)
     if (amount != blackDetails.size()) {
         LOG_ERROR().noquote() << "增量异常: amount和blackDetail数量不一致 amount" << amount << "blackDetail" << blackDetails.size();
         setStatus(m_isValid, -5);
-        return false;
-    }
-    if (queryRes != 1 && queryRes != 0) {
-        LOG_ERROR().noquote() << "增量异常: 返回增量状态查询结果" << queryRes << errMsg;
-        setStatus(m_isValid, -6);
         return false;
     }
 
@@ -277,7 +286,7 @@ bool DeltaBlackWorker::saveDeltaBlackJson(const QByteArray &data)
     }
 
     int affected = updateDeltaBlackVersion(version);
-    if (affected >= 0) {
+    if (affected == 1) {
         m_version = version;
         setStatus(true, 0);
         return true;

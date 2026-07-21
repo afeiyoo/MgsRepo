@@ -1,8 +1,5 @@
 #include "globalmanager.h"
 
-#include <QThread>
-#include <QTimer>
-
 #include "CuteLogger/include/ConsoleAppender.h"
 #include "CuteLogger/include/RollingFileAppender.h"
 #include "Logger.h"
@@ -79,9 +76,6 @@ int GlobalManager::init()
 
     // 启动全量检查
     m_fbMaster->init();
-
-    QThread::msleep(1000); // NOTE：目的是尽量让全量先加载完成
-
     // 启动增量检查
     m_dbMaster->init();
 
