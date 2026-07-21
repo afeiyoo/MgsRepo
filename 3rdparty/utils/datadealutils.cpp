@@ -1066,6 +1066,35 @@ QString DataDealUtils::getUpdateSql(const QObject *obj)
     return sql;
 }
 
+QString DataDealUtils::getExistSql(const QObject *obj)
+{
+    if (!obj)
+        return QString();
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QStringList pkList = obj->property("tbl_pk").toString().split(",", Qt::SkipEmptyParts);
+#else
+    QStringList pkList = obj->property("tbl_pk").toString().split(",", QString::SkipEmptyParts);
+#endif
+    if (pkList.isEmpty())
+        return QString();
+
+    QStringList whereClauses;
+    whereClauses.reserve(pkList.size());
+
+    for (QString &pk : pkList) {
+        pk = pk.trimmed();
+        if (pk.isEmpty() || obj->metaObject()->indexOfProperty(pk.toUtf8().constData()) < 0)
+            return QString();
+
+        const QVariant val = obj->property(pk.toUtf8().constData());
+        whereClauses << QString("%1=%2").arg(pk.toLower(), formatSqlValue(val));
+    }
+
+    const QString tableName = QString::fromLatin1(obj->metaObject()->className()).toLower();
+    return QString("SELECT COUNT(*) AS zs FROM %1 WHERE %2").arg(tableName, whereClauses.join(" AND "));
+}
+
 QString DataDealUtils::fullExecutedQuery(const QSqlQuery &query)
 {
     QString sql = query.lastQuery();

@@ -170,6 +170,9 @@ public:
     // 解析obj对象，获取对应的更新Sql
     static QString getUpdateSql(const QObject *obj);
 
+    // 解析obj对象，获取判断对象是否存在的Sql
+    static QString getExistSql(const QObject *obj);
+
     // 输出完整的SQL语句（不含占位符）
     static QString fullExecutedQuery(const QSqlQuery &query);
 
