@@ -40,9 +40,6 @@ public:
     // 整表删除（不删除表结构） 返回值>=0表示影响行数，<0表示执行失败
     int truncateTable(const QString &table);
 
-public slots:
-    bool cleanETCBlackCard(const QString &table);
-
 private:
     int updateRecordsImpl(EasyQtSql::Database &db, const QString &table, const QVariantMap &updateParams, const QString &whereClause);
     int insertRecordsImpl(EasyQtSql::Database &db, const QString &table, const QVariantMap &insertParams);

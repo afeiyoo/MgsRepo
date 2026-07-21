@@ -10,4 +10,6 @@ public:
 
 signals:
     void sigFullBlackFirstCheckFinished();
+    void sigCleanETCBlackCard(QString tableName);
+    void sigCleanETCBlackCardFinished(int affected);
 };

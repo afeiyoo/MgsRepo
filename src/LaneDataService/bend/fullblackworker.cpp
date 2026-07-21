@@ -135,6 +135,8 @@ void FullBlackWorker::finishFirstCheck()
 
 void FullBlackWorker::onInit()
 {
+    connect(GM_INS->m_sigMan, &SignalManager::sigCleanETCBlackCardFinished, this, &FullBlackWorker::onCleanETCBlackCardFinished);
+
     // 全量数据库连接初始化
     for (int i = 0; i < 2; ++i) {
         const QString connName = QString("fb_%1").arg(i, 2, 10, QChar('0'));
@@ -149,6 +151,11 @@ void FullBlackWorker::onInit()
     onCheckFullBlack();
 
     m_timer->start();
+}
+
+void FullBlackWorker::onCleanETCBlackCardFinished(int affected)
+{
+    LOG_INFO().noquote() << "清理增量表完成: 影响行数" << affected;
 }
 
 Utils::optional<int> FullBlackWorker::getMaxBatchNoFromFiles(const QString &path) const
@@ -244,23 +251,17 @@ bool FullBlackWorker::loadFullBlack(int batchNo, const QString &path)
     }
     LOG_INFO().noquote() << "全量文件校核成功";
 
-    // 清理ETCBlackCard表
-    const int curBatchNo = GM_INS->m_conf->getConfigSnap().fullBatchNo.toInt();
-    bool cleanOk = false;
-    if (batchNo > curBatchNo && !candidateCleanTable.isEmpty()) {
-        const bool invoked = QMetaObject::invokeMethod(GM_INS->m_ds, "cleanETCBlackCard", Qt::BlockingQueuedConnection, Q_RETURN_ARG(bool, cleanOk),
-                                                       Q_ARG(QString, candidateCleanTable));
-        if (!invoked || !cleanOk) {
-            LOG_ERROR().noquote() << "清理表" << candidateCleanTable << "失败";
-            m_dao[1].close();
-            return false;
-        }
-    }
-
     // 全量核验通过，发布连接
     std::swap(m_dao[0], m_dao[1]);
     if (m_dao[1].isOpen())
         m_dao[1].close();
+
+    // 清理ETCBlackCard表
+    const int curBatchNo = GM_INS->m_conf->getConfigSnap().fullBatchNo.toInt();
+    if (batchNo > curBatchNo && !candidateCleanTable.isEmpty()) {
+        LOG_INFO().noquote() << "清理增量表:" << candidateCleanTable;
+        emit GM_INS->m_sigMan->sigCleanETCBlackCard(candidateCleanTable);
+    }
 
     m_version = candidateVersion;
     m_cleanTable = candidateCleanTable;

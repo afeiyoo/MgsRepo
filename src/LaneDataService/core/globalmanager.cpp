@@ -74,10 +74,10 @@ int GlobalManager::init()
     if (!dbOk)
         return -102;
 
-    // 启动全量检查
-    m_fbMaster->init();
-    // 启动增量检查
+    // 增量初始化（NOTE：增量初始化放全量初始化前边，因为信号槽需要先连接）
     m_dbMaster->init();
+    // 全量初始化
+    m_fbMaster->init();
 
     return 0;
 }

@@ -42,7 +42,20 @@ void DeltaBlackWorker::onInit()
     m_client = new Http();
 
     // 增量数据库连接初始化
+    FileName dbPath = FileName::fromString(GM_INS->m_conf->getConfigSnap().deltaBlackPath + QStringLiteral("/ETCBlackListDelta.db"));
+    if (!dbPath.exists()) {
+        LOG_INFO().noquote() << "增量异常: 增量SQLite文件不存在";
+        setStatus(false, -1);
+        return;
+    }
+
     m_dao = QSqlDatabase::addDatabase("QSQLITE", "deltaBlack");
+    m_dao.setDatabaseName(dbPath.toString());
+    if (!m_dao.isOpen() && !m_dao.open()) {
+        LOG_ERROR().noquote() << "增量异常: 初始化增量SQLite数据库失败" << m_dao.lastError().text();
+        setStatus(false, -2);
+        return;
+    }
 
     // 每隔5分钟检查一次增量
     m_timer->setInterval(5 * 60 * 1000);
@@ -50,6 +63,8 @@ void DeltaBlackWorker::onInit()
 
     // 首次全量检查完成后，立即进行增量检查
     connect(GM_INS->m_sigMan, &SignalManager::sigFullBlackFirstCheckFinished, this, &DeltaBlackWorker::onCheckDeltaBlack);
+
+    connect(GM_INS->m_sigMan, &SignalManager::sigCleanETCBlackCard, this, &DeltaBlackWorker::onCleanETCBlackCard);
 
     m_timer->start();
 }
@@ -60,7 +75,7 @@ bool DeltaBlackWorker::batchUpsertDeltaBlack(int operateTable, const QVariantLis
         return true;
 
     try {
-        Transaction transaction(m_dao);
+        Transaction t(m_dao);
         int insertCount = 0;
         int updateCount = 0;
 
@@ -100,14 +115,14 @@ bool DeltaBlackWorker::batchUpsertDeltaBlack(int operateTable, const QVariantLis
                 return false;
             }
 
-            const bool exists = transaction.scalar<int>(existSql) > 0;
+            const bool exists = t.scalar<int>(existSql) > 0;
             const QString saveSql = exists ? DataDealUtils::getUpdateSql(record.get()) : DataDealUtils::getInsertSql(record.get());
             if (saveSql.isEmpty()) {
                 LOG_ERROR().noquote() << "保存增量数据失败: 第" << i << "条数据无法生成" << (exists ? "更新" : "插入") << "SQL";
                 return false;
             }
 
-            transaction.execNonQuery(saveSql);
+            t.execNonQuery(saveSql);
 
             if (exists) {
                 ++updateCount;
@@ -116,7 +131,7 @@ bool DeltaBlackWorker::batchUpsertDeltaBlack(int operateTable, const QVariantLis
             }
         }
 
-        if (!transaction.commit()) {
+        if (!t.commit()) {
             LOG_ERROR().noquote() << "提交增量SQLite事务失败";
             return false;
         }
@@ -141,21 +156,6 @@ void DeltaBlackWorker::onCheckDeltaBlack()
 {
     LOG_INFO().noquote() << "开始检查增量...";
 
-    // 增量数据库初始化
-    FileName dbPath = FileName::fromString(GM_INS->m_conf->getConfigSnap().deltaBlackPath + QStringLiteral("/ETCBlackListDelta.db"));
-    if (!dbPath.exists()) {
-        LOG_INFO().noquote() << "增量异常: 增量SQLite文件不存在";
-        setStatus(false, -1);
-        return;
-    }
-
-    m_dao.setDatabaseName(dbPath.toString());
-    if (!m_dao.isOpen() && !m_dao.open()) {
-        LOG_ERROR().noquote() << "增量异常: 初始化增量SQLite数据库失败" << m_dao.lastError().text();
-        setStatus(false, -2);
-        return;
-    }
-
     while (true) {
         QByteArray data = getDeltaBlackJson();
         if (data.isEmpty())
@@ -165,6 +165,22 @@ void DeltaBlackWorker::onCheckDeltaBlack()
         if (!saveOk)
             break;
         QThread::msleep(1000);
+    }
+}
+
+void DeltaBlackWorker::onCleanETCBlackCard(QString tableName)
+{
+    try {
+        Transaction t(m_dao);
+        NonQueryResult res = t.deleteFrom(tableName).where("1=1");
+        if (!t.commit()) {
+            emit GM_INS->m_sigMan->sigCleanETCBlackCardFinished(res.numRowsAffected());
+            return;
+        }
+        emit GM_INS->m_sigMan->sigCleanETCBlackCardFinished(res.numRowsAffected());
+    } catch (const DBException &e) {
+        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        return;
     }
 }
 

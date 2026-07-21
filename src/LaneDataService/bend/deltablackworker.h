@@ -16,6 +16,7 @@ public:
 public slots:
     void onInit();
     void onCheckDeltaBlack();
+    void onCleanETCBlackCard(QString tableName);
 
 private:
     bool batchUpsertDeltaBlack(int operateTable, const QVariantList &blackDetails);

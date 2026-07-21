@@ -158,12 +158,6 @@ int DataService::truncateTable(const QString &table)
     }
 }
 
-bool DataService::cleanETCBlackCard(const QString &table)
-{
-    int affected = truncateTable(table);
-    return affected >= 0;
-}
-
 int DataService::updateRecordsImpl(EasyQtSql::Database &db, const QString &table, const QVariantMap &updateParams, const QString &whereClause)
 {
     NonQueryResult res = db.update(table).set(updateParams).where(whereClause);

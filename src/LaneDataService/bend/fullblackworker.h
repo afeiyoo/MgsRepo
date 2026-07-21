@@ -15,6 +15,7 @@ public:
 public slots:
     void onCheckFullBlack();
     void onInit();
+    void onCleanETCBlackCardFinished(int affected);
 
 private:
     // 标记首次全量检查完成并发送一次通知
