@@ -249,16 +249,6 @@ int Cron::getFullFiles()
     if (!infoFile.exists()) {
         // 保存BlackUpdate.xml
         LOG_INFO().noquote() << "本地BlackUpdate.xml文件不存在!";
-        FileSaver saver(infoFile.toString());
-        if (!saver.write(retMsg)) {
-            LOG_ERROR().noquote() << "写入本地BlackUpdate.xml文件失败";
-            return -1;
-        }
-        if (!saver.finalize()) {
-            LOG_ERROR().noquote() << "保存本地BlackUpdate.xml文件失败";
-            return -1;
-        }
-
         LOG_INFO().noquote() << "启动全量文件下载";
         startDownload = true;
     } else {
