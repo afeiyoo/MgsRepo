@@ -169,6 +169,30 @@ QNetworkReply *reply = Http::instance().networkReply(req);
 
 Note that features like redirection, retries and read timeouts won't work in this mode.
 
+### Streaming large downloads
+
+Use `download()` to write a response to disk without buffering the complete body in memory. The
+target file is replaced atomically only after the request finishes successfully. A failed or
+cancelled request leaves an existing target file unchanged.
+
+```cpp
+#include "http.h"
+#include "httpdownloadreply.h"
+
+auto download = Http::instance().download(url, filePath);
+connect(download, &HttpDownloadReply::progress, this,
+        [](qint64 received, qint64 total) {
+            qDebug() << received << total;
+        });
+connect(download, &HttpDownloadReply::finished, this,
+        [](const HttpDownloadReply &reply) {
+            if (reply.isSuccessful())
+                qDebug() << "Saved to" << reply.filePath();
+            else
+                qWarning() << reply.errorString();
+        });
+```
+
 ## License
 
 You can use this library under the MIT license and at your own risk. If you do, you're welcome contributing your changes and fixes.

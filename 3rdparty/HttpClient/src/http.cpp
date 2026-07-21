@@ -1,5 +1,6 @@
 #include "http.h"
 
+#include "httpdownloadreply.h"
 #include "networkhttpreply.h"
 
 namespace {
@@ -198,6 +199,11 @@ HttpReply *Http::deleteResource(const QUrl &url)
     req.operation = QNetworkAccessManager::DeleteOperation;
     req.headers = requestHeaders;
     return request(req);
+}
+
+HttpDownloadReply *Http::download(const QUrl &url, const QString &filePath)
+{
+    return new HttpDownloadReply(url, filePath, *this);
 }
 
 bool Http::requestSync(QByteArray &resp, const QUrl &url, QNetworkAccessManager::Operation operation, const QByteArray &body, uint offset)

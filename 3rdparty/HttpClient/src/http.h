@@ -6,6 +6,8 @@
 #include "httpreply.h"
 #include "httprequest.h"
 
+class HttpDownloadReply;
+
 class Http
 {
 public:
@@ -43,6 +45,9 @@ public:
     HttpReply *post(const QUrl &url, const QByteArray &body, const QByteArray &contentType);
     HttpReply *put(const QUrl &url, const QByteArray &body, const QByteArray &contentType);
     HttpReply *deleteResource(const QUrl &url);
+
+    // 第三方库修改 2026-07-21 支持大文件流式下载
+    HttpDownloadReply *download(const QUrl &url, const QString &filePath);
 
     // 第三方库修改 2025-10-21 支持网络同步请求
     bool requestSync(QByteArray &resp,
