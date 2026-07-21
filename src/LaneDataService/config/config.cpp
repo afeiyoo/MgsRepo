@@ -59,7 +59,6 @@ void Config::loadConfig(const Utils::FileName &path)
     // TODO
 #endif
     m_fullBatchNo = m_confUtil->getValue("BlackList/fullBatchNo", "").toString();
-    m_deltaBatchNo = m_confUtil->getValue("BlackList/deltaBatchNo", "").toString();
 }
 
 ST_ConfigSnap Config::getConfigSnap() const
@@ -82,7 +81,6 @@ ST_ConfigSnap Config::getConfigSnap() const
     snap.fullBlackPath = m_fullBlackPath;
     snap.fullBatchNo = m_fullBatchNo;
     snap.deltaBlackPath = m_deltaBlackPath;
-    snap.deltaBatchNo = m_deltaBatchNo;
 
     snap.stationServiceURL = m_stationServiceURL;
 
@@ -94,11 +92,4 @@ void Config::setFullBatchNo(QString batchNo)
     QWriteLocker locker(&m_lock);
     m_confUtil->setValue("BlackList/fullBatchNo", batchNo);
     m_fullBatchNo = batchNo;
-}
-
-void Config::setDeltaBatchNo(QString batchNo)
-{
-    QWriteLocker locker(&m_lock);
-    m_confUtil->setValue("BlackList/deltaBatchNo", batchNo);
-    m_deltaBatchNo = batchNo;
 }

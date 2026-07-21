@@ -6,6 +6,7 @@
 #include "CuteLogger/include/ConsoleAppender.h"
 #include "CuteLogger/include/RollingFileAppender.h"
 #include "Logger.h"
+#include "bend/deltablackmaster.h"
 #include "bend/fullblackmaster.h"
 #include "config/config.h"
 #include "dbs/dataservice.h"
@@ -28,6 +29,7 @@ GlobalManager::GlobalManager(QObject *parent)
     m_ds = new DataService(this);
     m_sigMan = new SignalManager(this);
     m_fbMaster = new FullBlackMaster(this);
+    m_dbMaster = new DeltaBlackMaster(this);
     m_env = new Environment(this);
     m_sql = new SqlDealer();
 }
@@ -77,6 +79,11 @@ int GlobalManager::init()
 
     // 启动全量检查
     m_fbMaster->init();
+
+    QThread::msleep(1000); // NOTE：目的是尽量让全量先加载完成
+
+    // 启动增量检查
+    m_dbMaster->init();
 
     return 0;
 }

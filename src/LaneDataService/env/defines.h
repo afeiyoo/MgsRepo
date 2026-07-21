@@ -30,7 +30,6 @@ struct ST_ConfigSnap
     QString fullBlackPath;  // 全量文件所在路径
     QString fullBatchNo;    // 当前全量批次
     QString deltaBlackPath; // 增量文件所在路径
-    QString deltaBatchNo;   // 当前增量批次
 
     QString stationServiceURL; // 站级服务URL
 };

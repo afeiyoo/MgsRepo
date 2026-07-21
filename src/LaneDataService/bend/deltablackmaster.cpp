@@ -1,14 +1,14 @@
-#include "growthblackmaster.h"
+#include "deltablackmaster.h"
 
-#include "growthblackworker.h"
+#include "deltablackworker.h"
 
-GrowthBlackMaster::GrowthBlackMaster(QObject *parent)
+DeltaBlackMaster::DeltaBlackMaster(QObject *parent)
     : QObject{parent}
 {
     m_td = new QThread(this);
 }
 
-GrowthBlackMaster::~GrowthBlackMaster()
+DeltaBlackMaster::~DeltaBlackMaster()
 {
     if (m_td->isRunning()) {
         m_td->quit();
@@ -19,7 +19,7 @@ GrowthBlackMaster::~GrowthBlackMaster()
     }
 }
 
-void GrowthBlackMaster::init()
+void DeltaBlackMaster::init()
 {
     m_worker = new DeltaBlackWorker();
     connect(m_td, &QThread::finished, m_worker, &DeltaBlackWorker::deleteLater);

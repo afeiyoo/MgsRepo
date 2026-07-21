@@ -10,6 +10,7 @@ class DataService;
 class IMessageBus;
 class SignalManager;
 class FullBlackMaster;
+class DeltaBlackMaster;
 class Environment;
 class SqlDealer;
 
@@ -38,6 +39,8 @@ public:
     SignalManager *m_sigMan = nullptr;
     // 全量检查对象
     FullBlackMaster *m_fbMaster = nullptr;
+    // 增量检查对象
+    DeltaBlackMaster *m_dbMaster = nullptr;
     // 全局环境变量
     Environment *m_env = nullptr;
     // SQL语句获取器（线程安全）

@@ -24,7 +24,6 @@ public:
 
     // 写配置
     void setFullBatchNo(QString batchNo);
-    void setDeltaBatchNo(QString batchNo);
 
 private:
     // 数据库配置
@@ -43,10 +42,9 @@ private:
     QStringList m_sqlFiles; // sql文件存储路径
 
     // 状态名单配置
-    QString m_fullBlackPath;    // 全量文件所在路径
-    QString m_fullBatchNo = 0;  // 当前全量批次（可变）
-    QString m_deltaBlackPath;   // 增量文件保存路径
-    QString m_deltaBatchNo = 0; // 增量批次（可变）
+    QString m_fullBlackPath;   // 全量文件所在路径
+    QString m_fullBatchNo = 0; // 当前全量批次（可变）
+    QString m_deltaBlackPath;  // 增量文件保存路径
 
     // 服务配置
     QString m_stationServiceURL; // 站级服务

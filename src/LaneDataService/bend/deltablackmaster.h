@@ -4,12 +4,12 @@
 #include <QThread>
 
 class DeltaBlackWorker;
-class GrowthBlackMaster : public QObject
+class DeltaBlackMaster : public QObject
 {
     Q_OBJECT
 public:
-    explicit GrowthBlackMaster(QObject *parent = nullptr);
-    ~GrowthBlackMaster() override;
+    explicit DeltaBlackMaster(QObject *parent = nullptr);
+    ~DeltaBlackMaster() override;
 
     void init();
 

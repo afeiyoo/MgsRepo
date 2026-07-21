@@ -255,7 +255,7 @@ bool FullBlackWorker::loadFullBlack(int batchNo, const QString &path)
     m_version = candidateVersion;
     m_cleanTable = candidateCleanTable;
 
-    GM_INS->m_conf->setFullBatchNo(batchNo);
+    GM_INS->m_conf->setFullBatchNo(QString::number(batchNo));
     return true;
 }
 

@@ -25,6 +25,7 @@ include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/HttpClient/HttpClient.pri)
+include($$PWD/../LaneShares/Models/db/DBModels.pri)
 
 
 # You can make your code fail to compile if it uses deprecated APIs.
@@ -32,10 +33,10 @@ include($$THIRD_PARTY_LIBRARY_PATH/HttpClient/HttpClient.pri)
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    bend/deltablackmaster.cpp \
+    bend/deltablackworker.cpp \
     bend/fullblackmaster.cpp \
     bend/fullblackworker.cpp \
-    bend/growthblackmaster.cpp \
-    bend/growthblackworker.cpp \
     config/config.cpp \
     core/baseexception.cpp \
     core/globalmanager.cpp \
@@ -46,10 +47,10 @@ SOURCES += \
     lanedataservice.cpp
 
 HEADERS += \
+    bend/deltablackmaster.h \
+    bend/deltablackworker.h \
     bend/fullblackmaster.h \
     bend/fullblackworker.h \
-    bend/growthblackmaster.h \
-    bend/growthblackworker.h \
     config/config.h \
     core/baseexception.h \
     core/globalmanager.h \

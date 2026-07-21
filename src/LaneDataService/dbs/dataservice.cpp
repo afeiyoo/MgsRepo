@@ -3,6 +3,7 @@
 #include "EasyQtSql.h"
 #include "Logger.h"
 #include "core/globalmanager.h"
+#include "sqldealer.h"
 #include "utils/datadealutils.h"
 
 using namespace Utils;
@@ -60,7 +61,7 @@ bool DataService::testConnection(const QString &connName, const QString &sql)
 
 QString DataService::fetchString(const QString &sqlNamespace, const QString &sqlID, const QVariantMap &params, const QString &def)
 {
-    QString sql = m_sql->getSql(sqlNamespace, sqlID);
+    QString sql = GM_INS->m_sql->getSql(sqlNamespace, sqlID);
     if (sql.isEmpty())
         return def;
 
