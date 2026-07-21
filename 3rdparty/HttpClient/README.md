@@ -173,7 +173,8 @@ Note that features like redirection, retries and read timeouts won't work in thi
 
 Use `download()` to write a response to disk without buffering the complete body in memory. The
 target file is replaced atomically only after the request finishes successfully. A failed or
-cancelled request leaves an existing target file unchanged.
+cancelled request leaves an existing target file unchanged. Missing parent directories in
+`filePath` are created automatically before the request starts.
 
 ```cpp
 #include "http.h"

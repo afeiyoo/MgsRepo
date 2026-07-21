@@ -11,10 +11,10 @@ SUBDIRS += \
     # LaneMaster \
     # MgsToolsKit \
     # SmartLaneController \
-    # LaneDataService \
+    LaneDataService \
     # PadService \
     # ETC \
-    StationService \
+    # StationService \
     # ServiceHub
 
 LaneMaster.file = src/LaneMaster/LaneMaster.pro

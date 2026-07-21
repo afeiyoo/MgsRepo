@@ -1,5 +1,6 @@
 #include "httpdownloadreply.h"
 
+#include <QDir>
 #include <QFileInfo>
 #include <QSaveFile>
 #include <QTimer>
@@ -89,9 +90,15 @@ void HttpDownloadReply::start()
         return;
     }
 
+    if (m_filePath.isEmpty()) {
+        finish(false, QStringLiteral("Download file path is empty"));
+        return;
+    }
+
     const QFileInfo targetInfo(m_filePath);
-    if (m_filePath.isEmpty() || !targetInfo.dir().exists()) {
-        finish(false, QStringLiteral("Download directory does not exist: %1").arg(targetInfo.absolutePath()));
+    QDir targetDir = targetInfo.dir();
+    if (!targetDir.exists() && !targetDir.mkpath(QStringLiteral("."))) {
+        finish(false, QStringLiteral("Cannot create download directory: %1").arg(targetDir.absolutePath()));
         return;
     }
     if (!m_file->open(QIODevice::WriteOnly)) {
