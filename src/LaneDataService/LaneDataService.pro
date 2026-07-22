@@ -25,6 +25,7 @@ include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/HttpClient/HttpClient.pri)
+include($$THIRD_PARTY_LIBRARY_PATH/miniz/miniz.pri)
 include($$PWD/../LaneShares/Models/db/DBModels.pri)
 
 
@@ -35,6 +36,7 @@ include($$PWD/../LaneShares/Models/db/DBModels.pri)
 SOURCES += \
     bend/deltablackmaster.cpp \
     bend/deltablackworker.cpp \
+    bend/fullblackdownloader.cpp \
     bend/fullblackmaster.cpp \
     bend/fullblackworker.cpp \
     config/config.cpp \
@@ -49,6 +51,7 @@ SOURCES += \
 HEADERS += \
     bend/deltablackmaster.h \
     bend/deltablackworker.h \
+    bend/fullblackdownloader.h \
     bend/fullblackmaster.h \
     bend/fullblackworker.h \
     config/config.h \
