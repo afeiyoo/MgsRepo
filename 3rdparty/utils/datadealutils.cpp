@@ -1,5 +1,7 @@
 #include "datadealutils.h"
 
+#include <cstring>
+
 #include <QCryptographicHash>
 #include <QDateTime>
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
@@ -491,6 +493,16 @@ QString DataDealUtils::byteArrayToAsciiStr(const QByteArray &data)
     return temp.trimmed();
 }
 
+QByteArray DataDealUtils::bufferToByteArray(const char *buffer, int bufferSize)
+{
+    if (!buffer || bufferSize <= 0)
+        return {};
+
+    const void *terminator = std::memchr(buffer, '\0', static_cast<size_t>(bufferSize));
+    const int dataSize = terminator ? static_cast<int>(static_cast<const char *>(terminator) - buffer) : bufferSize;
+    return QByteArray(buffer, dataSize);
+}
+
 QString DataDealUtils::byteArrayToBCDStr(const QByteArray &data)
 {
     QString result;
@@ -868,7 +880,7 @@ QString DataDealUtils::trimmed(const QString &text, short type)
     // 调用正则表达式移除空格
     if (!pattern.isEmpty()) {
 #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-        temp.remove(QRegularExpression(pattern));
+              temp.remove(QRegularExpression(pattern));
 #else
         temp.remove(QRegExp(pattern));
 #endif

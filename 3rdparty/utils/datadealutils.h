@@ -122,6 +122,9 @@ public:
     // 字节数组转Ascii字符串
     static QString byteArrayToAsciiStr(const QByteArray &data);
 
+    // 将定长char缓冲区转为字节数组，遇到'\0'或达到bufferSize时停止
+    static QByteArray bufferToByteArray(const char *buffer, int bufferSize);
+
     // 字节数组转bcd编码字符串
     static QString byteArrayToBCDStr(const QByteArray &data);
 
