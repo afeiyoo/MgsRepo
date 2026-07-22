@@ -293,20 +293,20 @@ QString MainHandler::checkETCBlackInfo(const QString &version) const
     if (!file.exists()) {
         QString curVersion = GM_INS->getCurBlackVersion();
         if (curVersion < version) {
-            throw BaseException(BaseException::QUERY_ETC_BLACK, 2, "数据未准备好");
+            throw BaseException(BaseException::QUERY_ETC_BLACK, 2, version);
         } else {
-            throw BaseException(BaseException::QUERY_ETC_BLACK, 0, "该版本无数据");
+            throw BaseException(BaseException::QUERY_ETC_BLACK, 0, version);
         }
     }
 
     FileReader reader;
     QString errStr;
     if (!reader.fetch(file.toString(), &errStr))
-        throw BaseException(BaseException::QUERY_ETC_BLACK, 4, "增量文件异常");
+        throw BaseException(BaseException::QUERY_ETC_BLACK, 4, version);
 
     QString jsonData = reader.data();
     if (jsonData.isEmpty())
-        throw BaseException(BaseException::QUERY_ETC_BLACK, 4, "增量文件异常");
+        throw BaseException(BaseException::QUERY_ETC_BLACK, 4, version);
 
     // 文件内容存在，则直接读取文件内容返回
     return jsonData;
