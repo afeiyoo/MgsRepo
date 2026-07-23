@@ -10,12 +10,13 @@ SUBDIRS += \
     # QSimpleUpdater \
     # LaneMaster \
     # MgsToolsKit \
-    # SmartLaneController \
-    LaneDataService \
+    SmartLaneController \
+    # LaneDataService \
     # PadService \
     # ETC \
     # StationService \
-    # ServiceHub
+    # ServiceHub \
+    # CardService
 
 LaneMaster.file = src/LaneMaster/LaneMaster.pro
 MgsToolsKit.file = src/MgsToolsKit/MgsToolsKit.pro
@@ -30,3 +31,4 @@ StationService.file = src/StationService/StationService.pro
 ETC.file = src/ETC/ETC.pro
 LaneDataService.file = src/LaneDataService/LaneDataService.pro
 ServiceHub.file = src/ServiceHub/ServiceHub.pro
+CardService.file = src/CardService/CardService.pro
