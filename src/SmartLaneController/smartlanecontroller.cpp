@@ -44,7 +44,7 @@ SmartLaneController::SmartLaneController(QObject *parent)
     connect(m_tcpSocket, &QTcpSocket::errorOccurred, this, &SmartLaneController::onErrorOccurred);
 
     m_reconnectTimer = new QTimer(this);
-    m_reconnectTimer->setInterval(1000 * 30);
+    m_reconnectTimer->setInterval(1000 * 10);
     connect(m_reconnectTimer, &QTimer::timeout, this, &SmartLaneController::onTryConnect);
 
     m_heartbeatTimer = new QTimer(this);
