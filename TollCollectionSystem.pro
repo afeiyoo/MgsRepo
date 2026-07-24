@@ -10,9 +10,9 @@ SUBDIRS += \
     # QSimpleUpdater \
     # LaneMaster \
     # MgsToolsKit \
-    SmartLaneController \
-    # LaneDataService \
-    # PadService \
+    # SmartLaneController \
+    LaneDataService \
+    PadService \
     # ETC \
     # StationService \
     # ServiceHub \

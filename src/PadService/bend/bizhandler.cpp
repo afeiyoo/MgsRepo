@@ -1589,6 +1589,7 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
     int scanType = -1;
     QString stationId;
     QString tradeNum;
+    int shiftId = 0;
     if (aMap.contains("scanType"))
         scanType = aMap.take("scanType").toInt();
     if (aMap.contains("operateStation"))
@@ -1701,6 +1702,7 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
         int shiftId = aMap.take("shiftId").toInt();
         int vehClass = aMap.take("vehClass").toInt();
         QString vehicleId = aMap["vehicleId"].toString();
+        QString operatorId = aMap["operator"].toString();
 
         // DTP下发站级的T_AuditPayBack表（报文提前打印）
         T_AuditPayBack auditPayBack;
@@ -1715,7 +1717,7 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
         auditPayBack.VehClass = vehClass;
         auditPayBack.DataType = 2; // 手持机稽核
         auditPayBack.Remark = remark;
-        auditPayBack.Operator = aMap["operator"].toString();
+        auditPayBack.Operator = operatorId;
         auditPayBack.OperatorName = GM_INSTANCE->m_ds->getUserName(auditPayBack.Operator, 1);
         auditPayBack.OperateTime = Utils::DataDealUtils::curDateTime();
         auditPayBack.Status = 2; // 已处理
@@ -1785,6 +1787,7 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
                 m_auditInfos.remove(resultId.toString());
 
             QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationId);
+            QString stationServiceUrl = QString("http://%1:8082").arg(stationIP);
             int res = GM_INSTANCE->m_dtpSender->sendMsgToDtp(stationIP, 13591, "TradeQ", "", dtpXml);
             QVariantMap map;
             if (res < 0) {
@@ -1793,6 +1796,18 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
             } else {
                 map["status"] = 0;
                 map["desc"] = "稽核补费成功";
+
+                // 更新班次表
+                if (GM_INSTANCE->m_ds->getOutShiftSettleCount(stationId, shiftDate, shiftId, QUrl(stationServiceUrl)) <= 0) {
+                    QString varShiftDate = QDateTime::fromString(shiftDate, "yyyy-MM-dd hh:mm:ss").toString("yyyyMMdd");
+                    QString varDataId = QString("%1XX%2").arg(varShiftDate).arg(Utils::DataDealUtils::padValue(shiftId, 2));
+                    QString varOperatorName = GM_INSTANCE->m_ds->getUserName(operatorId, 1);
+                    QString operatorName = varOperatorName.isEmpty() ? "稽查班" : varOperatorName;
+                    if (!GM_INSTANCE->m_ds->insertOutShiftSettle(varDataId, shiftDate, shiftId, stationId, operatorId, operatorName,
+                                                                 QUrl(stationServiceUrl))) {
+                        LOG_WARNING().noquote() << "工班信息插入失败";
+                    }
+                }
             }
             map["tradeId"] = tradeNum;
             map["payId"] = payId;
