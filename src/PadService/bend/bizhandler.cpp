@@ -1589,7 +1589,6 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
     int scanType = -1;
     QString stationId;
     QString tradeNum;
-    int shiftId = 0;
     if (aMap.contains("scanType"))
         scanType = aMap.take("scanType").toInt();
     if (aMap.contains("operateStation"))
