@@ -33,7 +33,8 @@ QString DataDealUtils::cryptoMD5(const QString &s, bool bUtf8 /*= true */)
 
 QString DataDealUtils::bigFileMd5(const QString &filePath, bool *ok)
 {
-    *ok = false;
+    if (ok)
+        *ok = false;
 
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -880,7 +881,7 @@ QString DataDealUtils::trimmed(const QString &text, short type)
     // 调用正则表达式移除空格
     if (!pattern.isEmpty()) {
 #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-              temp.remove(QRegularExpression(pattern));
+        temp.remove(QRegularExpression(pattern));
 #else
         temp.remove(QRegExp(pattern));
 #endif
