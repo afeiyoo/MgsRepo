@@ -5,6 +5,7 @@
 #include <QSqlError>
 
 #include "EasyQtSql.h"
+#include "HttpClient/src/http.h"
 #include "Logger.h"
 #include "config/config.h"
 #include "core/globalmanager.h"
@@ -14,6 +15,7 @@
 #include "env/environment.h"
 #include "utils/datadealutils.h"
 #include "utils/fileutils.h"
+#include "utils/stdafx.h"
 
 using namespace EasyQtSql;
 using namespace Utils;
@@ -22,6 +24,7 @@ FullBlackWorker::FullBlackWorker(QObject *parent)
     : QObject{parent}
 {
     m_timer = new QTimer(this);
+    m_http = new Http();
 }
 
 FullBlackWorker::~FullBlackWorker()
@@ -41,11 +44,23 @@ FullBlackWorker::~FullBlackWorker()
             QSqlDatabase::removeDatabase(name);
     }
     m_timer->stop();
+
+    SAFE_DELETE(m_http);
 }
 
 void FullBlackWorker::onCheckFullBlack()
 {
     LOG_INFO().noquote() << "开始检查全量...";
+
+    // 比较批次号
+    int localBatchNo = getLocalBatchNo();
+    int remoteBatchNo = getRemoteBatchNo();
+    LOG_INFO().noquote() << "本地全量批次号:" << localBatchNo << "远程全量批次号:" << remoteBatchNo;
+    if (localBatchNo == 0 && remoteBatchNo == 0) {
+        LOG_ERROR().noquote() << "无法获得全量批次号 => 全量异常";
+        setStatus(false, -1);
+        return;
+    }
 
     ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
     auto result = getMaxBatchNoFromFiles(snap.fullBlackPath);
@@ -300,4 +315,66 @@ bool FullBlackWorker::validateFullBlack(const QSqlDatabase &db, int batchNo, QSt
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
         return false;
     }
+}
+
+int FullBlackWorker::getLocalBatchNo()
+{
+    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
+
+    FileName localFile = FileName::fromString(snap.fullBlackPath + "/BlackUpdate.xml");
+    if (!localFile.exists()) {
+        LOG_WARNING().noquote() << "本地BlackUpdate.xml不存在!";
+        return 0;
+    }
+
+    FileReader reader;
+    if (!reader.fetch(localFile.toString())) {
+        LOG_WARNING().noquote() << "读取本地BlackUpdate.xml文件失败:" << reader.errorString();
+        return 0;
+    }
+
+    const QByteArray data = reader.data();
+    bool ok = false;
+    QString errDesc;
+    QVariantMap resMap = DataDealUtils::xmlToMap(data, &ok, &errDesc);
+    if (!ok) {
+        LOG_WARNING().noquote() << "本地BlackUpdate.xml数据内容解析失败:" << errDesc;
+        return 0;
+    }
+
+    int localBatchNo = resMap["batchno"].toInt(&ok);
+    if (!ok) {
+        LOG_WARNING().noquote() << "本地BlackUpdate.xml解析获取批次号失败";
+        return 0;
+    }
+
+    return localBatchNo;
+}
+
+int FullBlackWorker::getRemoteBatchNo()
+{
+    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
+
+    QString url = snap.stationServiceURL + "/BlackUpdate/BlackUpdate.xml";
+    QByteArray data;
+    bool ok = m_http->getSync(data, QUrl(url));
+    if (!ok) {
+        LOG_WARNING().noquote() << "远程BlackUpdate.xml获取失败:" << data;
+        return 0;
+    }
+
+    QString errDesc;
+    QVariantMap resMap = DataDealUtils::xmlToMap(data, &ok, &errDesc);
+    if (!ok) {
+        LOG_WARNING().noquote() << "远程BlackUpdate.xml数据内容解析失败:" << errDesc;
+        return 0;
+    }
+
+    int remoteBatchNo = resMap["batchno"].toInt(&ok);
+    if (!ok) {
+        LOG_WARNING().noquote() << "远程BlackUpdate.xml解析获取批次号失败";
+        return 0;
+    }
+
+    return remoteBatchNo;
 }

@@ -36,7 +36,6 @@ include($$PWD/../LaneShares/Models/db/DBModels.pri)
 SOURCES += \
     bend/deltablackmaster.cpp \
     bend/deltablackworker.cpp \
-    bend/fullblackdownloader.cpp \
     bend/fullblackmaster.cpp \
     bend/fullblackworker.cpp \
     config/config.cpp \
@@ -51,7 +50,6 @@ SOURCES += \
 HEADERS += \
     bend/deltablackmaster.h \
     bend/deltablackworker.h \
-    bend/fullblackdownloader.h \
     bend/fullblackmaster.h \
     bend/fullblackworker.h \
     config/config.h \

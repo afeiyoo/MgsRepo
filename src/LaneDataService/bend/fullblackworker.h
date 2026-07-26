@@ -5,6 +5,7 @@
 #include <QSqlDatabase>
 #include <QTimer>
 
+class Http;
 class FullBlackWorker : public QObject
 {
     Q_OBJECT
@@ -31,6 +32,11 @@ private:
     // 校验全量数据库
     bool validateFullBlack(const QSqlDatabase &db, int batchNo, QString *version, QString *cleanTable);
 
+    // 获取本地BlackUpdate.xml的批次号
+    int getLocalBatchNo();
+    // 获取远程BlackUpdate.xml的批次号
+    int getRemoteBatchNo();
+
 private:
     // 当前全量是否正常 true:全量正常 false:全量异常
     bool m_isValid = false;
@@ -52,4 +58,6 @@ private:
     QSqlDatabase m_dao[2];
     // 定时器
     QTimer *m_timer = nullptr;
+
+    Http *m_http = nullptr;
 };

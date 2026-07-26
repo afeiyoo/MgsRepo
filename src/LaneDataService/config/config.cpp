@@ -50,11 +50,13 @@ void Config::loadConfig(const Utils::FileName &path)
 
     // 状态名单配置
 #ifdef Q_OS_WIN32
-    m_fullBlackPath = m_confUtil->getValue("BlackList/fullBlackPath", "D://fjeit//DtpAgent32//BlackList").toString();
+    m_fullBlackPath = m_confUtil->getValue("BlackList/fullBlackPath", "").toString();
+    if (m_fullBlackPath.isEmpty())
+        m_fullBlackPath = FileUtils::curApplicationDirPath() + "/fullBlack";
+
     m_deltaBlackPath = m_confUtil->getValue("BlackList/deltaBlackPath", "").toString();
-    if (m_deltaBlackPath.isEmpty()) {
+    if (m_deltaBlackPath.isEmpty())
         m_deltaBlackPath = FileUtils::curApplicationDirPath() + "/deltaBlack";
-    }
 #else
     // TODO
 #endif
