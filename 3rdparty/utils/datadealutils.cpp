@@ -50,7 +50,8 @@ QString DataDealUtils::bigFileMd5(const QString &filePath, bool *ok)
         hash.addData(chunk);
     }
 
-    *ok = true;
+    if (ok)
+        *ok = true;
     return QString(hash.result().toHex()).toUpper();
 }
 
