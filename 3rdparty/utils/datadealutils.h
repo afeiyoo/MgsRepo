@@ -194,7 +194,7 @@ public:
     // QVariantList转换成QByteArray并可以指定输出格式
     static QByteArray listToJson(const QVariantList &list, QJsonDocument::JsonFormat format = QJsonDocument::Compact);
 
-    // XML转换成QVariantMap
+    // XML转换成QVariantMap, 重复出现的同名节点会转成 QVariantList
     static QVariantMap xmlToMap(const QByteArray &data, bool *ok = nullptr, QString *errDesc = nullptr);
 
     // QObject对象转换成QVariantMap,并可以指定忽略属性
