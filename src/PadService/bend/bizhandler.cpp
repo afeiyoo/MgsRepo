@@ -1589,17 +1589,32 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
     int scanType = -1;
     QString stationId;
     QString tradeNum;
+    QDateTime shiftDate;
+    QDateTime paybackTime;
     if (aMap.contains("scanType"))
         scanType = aMap.take("scanType").toInt();
     if (aMap.contains("operateStation"))
         stationId = aMap["operateStation"].toString();
     if (aMap.contains("tradeNum"))
         tradeNum = aMap["tradeNum"].toString();
+    if (aMap.contains("shiftDate"))
+        shiftDate = QDateTime::fromString(aMap["shiftDate"].toString(), "yyyy-MM-dd hh:mm:ss");
+    if (aMap.contains("paybackTime"))
+        paybackTime = QDateTime::fromString(aMap["paybackTime"].toString(), "yyyy-MM-dd hh:mm:ss");
 
     if (scanType != 0 && scanType != 1 && scanType != 2)
         throw BaseException(1, "响应失败: 操作类型异常");
     if (stationId.isEmpty())
         throw BaseException(1, "响应失败: 站代码为空");
+    if (!shiftDate.isValid())
+        throw BaseException(1, "响应失败: 工班日期格式错误");
+    if (!paybackTime.isValid())
+        throw BaseException(1, "响应失败: 补费时间格式错误");
+    if (shiftDate.date() != paybackTime.date()) {
+        throw BaseException(1, QString("响应失败: 班次日期与补缴时间不一致，班次日期：%1，补缴日期：%2")
+                                   .arg(shiftDate.date().toString("yyyy-MM-dd"))
+                                   .arg(paybackTime.date().toString("yyyy-MM-dd")));
+    }
 
     NloJson nloJson;
 
