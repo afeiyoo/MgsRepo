@@ -1,5 +1,7 @@
 #include "fullblackworker.h"
 
+#include <algorithm>
+
 #include <QMetaObject>
 #include <QRegularExpression>
 #include <QSqlError>
@@ -11,7 +13,6 @@
 #include "core/globalmanager.h"
 #include "core/signalmanager.h"
 #include "dbs/dataservice.h"
-#include "env/defines.h"
 #include "env/environment.h"
 #include "utils/datadealutils.h"
 #include "utils/fileutils.h"
@@ -52,91 +53,93 @@ void FullBlackWorker::onCheckFullBlack()
 {
     LOG_INFO().noquote() << "开始检查全量...";
 
-    // 比较批次号
-    int localBatchNo = getLocalBatchNo();
-    int remoteBatchNo = getRemoteBatchNo();
-    LOG_INFO().noquote() << "本地全量批次号:" << localBatchNo << "远程全量批次号:" << remoteBatchNo;
-    if (localBatchNo == 0 && remoteBatchNo == 0) {
-        LOG_ERROR().noquote() << "无法获得全量批次号 => 全量异常";
-        setStatus(false, -1);
+    if (m_updateRunning) {
+        LOG_INFO().noquote() << "全量更新流程正在进行，本次检查跳过";
         return;
     }
 
-    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
-    auto result = getMaxBatchNoFromFiles(snap.fullBlackPath);
-    if (!result) {
-        if (m_isFirst) {
-            LOG_ERROR().noquote() << "程序启动，未找到全量文件 => 全量异常";
-            setStatus(false, -1);
-            finishFirstCheck();
-            return;
-        }
+    setStatus(m_isValid, FullBlackChecking);
 
-        if (m_isValid) {
-            LOG_INFO().noquote() << "程序运行中，未找到全量文件。上次检查全量正常 => 全量正常";
-        } else {
-            LOG_ERROR().noquote() << "程序运行中，未找到全量文件。上次检查全量异常 => 全量异常";
-        }
-        setStatus(m_isValid, -2);
+    ST_FullManifest localManifest;
+    ST_FullManifest remoteManifest;
+    QString localError;
+    QString remoteError;
+    const bool localOk = readLocalManifest(&localManifest, &localError);
+    const bool remoteOk = fetchRemoteManifest(&remoteManifest, &remoteError);
+
+    if (localOk) {
+        LOG_INFO().noquote() << "本地全量清单有效，批次:" << localManifest.batchNo;
+    } else {
+        LOG_WARNING().noquote() << "本地全量清单无效:" << localError;
+    }
+    if (remoteOk) {
+        LOG_INFO().noquote() << "远程全量清单有效，批次:" << remoteManifest.batchNo;
+    } else {
+        LOG_WARNING().noquote() << "远程全量清单无效:" << remoteError;
+    }
+
+    // 本地和远程清单都不可用，没有可确定的全量批次
+    if (!localOk && !remoteOk) {
+        setStatus(m_isFirst ? false : m_isValid, m_isFirst ? FullBlackUnavailable : FullBlackCheckFailed);
         return;
     }
 
-    const int fileBatchNo = result.value();
-    const int curBatchNo = snap.fullBatchNo.toInt();
-
-    const QString filePath = snap.fullBlackPath + QString("/ETCBlackCard_%1.db").arg(fileBatchNo);
-
-    // 全量批次检查
-    if (fileBatchNo < curBatchNo) {
-        if (m_isFirst) {
-            LOG_ERROR().noquote() << "程序启动，未找到当前批次全量文件: 当前批次" << curBatchNo << "文件最大批次" << fileBatchNo << "=> 全量异常";
-            setStatus(false, -3);
-            finishFirstCheck();
-            return;
-        }
-
-        if (m_isValid) {
-            LOG_ERROR().noquote() << "程序运行中，未找到当前批次全量文件: 当前批次" << curBatchNo << "文件最大批次" << fileBatchNo
-                                  << "上次检查全量正常 => 全量正常";
-        } else {
-            LOG_ERROR().noquote() << "程序运行中，未找到当前批次全量文件: 当前批次" << curBatchNo << "文件最大批次" << fileBatchNo
-                                  << "上次检查全量异常 => 全量异常";
-        }
-        setStatus(m_isValid, -4);
+    // 本地清单无效，直接下载远程权威批次
+    if (!localOk) {
+        prepareFullDownload(remoteManifest);
         return;
     }
 
-    if (!m_isFirst && fileBatchNo == curBatchNo) {
-        if (m_isValid) {
-            LOG_INFO().noquote() << "未发现新批次全量文件: 当前批次" << curBatchNo << "全量文件最大批次" << fileBatchNo
-                                 << "上次检查全量正常 => 全量正常";
-            return;
-        }
-        LOG_INFO().noquote() << "上次全量加载失败，尝试重新加载全量文件，批次:" << fileBatchNo;
-    }
-
-    // 加载全量
-    if (!loadFullBlack(fileBatchNo, filePath)) {
-        if (m_isFirst) {
-            LOG_ERROR().noquote() << "程序启动，全量加载失败: 批次" << fileBatchNo << "=> 全量异常";
-            setStatus(false, -5);
-            finishFirstCheck();
-            return;
-        }
-
-        if (m_isValid) {
-            LOG_ERROR().noquote() << "程序运行中，全量加载失败: 批次" << fileBatchNo << "上次检查全量正常 => 全量正常";
-        } else {
-            LOG_ERROR().noquote() << "程序运行中，全量加载失败: 批次" << fileBatchNo << "上次检查全量异常 => 全量异常";
-        }
-        setStatus(m_isValid, -6);
+    // 本地批次落后，不加载旧全量，直接下载远程权威批次
+    if (remoteOk && localManifest.batchNo < remoteManifest.batchNo) {
+        prepareFullDownload(remoteManifest);
         return;
     }
 
-    LOG_INFO().noquote() << "全量加载成功: 批次" << fileBatchNo;
-    setStatus(true, 0);
-    pruneOldFiles(fileBatchNo);
+    // 远程服务是批次权威来源。本地批次超前视为本地清单被异常修改，禁止加载和回退使用。
+    if (remoteOk && localManifest.batchNo > remoteManifest.batchNo) {
+        LOG_ERROR().noquote() << "本地全量批次高于远程权威批次，按远程批次重新下载修复。本地批次:" << localManifest.batchNo
+                              << "远程批次:" << remoteManifest.batchNo;
+        prepareFullDownload(remoteManifest, FullBlackLocalBatchAhead);
+        return;
+    }
+
+    // 走到这里说明本地清单有效，且远程不可用或两端批次相等
+    const int localBatchNo = localManifest.batchNo;
+    if (!m_isFirst && m_isValid && localBatchNo == m_activeBatchNo) {
+        LOG_INFO().noquote() << "当前活动全量已是本地清单批次，无需重复加载，批次:" << localBatchNo;
+        setStatus(true, FullBlackReady);
+        return;
+    }
+
+    const ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
+    const QString localFilePath = snap.fullBlackPath + QString("/ETCBlackCard_%1.db").arg(localBatchNo);
+    if (!loadFullBlack(localBatchNo, localFilePath)) {
+        LOG_ERROR().noquote() << "本地全量加载失败，批次:" << localBatchNo;
+
+        // 只要远程清单可用，就尝试通过下载恢复，包括本地和远程同批次的情况
+        if (remoteOk) {
+            prepareFullDownload(remoteManifest);
+            return;
+        }
+
+        setStatus(m_isFirst ? false : m_isValid, FullBlackLocalLoadFailed);
+        return;
+    }
+
+    LOG_INFO().noquote() << "本地全量加载成功，批次:" << localBatchNo;
+    setStatus(true, FullBlackReady);
+    pruneOldFiles(localBatchNo);
     finishFirstCheck();
+}
+
+void FullBlackWorker::prepareFullDownload(const ST_FullManifest &manifest, EM_FullBlackStatus status)
+{
+    m_pendingManifest = manifest;
+    m_updateRunning = true;
+
+    LOG_INFO().noquote() << "需要下载远程全量，批次:" << manifest.batchNo << "切片数量:" << manifest.slices.size();
+    setStatus(false, status);
 }
 
 void FullBlackWorker::finishFirstCheck()
@@ -236,7 +239,7 @@ void FullBlackWorker::pruneOldFiles(int batchNo)
     }
 }
 
-void FullBlackWorker::setStatus(bool isValid, int status)
+void FullBlackWorker::setStatus(bool isValid, EM_FullBlackStatus status)
 {
     m_isValid = isValid;
     m_curStatus = status;
@@ -271,17 +274,10 @@ bool FullBlackWorker::loadFullBlack(int batchNo, const QString &path)
     if (m_dao[1].isOpen())
         m_dao[1].close();
 
-    // 清理ETCBlackCard表
-    const int curBatchNo = GM_INS->m_conf->getConfigSnap().fullBatchNo.toInt();
-    if (batchNo > curBatchNo && !candidateCleanTable.isEmpty()) {
-        LOG_INFO().noquote() << "清理增量表:" << candidateCleanTable;
-        emit GM_INS->m_sigMan->sigCleanETCBlackCard(candidateCleanTable);
-    }
-
     m_version = candidateVersion;
+    m_activeBatchNo = batchNo;
     m_cleanTable = candidateCleanTable;
 
-    GM_INS->m_conf->setFullBatchNo(QString::number(batchNo));
     return true;
 }
 
@@ -317,64 +313,154 @@ bool FullBlackWorker::validateFullBlack(const QSqlDatabase &db, int batchNo, QSt
     }
 }
 
-int FullBlackWorker::getLocalBatchNo()
+bool FullBlackWorker::parseFullManifest(const QByteArray &data, const QUrl &manifestUrl, ST_FullManifest *manifest, QString *error) const
 {
-    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
+    *manifest = ST_FullManifest();
+    error->clear();
 
-    FileName localFile = FileName::fromString(snap.fullBlackPath + "/BlackUpdate.xml");
+    bool xmlOk = false;
+    QString xmlError;
+    const QVariantMap root = DataDealUtils::xmlToMap(data, &xmlOk, &xmlError);
+    if (!xmlOk) {
+        *error = QString("XML解析失败: %1").arg(xmlError);
+        return false;
+    }
+
+    bool batchOk = false;
+    const QString batchText = root.value("batchno").toString().trimmed();
+    const int batchNo = batchText.toInt(&batchOk);
+    if (!batchOk || batchNo <= 0) {
+        *error = QString("batchno无效: %1").arg(batchText);
+        return false;
+    }
+
+    // 获取完整zip文件的MD5
+    const QVariantMap totalMd5Node = root.value("totalmd5").toMap();
+    const QString totalMd5 = totalMd5Node.value("md5").toString().trimmed().toUpper();
+    if (totalMd5.isEmpty()) {
+        *error = "totalmd5不合法";
+        return false;
+    }
+
+    QList<ST_FullSliceInfo> slices;
+    QVariantList parameterNodes;
+    const QVariant parameterValue = root.value("parameter");
+    if (parameterValue.type() == QVariant::List) {
+        parameterNodes = parameterValue.toList();
+    } else if (parameterValue.type() == QVariant::Map) {
+        parameterNodes.append(parameterValue);
+    }
+    const QRegularExpression sliceRegex(QString("^ETCBlackCard_%1\\.zip\\.(\\d{2})$").arg(batchText));
+    for (const QVariant &node : parameterNodes) {
+        const QVariantMap one = node.toMap();
+        const QString fileName = one.value("zipfile").toString().trimmed();
+        const QString md5 = one.value("md5").toString().trimmed().toUpper();
+
+        const QRegularExpressionMatch match = sliceRegex.match(fileName);
+        if (!match.hasMatch()) {
+            *error = QString("全量切片文件名无效: %1").arg(fileName);
+            return false;
+        }
+
+        bool indexOk = false;
+        const int index = match.captured(1).toInt(&indexOk);
+        if (!indexOk || index <= 0) {
+            *error = QString("全量切片序号无效: %1").arg(fileName);
+            return false;
+        }
+        ST_FullSliceInfo slice;
+        slice.index = index;
+        slice.fileName = fileName;
+        slice.md5 = md5;
+        if (!manifestUrl.isEmpty())
+            slice.url = manifestUrl.resolved(QUrl(fileName));
+        slices.append(slice);
+    }
+    if (slices.isEmpty()) {
+        *error = "全量切片文件为空";
+        return false;
+    }
+
+    std::sort(slices.begin(), slices.end(), [](const ST_FullSliceInfo &left, const ST_FullSliceInfo &right) { return left.index < right.index; });
+    for (int i = 0; i < slices.size(); ++i) {
+        const int expectedIndex = i + 1;
+        if (slices.at(i).index != expectedIndex) {
+            *error = QString("全量切片序号不连续，期望%1，实际%2").arg(expectedIndex, 2, 10, QChar('0')).arg(slices.at(i).index, 2, 10, QChar('0'));
+            return false;
+        }
+    }
+
+    manifest->batchNo = batchNo;
+    manifest->totalMd5 = totalMd5;
+    manifest->slices = slices;
+    manifest->rawXml = data;
+    return true;
+}
+
+bool FullBlackWorker::readLocalManifest(ST_FullManifest *manifest, QString *error) const
+{
+    const ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
+
+    const FileName localFile = FileName::fromString(snap.fullBlackPath + "/BlackUpdate.xml");
     if (!localFile.exists()) {
-        LOG_WARNING().noquote() << "本地BlackUpdate.xml不存在!";
-        return 0;
+        *error = "本地BlackUpdate.xml不存在";
+        return false;
     }
 
     FileReader reader;
     if (!reader.fetch(localFile.toString())) {
-        LOG_WARNING().noquote() << "读取本地BlackUpdate.xml文件失败:" << reader.errorString();
+        *error = QString("读取本地BlackUpdate.xml失败: %1").arg(reader.errorString());
+        return false;
+    }
+
+    return parseFullManifest(reader.data(), QUrl(), manifest, error);
+}
+
+bool FullBlackWorker::fetchRemoteManifest(ST_FullManifest *manifest, QString *error) const
+{
+    const ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
+    QString baseUrl = snap.stationServiceURL.trimmed();
+    while (baseUrl.endsWith('/'))
+        baseUrl.chop(1);
+    const QUrl manifestUrl(baseUrl + "/BlackUpdate/BlackUpdate.xml");
+    if (!manifestUrl.isValid() || manifestUrl.isEmpty()) {
+        *error = QString("远程BlackUpdate.xml地址无效: %1").arg(manifestUrl.toString());
+        return false;
+    }
+
+    QByteArray data;
+    if (!m_http->getSync(data, manifestUrl)) {
+        *error = QString("远程BlackUpdate.xml获取失败: %1").arg(QString::fromUtf8(data));
+        return false;
+    }
+    if (data.isEmpty()) {
+        *error = "远程BlackUpdate.xml内容为空";
+        return false;
+    }
+
+    return parseFullManifest(data, manifestUrl, manifest, error);
+}
+
+int FullBlackWorker::getLocalBatchNo()
+{
+    ST_FullManifest manifest;
+    QString error;
+    if (!readLocalManifest(&manifest, &error)) {
+        LOG_WARNING().noquote() << error;
         return 0;
     }
 
-    const QByteArray data = reader.data();
-    bool ok = false;
-    QString errDesc;
-    QVariantMap resMap = DataDealUtils::xmlToMap(data, &ok, &errDesc);
-    if (!ok) {
-        LOG_WARNING().noquote() << "本地BlackUpdate.xml数据内容解析失败:" << errDesc;
-        return 0;
-    }
-
-    int localBatchNo = resMap["batchno"].toInt(&ok);
-    if (!ok) {
-        LOG_WARNING().noquote() << "本地BlackUpdate.xml解析获取批次号失败";
-        return 0;
-    }
-
-    return localBatchNo;
+    return manifest.batchNo;
 }
 
 int FullBlackWorker::getRemoteBatchNo()
 {
-    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
-
-    QString url = snap.stationServiceURL + "/BlackUpdate/BlackUpdate.xml";
-    QByteArray data;
-    bool ok = m_http->getSync(data, QUrl(url));
-    if (!ok) {
-        LOG_WARNING().noquote() << "远程BlackUpdate.xml获取失败:" << data;
+    ST_FullManifest manifest;
+    QString error;
+    if (!fetchRemoteManifest(&manifest, &error)) {
+        LOG_WARNING().noquote() << error;
         return 0;
     }
 
-    QString errDesc;
-    QVariantMap resMap = DataDealUtils::xmlToMap(data, &ok, &errDesc);
-    if (!ok) {
-        LOG_WARNING().noquote() << "远程BlackUpdate.xml数据内容解析失败:" << errDesc;
-        return 0;
-    }
-
-    int remoteBatchNo = resMap["batchno"].toInt(&ok);
-    if (!ok) {
-        LOG_WARNING().noquote() << "远程BlackUpdate.xml解析获取批次号失败";
-        return 0;
-    }
-
-    return remoteBatchNo;
+    return manifest.batchNo;
 }
