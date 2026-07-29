@@ -26,8 +26,8 @@ private:
     // 获取并校验全量临时目录路径，确保它严格位于fullBlackPath下
     bool resolveStagingPath(QString *path, QString *error) const;
 
-    // 清理.staging中的下载切片，保留可复用的完整ZIP
-    bool cleanupFullSlices(QString *error) const;
+    // 清理.staging中的切片、写入临时文件和异常目录，仅保留普通完整ZIP文件
+    bool cleanupStagingTransientFiles(QString *error) const;
 
     // 读取本地BlackUpdate.xml
     bool readLocalManifest(ST_FullManifest *manifest, QString *error) const;
@@ -38,10 +38,10 @@ private:
     // 解析并校验BlackUpdate.xml。manifestUrl非空时，同时生成切片下载地址
     bool parseFullManifest(const QByteArray &data, const QUrl &manifestUrl, ST_FullManifest *manifest, QString *error) const;
 
-    // 保存待下载清单并启动切片下载
-    void prepareFullDownload(const ST_FullManifest &manifest, EM_FullBlackStatus status = FullBlackDownloading);
+    // 保存待更新清单，优先复用完整ZIP；允许回退时才启动切片下载
+    void prepareFullUpdate(const ST_FullManifest &manifest, EM_FullBlackStatus status = FullBlackDownloading, bool allowDownloadFallback = true);
 
-    // 清理遗留切片并创建.staging目录
+    // 获取并创建.staging目录
     bool prepareStagingDirectory(QString *path, QString *error);
 
     // 按清单顺序下载下一个全量切片
@@ -111,22 +111,24 @@ private:
     bool m_isFirstCheck = true;
     // 是否已经进入全量更新流程
     bool m_updateRunning = false;
-    // 当前等待下载的BlackUpdate.xml
+    // 当前等待处理的BlackUpdate.xml
     ST_FullManifest m_pendingManifest;
     // 当前全量更新使用的批次临时目录
     QString m_stagingPath;
     // 当前正在下载的切片下标
     int m_downloadSliceIndex = 0;
-    // 当前流式下载任务
-    QPointer<HttpDownloadReply> m_downloadReply;
     // 拼接并校验通过的完整ZIP路径
     QString m_fullZipPath;
     // 已发布到正式目录、尚未切换连接的数据库路径
     QString m_publishedDbPath;
+    // 当前清单来自远程权威来源，成功后可以安全裁剪其他批次完整ZIP
+    bool m_pruneFullZipCacheOnSuccess = false;
     // 全量数据库连接 [0]: 活动连接 [1]: 候选连接，非加载期间处于关闭状态
     QSqlDatabase m_dao[2];
     // 定时器
     QTimer *m_timer = nullptr;
 
     Http *m_http = nullptr;
+    // 当前流式下载任务
+    QPointer<HttpDownloadReply> m_downloadReply;
 };

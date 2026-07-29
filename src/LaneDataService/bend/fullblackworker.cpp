@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QRegularExpression>
 #include <QSqlError>
 
@@ -37,8 +38,8 @@ FullBlackWorker::~FullBlackWorker()
     }
 
     QString stagingError;
-    if (!cleanupFullSlices(&stagingError))
-        LOG_WARNING().noquote() << "析构时清理全量下载切片失败:" << stagingError;
+    if (!cleanupStagingTransientFiles(&stagingError))
+        LOG_WARNING().noquote() << "析构时清理全量暂存文件失败:" << stagingError;
 
     QString connectionNames[2];
     for (int i = 0; i < 2; ++i) {
@@ -92,7 +93,7 @@ void FullBlackWorker::onCheckFullBlack()
 
     // 本地和远程清单都不可用，没有可确定的全量批次
     if (!localOk && !remoteOk) {
-        setStatus(m_isFirstCheck ? false : m_isValid, m_isFirstCheck ? FullBlackUnavailable : FullBlackCheckFailed);
+        setStatus(m_isValid, FullBlackCheckFailed);
         finishFirstCheck();
         scheduleNextCheck();
         return;
@@ -100,13 +101,13 @@ void FullBlackWorker::onCheckFullBlack()
 
     // 本地清单无效，直接下载远程权威批次
     if (!localOk) {
-        prepareFullDownload(remoteManifest);
+        prepareFullUpdate(remoteManifest);
         return;
     }
 
     // 本地批次落后，不加载旧全量，直接下载远程权威批次
     if (remoteOk && localManifest.batchNo < remoteManifest.batchNo) {
-        prepareFullDownload(remoteManifest);
+        prepareFullUpdate(remoteManifest);
         return;
     }
 
@@ -114,7 +115,7 @@ void FullBlackWorker::onCheckFullBlack()
     if (remoteOk && localManifest.batchNo > remoteManifest.batchNo) {
         LOG_ERROR().noquote() << "本地batchno高于远程batchno，按远程batchno重新下载修复。本地batchno:" << localManifest.batchNo
                               << "远程batchno:" << remoteManifest.batchNo;
-        prepareFullDownload(remoteManifest, FullBlackLocalBatchAhead);
+        prepareFullUpdate(remoteManifest, FullBlackLocalBatchAhead);
         return;
     }
 
@@ -122,6 +123,8 @@ void FullBlackWorker::onCheckFullBlack()
     const int localBatchNo = localManifest.batchNo;
     if (!m_isFirstCheck && m_isValid && localBatchNo == m_activeBatchNo) {
         LOG_INFO().noquote() << "当前活动全量与本地BlackUpdate.xml中相同，无需重复加载，批次:" << localBatchNo;
+        if (remoteOk)
+            pruneOtherFullZipFiles(localBatchNo);
         setStatus(true, FullBlackReady);
         scheduleNextCheck();
         return;
@@ -134,20 +137,23 @@ void FullBlackWorker::onCheckFullBlack()
 
         // 只要远程清单可用，就尝试通过下载恢复，包括本地和远程同批次的情况
         if (remoteOk) {
-            prepareFullDownload(remoteManifest);
+            prepareFullUpdate(remoteManifest);
             return;
         }
 
-        setStatus(m_isFirstCheck ? false : m_isValid, FullBlackLocalLoadFailed);
-        finishFirstCheck();
-        scheduleNextCheck();
+        // 远程不可用时，仍可使用本地有效清单校验并恢复保留的完整ZIP。
+        prepareFullUpdate(localManifest, FullBlackLocalLoadFailed, false);
         return;
     }
 
     LOG_INFO().noquote() << "本地全量加载成功，批次:" << localBatchNo;
     setStatus(true, FullBlackReady);
     pruneOtherFullBlackFiles(localBatchNo);
-    pruneOtherFullZipFiles(localBatchNo);
+    if (remoteOk) {
+        pruneOtherFullZipFiles(localBatchNo);
+    } else {
+        LOG_INFO().noquote() << "远程BlackUpdate.xml不可用，暂不清理其他批次完整全量ZIP";
+    }
     finishFirstCheck();
     scheduleNextCheck();
 }
@@ -164,9 +170,8 @@ bool FullBlackWorker::resolveStagingPath(QString *path, QString *error) const
     }
 
     FileName fullBlackPath = FileUtils::canonicalPath(FileName::fromString(configuredPath));
-    FileName stagingTemp = fullBlackPath;
-    stagingTemp.appendPath(".staging");
-    FileName stagingPath = FileUtils::canonicalPath(stagingTemp);
+    QString stagingTemp = QDir(fullBlackPath.toString()).filePath(".stging");
+    FileName stagingPath = FileUtils::canonicalPath(FileName::fromString(stagingTemp));
     if (!stagingPath.isChildOf(fullBlackPath)) {
         *error = QString("全量临时目录不在fullBlackPath内: %1").arg(stagingPath.toString());
         return false;
@@ -176,7 +181,7 @@ bool FullBlackWorker::resolveStagingPath(QString *path, QString *error) const
     return true;
 }
 
-bool FullBlackWorker::cleanupFullSlices(QString *error) const
+bool FullBlackWorker::cleanupStagingTransientFiles(QString *error) const
 {
     error->clear();
 
@@ -188,29 +193,31 @@ bool FullBlackWorker::cleanupFullSlices(QString *error) const
     if (!stagingDir.exists())
         return true;
 
-    const QRegularExpression sliceRegex("^ETCBlackCard_\\d+\\.zip\\.\\d{2}$");
-    QStringList failedFiles;
-    const QStringList files = stagingDir.entryList(QDir::Files | QDir::NoDotAndDotDot);
-    for (const QString &fileName : files) {
-        if (!sliceRegex.match(fileName).hasMatch())
+    const QRegularExpression fullZipRegex("^ETCBlackCard_\\d+\\.zip$");
+    QStringList failedEntries;
+    const QFileInfoList entries = stagingDir.entryInfoList(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
+    for (const QFileInfo &entry : entries) {
+        const QString fileName = entry.fileName();
+        if (entry.isFile() && !entry.isSymLink() && fullZipRegex.match(fileName).hasMatch())
             continue;
 
-        if (!QFile::remove(stagingDir.filePath(fileName)))
-            failedFiles.append(fileName);
+        QString removeError;
+        bool removed = FileUtils::removeRecursively(FileName::fromString(entry.absoluteFilePath()), &removeError);
+        if (!removed)
+            failedEntries.append(removeError.isEmpty() ? fileName : QString("%1（%2）").arg(fileName, removeError));
     }
 
-    if (failedFiles.isEmpty())
+    if (failedEntries.isEmpty())
         return true;
 
-    *error = QString("删除全量下载切片失败: %1").arg(failedFiles.join(", "));
+    *error = QString("删除全量暂存文件失败: %1").arg(failedEntries.join(", "));
     return false;
 }
 
 bool FullBlackWorker::prepareStagingDirectory(QString *path, QString *error)
 {
     path->clear();
-    if (!cleanupFullSlices(error))
-        return false;
+    error->clear();
 
     QString stagingRootPath;
     if (!resolveStagingPath(&stagingRootPath, error))
@@ -225,15 +232,17 @@ bool FullBlackWorker::prepareStagingDirectory(QString *path, QString *error)
     return true;
 }
 
-void FullBlackWorker::prepareFullDownload(const ST_FullManifest &manifest, EM_FullBlackStatus status)
+void FullBlackWorker::prepareFullUpdate(const ST_FullManifest &manifest, EM_FullBlackStatus status, bool allowDownloadFallback)
 {
+    m_pruneFullZipCacheOnSuccess = false;
+
     QString stagingError;
     QString stagingPath;
     if (!prepareStagingDirectory(&stagingPath, &stagingError)) {
         LOG_ERROR().noquote() << "准备全量临时目录失败:" << stagingError;
         m_pendingManifest = ST_FullManifest();
         m_updateRunning = false;
-        setStatus(false, FullBlackDownloadFailed);
+        setStatus(m_isValid, allowDownloadFallback ? FullBlackDownloadFailed : status);
         finishFirstCheck();
         scheduleNextCheck();
         return;
@@ -243,10 +252,12 @@ void FullBlackWorker::prepareFullDownload(const ST_FullManifest &manifest, EM_Fu
     m_stagingPath = stagingPath;
     m_downloadSliceIndex = 0;
     m_updateRunning = true;
+    m_pruneFullZipCacheOnSuccess = allowDownloadFallback;
 
     const QString reusableZipPath = QDir(m_stagingPath).filePath(QString("ETCBlackCard_%1.zip").arg(manifest.batchNo));
-    if (QFile::exists(reusableZipPath)) {
-        setStatus(false, FullBlackVerifying);
+    FileName reusableZipFile = FileName::fromString(reusableZipPath);
+    if (reusableZipFile.exists()) {
+        setStatus(m_isValid, FullBlackVerifying);
 
         QString verifyError;
         if (validateFullZip(reusableZipPath, &verifyError)) {
@@ -256,11 +267,25 @@ void FullBlackWorker::prepareFullDownload(const ST_FullManifest &manifest, EM_Fu
             return;
         }
 
-        LOG_WARNING().noquote() << "本地完整全量ZIP不可复用，将重新下载，批次:" << manifest.batchNo << "原因:" << verifyError;
+        LOG_WARNING().noquote() << (allowDownloadFallback ? "本地完整全量ZIP不可复用，将重新下载，批次:"
+                                                          : "本地完整全量ZIP不可复用，无法进行本地恢复，批次:")
+                                << manifest.batchNo << "原因:" << verifyError;
+
         if (!QFile::remove(reusableZipPath)) {
-            failFullUpdate(QString("删除无效完整全量ZIP失败: %1").arg(reusableZipPath), FullBlackVerifyFailed);
+            failFullUpdate(QString("删除无效完整全量ZIP失败: %1").arg(reusableZipPath), allowDownloadFallback ? FullBlackVerifyFailed : status);
             return;
         }
+    }
+
+    if (!allowDownloadFallback) {
+        failFullUpdate(QString("远程BlackUpdate.xml不可用，且本地完整全量ZIP不可复用: %1").arg(reusableZipPath), status);
+        return;
+    }
+
+    QString cleanupError;
+    if (!cleanupStagingTransientFiles(&cleanupError)) {
+        failFullUpdate(QString("准备下载时清理全量暂存文件失败: %1").arg(cleanupError), FullBlackDownloadFailed);
+        return;
     }
 
     LOG_INFO().noquote() << "需要下载远程全量，批次:" << manifest.batchNo << "切片数量:" << manifest.slices.size() << "临时目录:" << m_stagingPath;
@@ -409,7 +434,7 @@ void FullBlackWorker::publishValidatedFullZip()
     if (!m_updateRunning || m_fullZipPath.isEmpty())
         return;
 
-    setStatus(false, FullBlackPublishing);
+    setStatus(m_isValid, FullBlackPublishing);
 
     QString dbPath;
     QString extractError;
@@ -499,7 +524,7 @@ bool FullBlackWorker::publishLocalManifest(QString *error) const
 {
     error->clear();
     if (m_pendingManifest.rawXml.isEmpty()) {
-        *error = "远程BlackUpdate.xml原始内容为空";
+        *error = "待发布BlackUpdate.xml原始内容为空";
         return false;
     }
 
@@ -530,12 +555,13 @@ void FullBlackWorker::failFullUpdate(const QString &error, EM_FullBlackStatus st
     m_updateRunning = false;
 
     QString cleanupError;
-    if (!cleanupFullSlices(&cleanupError))
-        LOG_WARNING().noquote() << "全量更新失败后清理下载切片失败:" << cleanupError;
+    if (!cleanupStagingTransientFiles(&cleanupError))
+        LOG_WARNING().noquote() << "全量更新失败后清理暂存文件失败:" << cleanupError;
 
     m_stagingPath.clear();
     m_fullZipPath.clear();
     m_publishedDbPath.clear();
+    m_pruneFullZipCacheOnSuccess = false;
 
     setStatus(false, status);
     finishFirstCheck();
@@ -545,13 +571,18 @@ void FullBlackWorker::failFullUpdate(const QString &error, EM_FullBlackStatus st
 void FullBlackWorker::finishFullUpdate()
 {
     const int activeBatchNo = m_activeBatchNo;
+    const bool pruneFullZipCache = m_pruneFullZipCacheOnSuccess;
 
     QString cleanupError;
-    if (!cleanupFullSlices(&cleanupError))
-        LOG_WARNING().noquote() << "全量更新成功后清理下载切片失败:" << cleanupError;
+    if (!cleanupStagingTransientFiles(&cleanupError))
+        LOG_WARNING().noquote() << "全量更新成功后清理暂存文件失败:" << cleanupError;
 
     pruneOtherFullBlackFiles(activeBatchNo);
-    pruneOtherFullZipFiles(activeBatchNo);
+    if (pruneFullZipCache) {
+        pruneOtherFullZipFiles(activeBatchNo);
+    } else {
+        LOG_INFO().noquote() << "本次使用本地清单恢复全量，暂不清理其他批次完整全量ZIP";
+    }
 
     m_downloadReply.clear();
     m_downloadSliceIndex = 0;
@@ -560,6 +591,7 @@ void FullBlackWorker::finishFullUpdate()
     m_stagingPath.clear();
     m_fullZipPath.clear();
     m_publishedDbPath.clear();
+    m_pruneFullZipCacheOnSuccess = false;
 
     setStatus(true, FullBlackReady);
     finishFirstCheck();
@@ -588,10 +620,10 @@ void FullBlackWorker::onInit()
 {
     connect(GM_INS->m_sigMan, &SignalManager::sigCleanETCBlackCardFinished, this, &FullBlackWorker::onCleanETCBlackCardFinished);
 
-    // 清理上次异常退出遗留的下载切片，保留完整ZIP供本轮检查复用
+    // 清理上次异常退出遗留的切片和写入临时文件，保留普通完整ZIP供本轮检查复用
     QString stagingError;
-    if (!cleanupFullSlices(&stagingError))
-        LOG_WARNING().noquote() << "全量检查进程启动时，清理全量下载切片失败:" << stagingError;
+    if (!cleanupStagingTransientFiles(&stagingError))
+        LOG_WARNING().noquote() << "全量检查进程启动时，清理全量暂存文件失败:" << stagingError;
 
     // 全量数据库连接初始化
     for (int i = 0; i < 2; ++i) {
@@ -652,7 +684,7 @@ void FullBlackWorker::pruneOtherFullZipFiles(int batchNo)
 
     const QString activeFileName = QString("ETCBlackCard_%1.zip").arg(batchNo);
     const QRegularExpression zipRegex("^ETCBlackCard_\\d+\\.zip$");
-    const QStringList files = stagingDir.entryList(QDir::Files | QDir::NoDotAndDotDot);
+    const QStringList files = stagingDir.entryList(QDir::Files | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
     for (const QString &fileName : files) {
         if (fileName == activeFileName || !zipRegex.match(fileName).hasMatch())
             continue;
