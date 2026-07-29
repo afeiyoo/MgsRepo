@@ -23,6 +23,7 @@ DeltaBlackWorker::DeltaBlackWorker(QObject *parent)
     : QObject{parent}
 {
     m_timer = new QTimer(this);
+    m_client = new Http();
 }
 
 DeltaBlackWorker::~DeltaBlackWorker()
@@ -39,34 +40,13 @@ DeltaBlackWorker::~DeltaBlackWorker()
 
 void DeltaBlackWorker::onInit()
 {
-    m_client = new Http();
-
-    // 增量数据库连接初始化
-    FileName dbPath = FileName::fromString(GM_INS->m_conf->getConfigSnap().deltaBlackPath + QStringLiteral("/ETCBlackListDelta.db"));
-    if (!dbPath.exists()) {
-        LOG_INFO().noquote() << "增量异常: 增量SQLite文件不存在";
-        setStatus(false, -1);
-        return;
-    }
-
-    m_dao = QSqlDatabase::addDatabase("QSQLITE", "deltaBlack");
-    m_dao.setDatabaseName(dbPath.toString());
-    if (!m_dao.isOpen() && !m_dao.open()) {
-        LOG_ERROR().noquote() << "增量异常: 初始化增量SQLite数据库失败" << m_dao.lastError().text();
-        setStatus(false, -2);
-        return;
-    }
+    // 首次全量检查完成后，立即进行增量检查
+    connect(GM_INS->m_sigMan, &SignalManager::sigFullBlackFirstCheckFinished, this, &DeltaBlackWorker::onCheckDeltaBlack);
+    connect(GM_INS->m_sigMan, &SignalManager::sigCleanETCBlackCard, this, &DeltaBlackWorker::onCleanETCBlackCard);
 
     // 每隔5分钟检查一次增量
     m_timer->setInterval(5 * 60 * 1000);
     connect(m_timer, &QTimer::timeout, this, &DeltaBlackWorker::onCheckDeltaBlack);
-
-    // 首次全量检查完成后，立即进行增量检查
-    connect(GM_INS->m_sigMan, &SignalManager::sigFullBlackFirstCheckFinished, this, &DeltaBlackWorker::onCheckDeltaBlack);
-
-    connect(GM_INS->m_sigMan, &SignalManager::sigCleanETCBlackCard, this, &DeltaBlackWorker::onCleanETCBlackCard);
-
-    m_timer->start();
 }
 
 bool DeltaBlackWorker::batchUpsertDeltaBlack(int operateTable, const QVariantList &blackDetails)
@@ -152,11 +132,39 @@ void DeltaBlackWorker::setStatus(bool isValid, int status)
     GM_INS->m_env->updateDeltaBlackEnvs(m_isValid, m_curStatus, m_version);
 }
 
+void DeltaBlackWorker::onFullBlackReady()
+{
+    if (!GM_INS->m_env->getEnvSnap().isFullBlackValid)
+        return;
+
+    if (!m_timer->isActive())
+        m_timer->start();
+
+    onCheckDeltaBlack();
+}
+
 void DeltaBlackWorker::onCheckDeltaBlack()
 {
     LOG_INFO().noquote() << "开始检查增量...";
 
-    while (true) {
+    // 增量数据库连接初始化
+    const QString targetPath = QDir(GM_INS->m_conf->getConfigSnap().deltaBlackPath).filePath("ETCBlackListDelta.db");
+    FileName dbPath = FileUtils::canonicalPath(FileName::fromString(targetPath));
+    if (!dbPath.exists()) {
+        LOG_INFO().noquote() << "增量异常: 增量SQLite文件不存在";
+        setStatus(false, -1);
+        return;
+    }
+
+    m_dao = QSqlDatabase::addDatabase("QSQLITE", "deltaBlack");
+    m_dao.setDatabaseName(dbPath.toString());
+    if (!m_dao.isOpen() && !m_dao.open()) {
+        LOG_ERROR().noquote() << "增量异常: 初始化增量SQLite数据库失败" << m_dao.lastError().text();
+        setStatus(false, -2);
+        return;
+    }
+
+    while (1) {
         QByteArray data = getDeltaBlackJson();
         if (data.isEmpty())
             break;
@@ -180,6 +188,7 @@ void DeltaBlackWorker::onCleanETCBlackCard(QString tableName)
         emit GM_INS->m_sigMan->sigCleanETCBlackCardFinished(res.numRowsAffected());
     } catch (const DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
+        emit GM_INS->m_sigMan->sigCleanETCBlackCardFinished(0);
         return;
     }
 }

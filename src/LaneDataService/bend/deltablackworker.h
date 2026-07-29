@@ -15,6 +15,7 @@ public:
 
 public slots:
     void onInit();
+    void onFullBlackReady();
     void onCheckDeltaBlack();
     void onCleanETCBlackCard(QString tableName);
 
@@ -50,6 +51,8 @@ private:
     int m_curStatus = -1;
     // 增量版本
     QString m_version;
+    // 全量指定要清空的表
+    QString m_cleanTable;
 
     QSqlDatabase m_dao;
 
