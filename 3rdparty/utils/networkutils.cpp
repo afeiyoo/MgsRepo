@@ -1,6 +1,7 @@
 #include "networkutils.h"
 
 #include <QHostInfo>
+#include <QUrl>
 
 using namespace Utils;
 
@@ -24,4 +25,18 @@ QStringList NetworkUtils::getLocalAddresses()
     }
 
     return addressList;
+}
+
+QUrl NetworkUtils::appendUrlPath(const QUrl &baseUrl, const QString &pathPart)
+{
+    QUrl url(baseUrl);
+
+    QString path = url.path();
+    if (!path.endsWith('/'))
+        path.append('/');
+
+    path.append(pathPart);
+    url.setPath(path);
+
+    return url;
 }
