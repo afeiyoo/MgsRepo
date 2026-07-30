@@ -3,10 +3,7 @@
 #include <QDir>
 #include <QMap>
 #include <QObject>
-#include <QSet>
 #include <QTimer>
-
-#include "utils/fileutils.h"
 
 #define GM_INSTANCE GlobalManager::instance()
 
@@ -23,6 +20,9 @@ public:
     static GlobalManager *instance();
 
     int init();
+
+private:
+    void initRemoteURIs();
 
 private slots:
     void onCleanExpiredPictures();

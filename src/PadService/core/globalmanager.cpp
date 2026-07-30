@@ -18,9 +18,10 @@ GlobalManager::GlobalManager(QObject *parent)
 {
     m_configMan = new ConfigManager(this);
     m_dtpSender = new DtpSender(this);
+
     m_confPath = QDir(FileUtils::curApplicationDirPath()).filePath("config/config.ini");
 
-    m_pictureDir = QDir(FileUtils::curApplicationDirPath() + "/pictures");
+    m_pictureDir.setPath(QDir(FileUtils::curApplicationDirPath()).filePath("pictures"));
     m_pictureCleanupTimer = new QTimer(this);
 
     m_ds = new DataService();
@@ -41,7 +42,7 @@ void GlobalManager::onCleanExpiredPictures()
     QString error;
     const bool ok = FileUtils::autoDeleteFiles(m_pictureDir.absolutePath(), ".jpg", 30 * 24, &error);
     if (!ok)
-        LOG_INFO().noquote() << "定期删除" << m_pictureDir.absolutePath() << "下过期文件失败:" << error;
+        LOG_WARNING().noquote() << "定期删除" << m_pictureDir.absolutePath() << "下过期文件失败:" << error;
 }
 
 int GlobalManager::init()
@@ -60,27 +61,12 @@ int GlobalManager::init()
     rollingFileAppender->setDatePattern(RollingFileAppender::DatePattern::DailyRollover);
     cuteLogger->registerAppender(rollingFileAppender);
 
-    LOG_INFO().noquote() << "开始进行程序初始化...";
-
     // 配置加载
     if (!QFileInfo::exists(m_confPath)) {
         LOG_ERROR().noquote() << "程序初始化失败: 配置文件不存在" << m_confPath;
         return -100;
     }
     m_configMan->loadConfig(m_confPath);
-
-    // 系统环境初始化
-    FileUtils::makeSureDirExist(FileName::fromString(m_pictureDir.absolutePath()));
-    FileUtils::makeSureDirExist(FileName::fromString(GM_INSTANCE->m_configMan->m_baseConfig.cachePath));
-
-    m_pictureCleanupTimer->setInterval(30 * 60 * 1000);
-    connect(m_pictureCleanupTimer, &QTimer::timeout, this, &GlobalManager::onCleanExpiredPictures);
-    onCleanExpiredPictures();
-    m_pictureCleanupTimer->start();
-
-#if QT_VERSION <= QT_VERSION_CHECK(5, 10, 0)
-    qsrand(QTime(0, 0, 0).secsTo(QTime::currentTime())); // 随机数种子初始化
-#endif
 
     // 数据库连接初始化
     QString dbType = m_configMan->m_dbConfig.type;
@@ -92,43 +78,62 @@ int GlobalManager::init()
     }
 
     // Dtp发送对象初始化
-    bool dtpOk = m_dtpSender->initDtp("./libDtp-Client.so");
+    const QString dtpLibPath = QDir(FileUtils::curApplicationDirPath()).filePath("libDtp-Client.so");
+    bool dtpOk = m_dtpSender->initDtp(dtpLibPath);
     if (!dtpOk) {
         LOG_ERROR().noquote() << "程序初始化失败: DTP初始化失败";
         return -102;
     }
 
     // 云坐席台账接口URI初始化
-    m_remoteURIs.insert(11, "/adminlogin/login");
-    m_remoteURIs.insert(21, "/rmtLeaveAndReturn/pagn");
-    m_remoteURIs.insert(22, "/rmtLeaveAndReturn/save");
-    m_remoteURIs.insert(23, "/rmtLeaveAndReturn/getById/%1");
-    m_remoteURIs.insert(31, "/rmtLeader/pagn");
-    m_remoteURIs.insert(32, "/rmtLeader/save");
-    m_remoteURIs.insert(33, "/rmtLeader/getById/%1");
-    m_remoteURIs.insert(41, "/rmtNightPatrol/pagn");
-    m_remoteURIs.insert(42, "/rmtNightPatrol/save");
-    m_remoteURIs.insert(43, "/rmtNightPatrol/getById/%1");
-    m_remoteURIs.insert(51, "/rmtSpecialVehicle/pagn");
-    m_remoteURIs.insert(52, "/rmtSpecialVehicle/save");
-    m_remoteURIs.insert(53, "/rmtSpecialVehicle/getById/%1");
-    m_remoteURIs.insert(54, "/rmtSpecialVehicle/enPassRecord");
-    m_remoteURIs.insert(55, "/rmtSpecialVehicle/pictureSave");
-    m_remoteURIs.insert(56, "/rmtSpecialVehicle/pictureDownload");
-    m_remoteURIs.insert(61, "/rmtOverWeight/pagn");
-    m_remoteURIs.insert(62, "/rmtOverWeight/save");
-    m_remoteURIs.insert(63, "/rmtOverWeight/getById/%1");
-    m_remoteURIs.insert(64, "/rmtOverWeight/overWeightRecord");
-    m_remoteURIs.insert(71, "/rmtIllegalEntry/pagn");
-    m_remoteURIs.insert(72, "/rmtIllegalEntry/save");
-    m_remoteURIs.insert(73, "/rmtIllegalEntry/getById/%1");
-    m_remoteURIs.insert(81, "/rmtUnmannedLane/pagn");
-    m_remoteURIs.insert(82, "/rmtUnmannedLane/save");
-    m_remoteURIs.insert(83, "/rmtUnmannedLane/getById/%1");
-    m_remoteURIs.insert(91, "/rmtSystemUser/getAll");
-    m_remoteURIs.insert(101, "/rmtShiftRecord/pagn");
-    m_remoteURIs.insert(102, "/rmtShiftRecord/save");
-    m_remoteURIs.insert(103, "/rmtShiftRecord/getById/%1");
+    initRemoteURIs();
+
+    // 系统环境初始化
+    FileUtils::makeSureDirExist(FileName::fromString(m_pictureDir.absolutePath()));
+    FileUtils::makeSureDirExist(FileName::fromString(m_configMan->m_baseConfig.cachePath));
+
+    m_pictureCleanupTimer->setInterval(30 * 60 * 1000);
+    connect(m_pictureCleanupTimer, &QTimer::timeout, this, &GlobalManager::onCleanExpiredPictures);
+    onCleanExpiredPictures();
+    m_pictureCleanupTimer->start();
+
+#if QT_VERSION <= QT_VERSION_CHECK(5, 10, 0)
+    qsrand(QTime(0, 0, 0).secsTo(QTime::currentTime())); // 随机数种子初始化
+#endif
 
     return 0;
+}
+
+void GlobalManager::initRemoteURIs()
+{
+    m_remoteURIs = {{11, "/adminlogin/login"},
+                    {21, "/rmtLeaveAndReturn/pagn"},
+                    {22, "/rmtLeaveAndReturn/save"},
+                    {23, "/rmtLeaveAndReturn/getById/%1"},
+                    {31, "/rmtLeader/pagn"},
+                    {32, "/rmtLeader/save"},
+                    {33, "/rmtLeader/getById/%1"},
+                    {41, "/rmtNightPatrol/pagn"},
+                    {42, "/rmtNightPatrol/save"},
+                    {43, "/rmtNightPatrol/getById/%1"},
+                    {51, "/rmtSpecialVehicle/pagn"},
+                    {52, "/rmtSpecialVehicle/save"},
+                    {53, "/rmtSpecialVehicle/getById/%1"},
+                    {54, "/rmtSpecialVehicle/enPassRecord"},
+                    {55, "/rmtSpecialVehicle/pictureSave"},
+                    {56, "/rmtSpecialVehicle/pictureDownload"},
+                    {61, "/rmtOverWeight/pagn"},
+                    {62, "/rmtOverWeight/save"},
+                    {63, "/rmtOverWeight/getById/%1"},
+                    {64, "/rmtOverWeight/overWeightRecord"},
+                    {71, "/rmtIllegalEntry/pagn"},
+                    {72, "/rmtIllegalEntry/save"},
+                    {73, "/rmtIllegalEntry/getById/%1"},
+                    {81, "/rmtUnmannedLane/pagn"},
+                    {82, "/rmtUnmannedLane/save"},
+                    {83, "/rmtUnmannedLane/getById/%1"},
+                    {91, "/rmtSystemUser/getAll"},
+                    {101, "/rmtShiftRecord/pagn"},
+                    {102, "/rmtShiftRecord/save"},
+                    {103, "/rmtShiftRecord/getById/%1"}};
 }
