@@ -1165,7 +1165,7 @@ QString DataDealUtils::fullExecutedQuery(const QSqlQuery &query)
 QVariantMap DataDealUtils::jsonToMap(const QByteArray &data, bool *ok, QString *errDesc)
 {
     *ok = false;
-    (*errDesc).clear();
+    errDesc->clear();
 
     QJsonParseError err;
     QJsonDocument doc = QJsonDocument::fromJson(data, &err);
@@ -1187,7 +1187,7 @@ QVariantMap DataDealUtils::jsonToMap(const QByteArray &data, bool *ok, QString *
 QVariantList DataDealUtils::jsonToList(const QByteArray &data, bool *ok, QString *errDesc)
 {
     *ok = false;
-    (*errDesc).clear();
+    errDesc->clear();
 
     QJsonParseError err;
     QJsonDocument doc = QJsonDocument::fromJson(data, &err);
@@ -1225,7 +1225,7 @@ QVariantMap DataDealUtils::xmlToMap(const QByteArray &data, bool *ok, QString *e
     QXmlStreamReader reader(data);
 
     *ok = true;
-    (*errDesc).clear();
+    errDesc->clear();
     while (!reader.atEnd()) {
         reader.readNext();
 

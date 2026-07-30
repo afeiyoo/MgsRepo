@@ -21,7 +21,7 @@ public:
     static QString cryptoMD5(const QString &s, bool bUtf8 = true);
 
     // 大文件计算MD5编码
-    static QString bigFileMd5(const QString &filePath, bool *ok = nullptr);
+    static QString bigFileMd5(const QString &filePath, bool *ok);
 
     // Modbus CRC16校验
     static quint16 getModbus16(quint8 *data, int len);
@@ -183,10 +183,10 @@ public:
     /****                 内容格式转换相关               ****/
     /*******************************************************/
     // Json对象转换成QVariantMap
-    static QVariantMap jsonToMap(const QByteArray &data, bool *ok = nullptr, QString *errDesc = nullptr);
+    static QVariantMap jsonToMap(const QByteArray &data, bool *ok, QString *errDesc);
 
     // Json数组转换成QVariantList
-    static QVariantList jsonToList(const QByteArray &data, bool *ok = nullptr, QString *errDesc = nullptr);
+    static QVariantList jsonToList(const QByteArray &data, bool *ok, QString *errDes);
 
     // QVariantMap转换成QByteArray并可以指定输出格式
     static QByteArray mapToJson(const QVariantMap &map, QJsonDocument::JsonFormat format = QJsonDocument::Compact);
@@ -195,7 +195,7 @@ public:
     static QByteArray listToJson(const QVariantList &list, QJsonDocument::JsonFormat format = QJsonDocument::Compact);
 
     // XML转换成QVariantMap, 重复出现的同名节点会转成 QVariantList
-    static QVariantMap xmlToMap(const QByteArray &data, bool *ok = nullptr, QString *errDesc = nullptr);
+    static QVariantMap xmlToMap(const QByteArray &data, bool *ok, QString *errDesc);
 
     // QObject对象转换成QVariantMap,并可以指定忽略属性
     static QVariantMap qobject2qvariant(const QObject *object,

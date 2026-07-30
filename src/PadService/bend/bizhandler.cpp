@@ -2839,7 +2839,7 @@ bool BizHandler::repostAuditData(const QString &fileName, const QString &station
         }
 
         LOG_INFO().noquote() << "返回稽核补费上传结果:" << result.left(1024);
-        QVariantMap tempMap = Utils::DataDealUtils::jsonToMap(result);
+        QVariantMap tempMap = Utils::DataDealUtils::jsonToMap(result, &jsonOk, &jsonErr);
         bool uploadSuccess = tempMap["success"].toBool();
 
         if (!uploadSuccess) {
