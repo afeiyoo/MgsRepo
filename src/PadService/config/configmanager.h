@@ -2,18 +2,16 @@
 
 #include "global/defs.h"
 #include "utils/configutils.h"
-#include "utils/fileutils.h"
 #include <QObject>
 
-class FileName;
-class Config : public QObject
+class ConfigManager : public QObject
 {
     Q_OBJECT
 public:
-    explicit Config(QObject *parent = nullptr);
-    ~Config() override;
+    explicit ConfigManager(QObject *parent = nullptr);
+    ~ConfigManager() override;
 
-    void loadConfig(const Utils::FileName &configPath);
+    void loadConfig(const QString &configPath);
 
 public:
     ST_BaseConfig m_baseConfig;

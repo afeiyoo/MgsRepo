@@ -9,7 +9,7 @@
 #define GM_INSTANCE GlobalManager::instance()
 
 class DtpSender;
-class Config;
+class ConfigManager;
 class DataService;
 class GlobalManager : public QObject
 {
@@ -26,7 +26,7 @@ public:
     // 配置文件路径
     QString m_confPath;
     // 配置对象
-    Config *m_config = nullptr;
+    ConfigManager *m_configMan = nullptr;
     // 数据库操作对象
     DataService *m_ds = nullptr;
     // 图片保存目录

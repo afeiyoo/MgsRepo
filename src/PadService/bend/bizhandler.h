@@ -90,6 +90,8 @@ private:
     int getUniqueTradeNum(const QString &stationId);
     // 第三方支付时，根据错误码获取错误信息
     QString getErrInfo(int errorCode);
+    // 保存稽核补费缓存数据
+    bool saveAuditCache(const QString &fileName, const QVariantMap &cacheMap, QString *errDesc);
 
     // 3.3.32 大件运输车预约信息查询
     QString doDealCmd32(const QVariantMap &aMap);
@@ -120,6 +122,13 @@ private:
 
     // 3.3.41 权限管理
     QString doDealCmd41(const QVariantMap &aMap);
+
+    // 3.3.42 数据重传
+    QString doDealCmd42(const QVariantMap &aMap);
+    // 重传稽核补费数据
+    bool repostAuditData(const QString &fileName, const QString &stationID, QString *errDesc);
+    // 更新缓存数据
+    bool updateCache(const QString &fileName, const QString &key, const QVariant &val);
 
 private:
     static QMap<QString, ST_AuditInfo> m_auditInfos;

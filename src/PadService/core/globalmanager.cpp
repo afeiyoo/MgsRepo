@@ -3,23 +3,25 @@
 #include "ConsoleAppender.h"
 #include "Logger.h"
 #include "RollingFileAppender.h"
-#include "config/config.h"
+#include "config/configmanager.h"
 #include "core/dtpsender.h"
 #include "dataservice/dataservice.h"
 #include "utils/fileutils.h"
 #include "utils/stdafx.h"
+
+using namespace Utils;
 
 Q_GLOBAL_STATIC(GlobalManager, ins);
 
 GlobalManager::GlobalManager(QObject *parent)
     : QObject{parent}
 {
-    m_config = new Config(this);
+    m_configMan = new ConfigManager(this);
     m_dtpSender = new DtpSender(this);
-    m_confPath = Utils::FileUtils::curApplicationDirPath() + "/config/config.ini";
+    m_confPath = FileUtils::curApplicationDirPath() + "/config/config.ini";
 
-    m_pictureDir = Utils::FileName::fromString(Utils::FileUtils::curApplicationDirPath() + "/pictures");
-    Utils::FileUtils::makeSureDirExist(m_pictureDir);
+    m_pictureDir = FileName::fromString(FileUtils::curApplicationDirPath() + "/pictures");
+    FileUtils::makeSureDirExist(m_pictureDir);
 
     m_ds = new DataService();
 }
@@ -36,39 +38,41 @@ GlobalManager *GlobalManager::instance()
 
 int GlobalManager::init()
 {
-    // 配置加载
-    Utils::FileName configPath = Utils::FileName::fromString(m_confPath);
-    if (!configPath.exists())
-        return -100;
-    m_config->loadConfig(configPath);
-
     // 日志初始化
     ConsoleAppender *consoleAppender = new ConsoleAppender();
-    consoleAppender->setFormat(m_config->m_logConfig.format);
+    consoleAppender->setFormat(m_configMan->m_logConfig.format);
     cuteLogger->registerAppender(consoleAppender);
 
-    Utils::FileName logPath = Utils::FileName::fromString(Utils::FileUtils::curApplicationDirPath() + "/logs/PadService.log");
-    Utils::FileUtils::makeSureDirExist(logPath.parentDir());
-    RollingFileAppender *rollingFileAppender = new RollingFileAppender(Utils::FileUtils::canonicalPath(logPath).toString());
-    rollingFileAppender->setFormat(m_config->m_logConfig.format);
-    rollingFileAppender->setLogFilesLimit(m_config->m_logConfig.filesLimit);
+    FileName logPath = FileName::fromString(FileUtils::curApplicationDirPath() + "/logs/PadService.log");
+    FileUtils::makeSureDirExist(logPath.parentDir());
+    RollingFileAppender *rollingFileAppender = new RollingFileAppender(FileUtils::canonicalPath(logPath).toString());
+    rollingFileAppender->setFormat(m_configMan->m_logConfig.format);
+    rollingFileAppender->setLogFilesLimit(m_configMan->m_logConfig.filesLimit);
     rollingFileAppender->setFlushOnWrite(true);
     rollingFileAppender->setDatePattern(RollingFileAppender::DatePattern::DailyRollover);
     cuteLogger->registerAppender(rollingFileAppender);
 
+    // 配置加载
+    FileName configPath = FileName::fromString(m_confPath);
+    if (!configPath.exists())
+        return -100;
+    m_configMan->loadConfig(m_confPath);
+
     // 系统环境初始化
     QString error;
-    Utils::FileUtils::autoDeleteFiles(m_pictureDir.toString(), ".jpg", 30 * 24, &error);
+    FileUtils::autoDeleteFiles(m_pictureDir.toString(), ".jpg", 30 * 24, &error);
     if (!error.isEmpty())
         LOG_INFO().noquote() << error;
+
+    FileUtils::makeSureDirExist(FileName::fromString(GM_INSTANCE->m_configMan->m_baseConfig.cachePath));
 
 #if QT_VERSION <= QT_VERSION_CHECK(5, 10, 0)
     qsrand(QTime(0, 0, 0).secsTo(QTime::currentTime())); // 随机数种子初始化
 #endif
 
     // 数据库连接初始化
-    QString dbType = m_config->m_dbConfig.type;
-    bool dbOk = m_ds->init(dbType, m_config->m_dbConfig.driver, m_config->m_dbConfig.user, m_config->m_dbConfig.password, m_config->m_dbConfig.dbName);
+    QString dbType = m_configMan->m_dbConfig.type;
+    bool dbOk = m_ds->init(dbType, m_configMan->m_dbConfig.driver, m_configMan->m_dbConfig.user, m_configMan->m_dbConfig.password, m_configMan->m_dbConfig.dbName);
     if (!dbOk)
         return -101;
 

@@ -12,7 +12,7 @@
 #include "bean/t_mticketuse.h"
 #include "bean/t_specialcards.h"
 #include "bean/t_splitout.h"
-#include "config/config.h"
+#include "config/configmanager.h"
 #include "core/baseexception.h"
 #include "core/dtpsender.h"
 #include "core/globalmanager.h"
@@ -101,6 +101,9 @@ QString BizHandler::doMainDeal(int cmdType, const QVariantMap &dataMap, const QB
         break;
     case 41:
         dealtData = doDealCmd41(dataMap); // 权限管理
+        break;
+    case 42:
+        dealtData = doDealCmd42(dataMap); // 数据重传
         break;
     default:
         break;
@@ -452,7 +455,7 @@ QString BizHandler::getVehicleWayFromPlate(const QString &plateNumber)
     QString sendJson = packFeePath(pathFitting, exitFeeType);
     LOG_INFO().noquote() << "发送地图路径请求: " << sendJson;
 
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.mapUrl);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.mapUrl);
 
     QByteArray result;
     Http client;
@@ -487,7 +490,7 @@ QString BizHandler::getVehicleWayFromScan(const QString &scan)
     QString sendJson = nloJson.serialize(aMap);
     LOG_INFO().noquote() << "传扫描内容: " << sendJson;
 
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.mapUrl);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.mapUrl);
     QByteArray result;
     Http client;
     bool ok = client.postSync(result, url, sendJson.toUtf8(), "application/json");
@@ -1014,7 +1017,7 @@ QString BizHandler::getGreenVehicleWayFromScan(const QString &scan)
     QString sendJson = packFeePath(pathFitting, exitFeeType);
 
     LOG_INFO().noquote() << "发送地图路径请求: " << sendJson;
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.mapUrl);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.mapUrl);
     QByteArray result;
     Http client;
     bool ok = client.postSync(result, url, sendJson.toUtf8(), "application/json");
@@ -1127,7 +1130,7 @@ QString BizHandler::getGantryImage(const QString &plateNumber, const QString &ga
     QString sendData = nloJson.serialize(sendMap);
     LOG_INFO().noquote() << "获取门架图片请求: " << sendData;
 
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.gantryPicUrl);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.gantryPicUrl);
     QByteArray result;
     Http client;
     client.setReadTimeout(30 * 1000);
@@ -1153,7 +1156,7 @@ QString BizHandler::getLaneImage(const QString &captureId)
     QString sendData = nloJson.serialize(sendMap);
     LOG_INFO().noquote() << "获取车道图片请求: " << sendData;
 
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.lanePicUrl);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.lanePicUrl);
     QByteArray result;
     Http client;
     bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
@@ -1285,7 +1288,7 @@ QString BizHandler::doDealCmd24(const QByteArray &reqBody)
 {
     LOG_INFO().noquote() << "车牌识别获取请求: " << QString::fromUtf8(reqBody.left(1024));
 
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.plateOcrUrl);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.plateOcrUrl);
     QByteArray result;
     Http client;
     bool okNet = client.postSync(result, url, reqBody, "application/json");
@@ -1325,7 +1328,7 @@ QString BizHandler::doDealCmd25(const QVariantMap &aMap)
     QString sendData = nloJson.serialize(map);
     LOG_INFO().noquote() << "状态名单信息查询请求: " << sendData;
 
-    QString url(GM_INSTANCE->m_config->m_baseConfig.blackStatusUrl);
+    QString url(GM_INSTANCE->m_configMan->m_baseConfig.blackStatusUrl);
     QByteArray result;
     Http client;
     bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
@@ -1523,7 +1526,7 @@ QString BizHandler::doDealCmd30(const QVariantMap &aMap)
 
     LOG_INFO().noquote() << QString("查询逃漏费车辆 %1 欠费列表").arg(vehicleId);
     QString encodedVehicleId = QUrl::toPercentEncoding(QString("%1_%2").arg(plateNoColor).arg(colorIndex));
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.arrearsUrl + "/" + encodedVehicleId);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.arrearsUrl + "/" + encodedVehicleId);
     // 跳过证书校验
     Http client;
     client.setSkipVerify(true);
@@ -1611,28 +1614,16 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
     if (!paybackTime.isValid())
         throw BaseException(1, "响应失败: 补费时间格式错误");
     if (shiftDate.date() != paybackTime.date()) {
-        throw BaseException(1, QString("响应失败: 班次日期与补缴时间不一致，班次日期：%1，补缴日期：%2")
+        throw BaseException(1, QString("响应失败: 班次日期 %1 与补缴日期 %2 不一致")
                                    .arg(shiftDate.date().toString("yyyy-MM-dd"))
                                    .arg(paybackTime.date().toString("yyyy-MM-dd")));
     }
 
     NloJson nloJson;
 
-    if (tradeNum.isEmpty()) {
-        // 第一次请求时，该字段手持机传空。此时由后端自行组装
-        int tradeNumSuffix = getUniqueTradeNum(stationId) + 1000000000;
-        // 更新唯一交易号
-        GM_INSTANCE->m_ds->updateEmgcSeqNum(stationId);
-        tradeNum = QString("%1AD%2").arg(stationId).arg(tradeNumSuffix);
-        aMap["tradeNum"] = tradeNum;
-    }
-    // 支付失败，重新支付或核单时，对于同一笔交易，手持机填上次返回的TradeID
-
     QString payId = aMap["payId"].toString();
     QByteArray sendData;
     if (scanType == 0) {
-        int payMeans = aMap["payMeans"].toInt();
-
         QString auditId;
         QString passId;
         QString escapeType;
@@ -1677,6 +1668,17 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
             isPreBlack = 0;
         }
 
+        if (tradeNum.isEmpty()) {
+            // 请求补费时，该字段传空。此时由后端自行组装
+            // 支付失败，重新支付或核单时，对于同一笔交易，手持机填上次返回的TradeID
+            int tradeNumSuffix = getUniqueTradeNum(stationId) + 1000000000;
+            // 更新唯一交易号
+            GM_INSTANCE->m_ds->updateEmgcSeqNum(stationId);
+            tradeNum = QString("%1AD%2").arg(stationId).arg(tradeNumSuffix);
+            aMap["tradeNum"] = tradeNum;
+        }
+
+        int payMeans = aMap["payMeans"].toInt();
         if (payMeans != 0) {
             // 发起第三方支付，支付系统LaneTradeId生成格式：LPDA{stationid}AD{yyyyMMddHHmmss}{seqNum}
             if (payId.isEmpty()) {
@@ -1693,9 +1695,9 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
             QString message = resMap["message"].toString();
 
             // 支付失败，返回TradeId用于再次核单 NOTE 错误码300001，表示订单已支付
-            if (payState != 0 && errorCode != 300001) {
+            if (payState != 0) {
                 QVariantMap map;
-                if (errorCode == 100001) {
+                if (errorCode == 100001 || errorCode == 100002 || errorCode == 300001 || errorCode == 400004) {
                     map["status"] = 2;
                 } else {
                     map["status"] = 1;
@@ -1774,13 +1776,32 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
         sendData = nloJson.serialize(aMap);
         LOG_INFO().noquote() << "请求稽核补费结果上传: " << QString::fromUtf8(sendData);
 
-        QUrl url(GM_INSTANCE->m_config->m_baseConfig.payBackUrl + "/" + vehicleId);
+        // 生成稽核补费缓存数据
+        QString cacheFileName = QString("audit_%1.cache").arg(tradeNum);
+        QString cacheErr;
+        QVariantMap cacheMap;
+        cacheMap["stationData"] = dtpXml;
+        cacheMap["provinceData"] = sendData;
+        cacheMap["vehicleID"] = vehicleId;
+        cacheMap["resultIDs"] = resultIds;
+        cacheMap["shiftID"] = shiftId;
+        cacheMap["shiftDate"] = shiftDate;
+        cacheMap["operatorID"] = operatorId;
+
+        QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.payBackUrl + "/" + vehicleId);
         QByteArray result;
         Http client;
         client.setSkipVerify(true);
         bool okNet = client.postSync(result, url, sendData, "application/json");
 
         if (!okNet) {
+            cacheMap["stage"] = 0; // 0-从省中心接口开始重传 1-从站级数据开始重传
+            if (!saveAuditCache(cacheFileName, cacheMap, &cacheErr)) {
+                LOG_WARNING().noquote() << "生成" << tradeNum << "稽核补费缓存失败:" << cacheErr;
+            } else {
+                LOG_INFO().noquote() << "生成" << tradeNum << "稽核补费缓存成功";
+            }
+
             QVariantMap map;
             map["status"] = 1;
             map["desc"] = QString("响应失败: %1").arg(QString::fromUtf8(result));
@@ -1795,40 +1816,14 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
         QVariantMap tempMap = nloJson.parse(result).toMap();
         bool ok = tempMap["success"].toBool();
 
-        if (ok) {
-            // 清理补缴对象缓存
-            for (const auto &resultId : resultIds)
-                m_auditInfos.remove(resultId.toString());
-
-            QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationId);
-            QString stationServiceUrl = QString("http://%1:8082").arg(stationIP);
-            int res = GM_INSTANCE->m_dtpSender->sendMsgToDtp(stationIP, 13591, "TradeQ", "", dtpXml);
-            QVariantMap map;
-            if (res < 0) {
-                map["status"] = 1;
-                map["desc"] = "响应失败: 站级数据传输失败(请联系运维人员处理)";
+        if (!ok) {
+            cacheMap["stage"] = 0; // 0-从省中心接口开始重传 1-从站级数据开始重传
+            if (!saveAuditCache(cacheFileName, cacheMap, &cacheErr)) {
+                LOG_WARNING().noquote() << "生成" << tradeNum << "稽核补费缓存失败:" << cacheErr;
             } else {
-                map["status"] = 0;
-                map["desc"] = "稽核补费成功";
-
-                // 更新班次表
-                if (GM_INSTANCE->m_ds->getOutShiftSettleCount(stationId, shiftDate, shiftId, QUrl(stationServiceUrl)) <= 0) {
-                    QString varShiftDate = QDateTime::fromString(shiftDate, "yyyy-MM-dd hh:mm:ss").toString("yyyyMMdd");
-                    QString varDataId = QString("%1XX%2").arg(varShiftDate).arg(Utils::DataDealUtils::padValue(shiftId, 2));
-                    QString varOperatorName = GM_INSTANCE->m_ds->getUserName(operatorId, 1);
-                    QString operatorName = varOperatorName.isEmpty() ? "稽查班" : varOperatorName;
-                    if (!GM_INSTANCE->m_ds->insertOutShiftSettle(varDataId, shiftDate, shiftId, stationId, operatorId, operatorName,
-                                                                 QUrl(stationServiceUrl))) {
-                        LOG_WARNING().noquote() << "工班信息插入失败";
-                    }
-                }
+                LOG_INFO().noquote() << "生成" << tradeNum << "稽核补费缓存成功";
             }
-            map["tradeId"] = tradeNum;
-            map["payId"] = payId;
-            map["paySuccess"] = 0;
-            sendData = nloJson.serialize(map);
-            return sendData;
-        } else {
+
             QVariantMap map;
             map["status"] = 1;
             map["desc"] = "响应失败: 稽核补费接口上传失败";
@@ -1838,6 +1833,47 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
             sendData = nloJson.serialize(map);
             return sendData;
         }
+
+        QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationId);
+        QString stationServiceUrl = QString("http://%1:8082").arg(stationIP);
+        int res = GM_INSTANCE->m_dtpSender->sendMsgToDtp(stationIP, 13591, "TradeQ", "", dtpXml);
+        QVariantMap map;
+        if (res < 0) {
+            cacheMap["stage"] = 1;
+            if (!saveAuditCache(cacheFileName, cacheMap, &cacheErr)) {
+                LOG_WARNING().noquote() << "生成" << tradeNum << "稽核补费缓存失败:" << cacheErr;
+            } else {
+                LOG_INFO().noquote() << "生成" << tradeNum << "稽核补费缓存成功";
+            }
+
+            map["status"] = 1;
+            map["desc"] = "响应失败: 站级数据传输失败(请联系运维人员处理)";
+        } else {
+            map["status"] = 0;
+            map["desc"] = "稽核补费成功";
+
+            // 清理补缴对象缓存
+            for (const auto &resultId : resultIds)
+                m_auditInfos.remove(resultId.toString());
+
+            // 更新班次表
+            if (GM_INSTANCE->m_ds->getOutShiftSettleCount(stationId, shiftDate, shiftId, QUrl(stationServiceUrl)) <= 0) {
+                QString varShiftDate = QDateTime::fromString(shiftDate, "yyyy-MM-dd hh:mm:ss").toString("yyyyMMdd");
+                QString varDataId = QString("%1XX%2").arg(varShiftDate).arg(Utils::DataDealUtils::padValue(shiftId, 2));
+                QString varOperatorName = GM_INSTANCE->m_ds->getUserName(operatorId, 1);
+                QString operatorName = varOperatorName.isEmpty() ? "稽查班" : varOperatorName;
+                if (!GM_INSTANCE->m_ds->insertOutShiftSettle(varDataId, shiftDate, shiftId, stationId, operatorId, operatorName,
+                                                             QUrl(stationServiceUrl))) {
+                    LOG_WARNING().noquote() << "工班信息插入失败";
+                }
+            }
+        }
+
+        map["tradeId"] = tradeNum;
+        map["payId"] = payId;
+        map["paySuccess"] = 0;
+        sendData = nloJson.serialize(map);
+        return sendData;
     } else if (scanType == 1) {
         // 核单
         QString scanCode = aMap["scanCode"].toString();
@@ -1921,7 +1957,7 @@ QVariantMap BizHandler::cloudPay(const QString &tradeNum, const QVariantMap &aMa
     QString enStationId = "-";
     QString enTimeStamp = Utils::DataDealUtils::curDateTimeStr();
     int randNum = Utils::DataDealUtils::getRandomNum(1000);
-    QString cloudPayKey = GM_INSTANCE->m_config->m_baseConfig.cloudPayKey;
+    QString cloudPayKey = GM_INSTANCE->m_configMan->m_baseConfig.cloudPayKey;
 
     QString var = QString("%1&%2&%3&%4&%5&%6&%7&%8&%9&%10&%11")
                       .arg(exStationId)
@@ -1953,7 +1989,7 @@ QVariantMap BizHandler::cloudPay(const QString &tradeNum, const QVariantMap &aMa
     QByteArray sendData = nloJson.serialize(sendMap);
     LOG_INFO().noquote() << "第三方支付请求: " << QString::fromUtf8(sendData);
 
-    QString url(GM_INSTANCE->m_config->m_baseConfig.cloudPayUrl);
+    QString url(GM_INSTANCE->m_configMan->m_baseConfig.cloudPayUrl);
     QByteArray result;
     Http client;
     bool ok = client.postSync(result, url, sendData, "application/json");
@@ -1978,7 +2014,7 @@ QVariantMap BizHandler::getBillState(const QString &tradeNum)
     // 获取订单状态
     LOG_INFO().noquote() << "发起核单请求: 订单号 " << tradeNum;
 
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.billQueryUrl + "/" + tradeNum);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.billQueryUrl + "/" + tradeNum);
     QByteArray result;
     Http client;
     bool ok = client.getSync(result, url);
@@ -2002,7 +2038,7 @@ QVariantMap BizHandler::refund(const QString &tradeNum, const QVariantMap &aMap)
     QString operatorName = GM_INSTANCE->m_ds->getUserName(operatorId, 1);
     QString refundDesc = "";
     int randNum = Utils::DataDealUtils::getRandomNum(1000);
-    QString cloudPayKey = GM_INSTANCE->m_config->m_baseConfig.cloudPayKey;
+    QString cloudPayKey = GM_INSTANCE->m_configMan->m_baseConfig.cloudPayKey;
 
     QString var
         = QString("%1&%2&%3&%4&%5&%6&%7").arg(tradeNum).arg(refundFee).arg(operatorId).arg(operatorName).arg(refundDesc).arg(randNum).arg(cloudPayKey);
@@ -2021,7 +2057,7 @@ QVariantMap BizHandler::refund(const QString &tradeNum, const QVariantMap &aMap)
     QByteArray sendData = nloJson.serialize(sendMap);
     LOG_INFO().noquote() << "第三方支付请求退款: " << QString::fromUtf8(sendData);
 
-    QString url(GM_INSTANCE->m_config->m_baseConfig.refundUrl);
+    QString url(GM_INSTANCE->m_configMan->m_baseConfig.refundUrl);
     QByteArray result;
     Http client;
     bool ok = client.postSync(result, url, sendData, "application/json");
@@ -2059,6 +2095,8 @@ QString BizHandler::getErrInfo(int errorCode)
         errInfo = "订单已关闭";
     } else if (errorCode == 200002) {
         errInfo = "订单已撤销";
+    } else if (errorCode == 300001) {
+        errInfo = "订单已支付";
     } else if (errorCode == 400001) {
         errInfo = "二维码已过期";
     } else if (errorCode == 400002) {
@@ -2073,6 +2111,28 @@ QString BizHandler::getErrInfo(int errorCode)
         errInfo = "其他内部错误";
     }
     return errInfo;
+}
+
+bool BizHandler::saveAuditCache(const QString &fileName, const QVariantMap &cacheMap, QString *errDesc)
+{
+    const QString path = QDir(GM_INSTANCE->m_configMan->m_baseConfig.cachePath).filePath(fileName);
+    Utils::FileSaver saver(path);
+    if (saver.hasError()) {
+        *errDesc = QString("创建文件失败: %1").arg(saver.errorString());
+        return false;
+    }
+
+    QByteArray data = Utils::DataDealUtils::mapToJson(cacheMap);
+    if (!saver.write(data)) {
+        *errDesc = QString("写入数据失败: %1").arg(saver.errorString());
+        return false;
+    }
+    if (!saver.finalize()) {
+        *errDesc = QString("提交数据失败: %1").arg(saver.errorString());
+        return false;
+    }
+
+    return true;
 }
 
 QString BizHandler::doDealCmd32(const QVariantMap &aMap)
@@ -2093,7 +2153,7 @@ QString BizHandler::doDealCmd32(const QVariantMap &aMap)
     QByteArray sendData = nloJson.serialize(map);
     LOG_INFO().noquote() << "获取大件运输车信息(多条)请求: " << sendData.constData();
 
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.multiBulkUrl);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.multiBulkUrl);
     QByteArray result;
     Http client;
     bool ok = client.postSync(result, url, sendData, "application/json");
@@ -2133,7 +2193,7 @@ QString BizHandler::doDealCmd33(const QVariantMap &aMap)
     QByteArray sendData = nloJson.serialize(map);
     LOG_INFO().noquote() << "获取集装箱信息请求: " << QString::fromUtf8(sendData);
 
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.containerConfirmUrl);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.containerConfirmUrl);
     QByteArray result;
     Http client;
     bool ok = client.postSync(result, url, sendData, "application/json");
@@ -2459,7 +2519,7 @@ bool BizHandler::checkHasEInvoice(const QString &tradeId)
 
     LOG_INFO().noquote() << "查询是否已开过电子票:" << tradeId;
 
-    QUrl url(GM_INSTANCE->m_config->m_baseConfig.eInvoiceUrl + "/" + tradeId);
+    QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.eInvoiceUrl + "/" + tradeId);
     QByteArray result;
     Http client;
     bool ok = client.getSync(result, url);
@@ -2644,7 +2704,7 @@ QString BizHandler::requestRemoteAPI(int type, const QString &id, const QString 
         uri = uri.arg(id);
     }
 
-    QString url(GM_INSTANCE->m_config->m_baseConfig.remoteAPIUrl + uri);
+    QString url(GM_INSTANCE->m_configMan->m_baseConfig.remoteAPIUrl + uri);
 
     Http client;
     QByteArray result;
@@ -2690,4 +2750,183 @@ QString BizHandler::doDealCmd41(const QVariantMap &aMap)
 
     QString dealtData = nloJson.serialize(resMap);
     return dealtData;
+}
+
+QString BizHandler::doDealCmd42(const QVariantMap &aMap)
+{
+    QString stationID;
+    int type = -1;
+    QVariantMap info;
+
+    if (aMap.contains("type"))
+        type = aMap["type"].toInt();
+    if (aMap.contains("stationID"))
+        stationID = aMap["stationID"].toString();
+    if (aMap.contains("info"))
+        info = aMap["info"].toMap();
+
+    if (type == -1)
+        throw BaseException(1, "响应失败: 重传业务类型错误");
+    if (stationID.isEmpty())
+        throw BaseException(1, "响应失败: 站代码为空");
+    if (info.isEmpty())
+        throw BaseException(1, "响应失败: 重传数据为空");
+
+    if (type == 1) {
+        // 重传稽核补费数据
+        QString tradeNum;
+        if (info.contains("tradeNum"))
+            tradeNum = info["tradeNum"].toString();
+
+        if (tradeNum.isEmpty())
+            throw BaseException(1, "响应失败: 稽核订单号为空");
+
+        QString repostErr;
+        const QString cacheFileName = QString("audit_%1.cache").arg(tradeNum);
+        bool ok = repostAuditData(cacheFileName, stationID, &repostErr);
+        if (!ok)
+            throw BaseException(1, repostErr);
+
+        QVariantMap resMap;
+        resMap["status"] = 0;
+        resMap["desc"] = "稽核数据重传成功";
+        return Utils::DataDealUtils::mapToJson(resMap);
+    } else {
+        throw BaseException(1, "响应失败: 该重传业务类型暂未实现");
+    }
+}
+
+bool BizHandler::repostAuditData(const QString &fileName, const QString &stationID, QString *errDesc)
+{
+    QString path = QDir(GM_INSTANCE->m_configMan->m_baseConfig.cachePath).filePath(fileName);
+    Utils::FileName cacheFile = Utils::FileName::fromString(path);
+    if (!cacheFile.exists()) {
+        *errDesc = "响应失败: 缓存数据文件不存在";
+        return false;
+    }
+
+    Utils::FileReader reader;
+    if (!reader.fetch(path)) {
+        *errDesc = QString("响应失败: 读取缓存数据文件失败 %1").arg(reader.errorString());
+        return false;
+    }
+
+    bool jsonOk = false;
+    QString jsonErr;
+    QVariantMap auditMap = Utils::DataDealUtils::jsonToMap(reader.data(), &jsonOk, &jsonErr);
+    if (!jsonOk) {
+        *errDesc = QString("响应失败: 解析缓存数据文件失败 %1").arg(jsonErr);
+        return false;
+    }
+
+    LOG_INFO().noquote() << "待重传稽核数据:" << reader.data();
+    QString stationData = auditMap["stationData"].toString();
+    QString provinceData = auditMap["provinceData"].toString();
+    QString vehicleID = auditMap["vehicleID"].toString();
+    QVariantList resultIDs = auditMap["resultIDs"].toList();
+    int shiftID = auditMap["shiftID"].toInt();
+    QString shiftDate = auditMap["shiftDate"].toString();
+    QString operatorID = auditMap["operatorID"].toString();
+    int stage = auditMap["stage"].toInt();
+
+    if (stage == 0) {
+        // 完整重传（省中心，站级）
+        QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.payBackUrl + "/" + vehicleID);
+        QByteArray result;
+        Http client;
+        client.setSkipVerify(true);
+        bool netOk = client.postSync(result, url, provinceData.toUtf8(), "application/json");
+        if (!netOk) {
+            *errDesc = QString("响应失败: 稽核数据重传省中心接口网络异常 %1").arg(QString(result));
+            return false;
+        }
+
+        LOG_INFO().noquote() << "返回稽核补费上传结果:" << result.left(1024);
+        QVariantMap tempMap = Utils::DataDealUtils::jsonToMap(result);
+        bool uploadSuccess = tempMap["success"].toBool();
+
+        if (!uploadSuccess) {
+            *errDesc = "响应失败: 稽核数据重传省中心接口返回失败";
+            return false;
+        }
+
+        if (updateCache(fileName, "stage", 1))
+            LOG_INFO().noquote() << "更新缓存文件" << fileName << "成功";
+    }
+
+    // 部分重传（站级）
+    QString stationIP = GM_INSTANCE->m_ds->getStationIP(stationID);
+    QString stationServiceUrl = QString("http://%1:8082").arg(stationIP);
+    int res = GM_INSTANCE->m_dtpSender->sendMsgToDtp(stationIP, 13591, "TradeQ", "", stationData);
+    if (res < 0) {
+        *errDesc = "响应失败: 稽核数据重传站级失败";
+        return false;
+    }
+
+    for (const auto &resultID : resultIDs)
+        m_auditInfos.remove(resultID.toString());
+
+    // 更新班次表
+    if (GM_INSTANCE->m_ds->getOutShiftSettleCount(stationID, shiftDate, shiftID, QUrl(stationServiceUrl)) <= 0) {
+        QString varShiftDate = QDateTime::fromString(shiftDate, "yyyy-MM-dd hh:mm:ss").toString("yyyyMMdd");
+        QString varDataId = QString("%1XX%2").arg(varShiftDate).arg(Utils::DataDealUtils::padValue(shiftID, 2));
+        QString varOperatorName = GM_INSTANCE->m_ds->getUserName(operatorID, 1);
+        QString operatorName = varOperatorName.isEmpty() ? "稽查班" : varOperatorName;
+        if (!GM_INSTANCE->m_ds->insertOutShiftSettle(varDataId, shiftDate, shiftID, stationID, operatorID, operatorName, QUrl(stationServiceUrl))) {
+            LOG_WARNING().noquote() << "工班信息插入失败";
+        }
+    }
+
+    // 删除缓存文件
+    QString removeErr;
+    if (!Utils::FileUtils::removeRecursively(cacheFile, &removeErr))
+        LOG_WARNING().noquote() << "删除缓存文件" << cacheFile.fileName() << "失败:" << removeErr;
+
+    return true;
+}
+
+bool BizHandler::updateCache(const QString &fileName, const QString &key, const QVariant &val)
+{
+    const QString path = QDir(GM_INSTANCE->m_configMan->m_baseConfig.cachePath).filePath(fileName);
+    Utils::FileName cacheFile = Utils::FileName::fromString(path);
+    LOG_INFO().noquote() << "更新缓存文件" << cacheFile.fileName() << "key:" << key << "val:" << val;
+    if (!cacheFile.exists()) {
+        LOG_ERROR().noquote() << "更新缓存文件" << cacheFile.fileName() << "失败: 文件不存在";
+        return false;
+    }
+
+    Utils::FileReader reader;
+    if (!reader.fetch(path)) {
+        LOG_ERROR().noquote() << "更新缓存文件" << cacheFile.fileName() << "失败:" << reader.errorString();
+        return false;
+    }
+
+    bool jsonOk = false;
+    QString jsonErr;
+    QVariantMap aMap = Utils::DataDealUtils::jsonToMap(reader.data(), &jsonOk, &jsonErr);
+    if (!jsonOk) {
+        LOG_ERROR().noquote() << "更新缓存文件" << cacheFile.fileName() << "失败: 数据解析异常" << jsonErr;
+        return false;
+    }
+
+    aMap[key] = val;
+
+    Utils::FileSaver saver(path);
+    if (saver.hasError()) {
+        LOG_ERROR().noquote() << "更新缓存文件" << cacheFile.fileName() << "失败: 创建文件失败" << saver.errorString();
+        return false;
+    }
+
+    const QByteArray data = Utils::DataDealUtils::mapToJson(aMap);
+    if (!saver.write(data)) {
+        LOG_ERROR().noquote() << "更新缓存文件" << cacheFile.fileName() << "失败: 写入数据失败" << saver.errorString();
+        return false;
+    }
+
+    if (!saver.finalize()) {
+        LOG_ERROR().noquote() << "更新缓存文件" << cacheFile.fileName() << "失败: 提交数据失败" << saver.errorString();
+        return false;
+    }
+
+    return true;
 }

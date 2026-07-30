@@ -1,29 +1,33 @@
-#include "config.h"
+#include "configmanager.h"
 
 #include <QApplication>
 #include <QSettings>
 
 #include "utils/configutils.h"
+#include "utils/fileutils.h"
+#include "utils/stdafx.h"
 
-Config::Config(QObject *parent)
+using namespace Utils;
+
+ConfigManager::ConfigManager(QObject *parent)
     : QObject{parent}
 {
-    m_confUtil = new Utils::ConfigUtils();
+    m_confUtil = new ConfigUtils();
 
     // 日志配置
     m_logConfig.format = "%{time} [%{type}] [%{threadid}] %{message}\n\n";
     m_logConfig.filesLimit = 180;
 }
 
-Config::~Config()
+ConfigManager::~ConfigManager()
 {
-    delete m_confUtil;
+    SAFE_DELETE(m_confUtil);
 }
 
-void Config::loadConfig(const Utils::FileName &configPath)
+void ConfigManager::loadConfig(const QString &configPath)
 {
-    QString str = Utils::FileUtils::canonicalPath(configPath).toString();
-    m_confUtil->init(str, Utils::ConfigUtils::INI);
+    QString str = FileUtils::canonicalPath(FileName::fromString(configPath)).toString();
+    m_confUtil->init(str, ConfigUtils::INI);
 
     // 数据库配置
     m_dbConfig.type = m_confUtil->getValue("DataBase/type", "QODBC").toString();
@@ -51,4 +55,8 @@ void Config::loadConfig(const Utils::FileName &configPath)
     m_baseConfig.eInvoiceUrl = m_confUtil->getValue("BaseEnv/eInvoiceUrl", "http://192.168.75.128:12345/api/einvoice/queryTrade").toString();
     m_baseConfig.refundUrl = m_confUtil->getValue("BaseEnv/refundUrl", "http://35.16.1.75:18080/SPTWebService/api/trade/pay/Refund").toString();
     m_baseConfig.remoteAPIUrl = m_confUtil->getValue("BaseEnv/remoteAPIUrl", "http://10.35.2.136:6099/api/common").toString();
+    m_baseConfig.cachePath = m_confUtil->getValue("BaseEnv/cachePath", "").toString();
+    if (m_baseConfig.cachePath.isEmpty()) {
+        m_baseConfig.cachePath = FileUtils::curApplicationDirPath() + "/cache";
+    }
 }
