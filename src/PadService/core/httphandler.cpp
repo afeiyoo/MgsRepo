@@ -26,12 +26,12 @@ void HttpHandler::service(HttpRequest &request, HttpResponse &response)
     QString jsonErr;
     QVariantMap aMap = DataDealUtils::jsonToMap(reqBody, &jsonOk, &jsonErr);
 
-    try {
-        if (!jsonOk) {
-            LOG_ERROR().noquote() << "Json解析异常:" << jsonErr;
-            throw BaseException(1, "响应失败: json整体数据解析异常");
-        }
+    if (!jsonOk) {
+        LOG_ERROR().noquote() << "Json整体解析异常:" << jsonErr;
+        return;
+    }
 
+    try {
         int cmdType = aMap["cmdType"].toInt();
         QVariantMap dataMap = aMap["data"].toMap();
         if (dataMap.isEmpty())
