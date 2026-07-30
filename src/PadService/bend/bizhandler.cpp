@@ -20,6 +20,9 @@
 #include "utils/bizutils.h"
 #include "utils/datadealutils.h"
 #include "utils/fileutils.h"
+#include "utils/networkutils.h"
+
+using namespace Utils;
 
 QMap<QString, ST_AuditInfo> BizHandler::m_auditInfos;
 
@@ -1782,7 +1785,7 @@ QString BizHandler::doDealCmd31(QVariantMap aMap)
         cacheMap["shiftDate"] = shiftDate;
         cacheMap["operatorID"] = operatorId;
 
-        QUrl url(GM_INSTANCE->m_configMan->m_baseConfig.payBackUrl + "/" + vehicleId);
+        QUrl url = NetworkUtils::appendUrlPath(QUrl(GM_INSTANCE->m_configMan->m_baseConfig.payBackUrl), vehicleId);
         QByteArray result;
         Http client;
         client.setSkipVerify(true);
@@ -2764,7 +2767,7 @@ QString BizHandler::doDealCmd42(const QVariantMap &aMap)
     if (stationID.isEmpty())
         throw BaseException(1, "响应失败: 站代码为空");
     if (info.isEmpty())
-        throw BaseException(1, "响应失败: 重传数据为空");
+        throw BaseException(1, "响应失败: 重传业务信息为空");
 
     if (type == 1) {
         // 重传稽核补费数据
