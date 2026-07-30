@@ -25,13 +25,7 @@ QMap<QString, ST_AuditInfo> BizHandler::m_auditInfos;
 
 BizHandler::BizHandler(QObject *parent)
     : QObject{parent}
-{
-    // 每次有新请求到来时，清除30天前的图片文件
-    QString error;
-    Utils::FileUtils::autoDeleteFiles(GM_INSTANCE->m_pictureDir.toString(), ".jpg", 30 * 24, &error);
-    if (!error.isEmpty())
-        LOG_INFO().noquote() << error;
-}
+{}
 
 BizHandler::~BizHandler() {}
 
@@ -1173,15 +1167,15 @@ QString BizHandler::getContainerImage(const QString &picName)
     if (picName.isEmpty())
         throw BaseException(1, "响应失败: 图片ID为空");
 
-    Utils::FileName picturePath = GM_INSTANCE->m_pictureDir + QString("/%1").arg(picName);
+    QString picturePath = GM_INSTANCE->m_pictureDir.filePath(QString("%1").arg(picName));
 
-    if (!picturePath.exists()) {
+    if (!QFileInfo::exists(picturePath)) {
         LOG_WARNING().noquote() << QString("图片文件不存在 %1.jgp").arg(picName);
         throw BaseException(1, "响应失败: 图片文件不存在");
     }
 
     Utils::FileReader fileReader;
-    bool ok = fileReader.fetch(picturePath.toString());
+    bool ok = fileReader.fetch(picturePath);
     if (!ok) {
         LOG_ERROR().noquote() << QString("读取图片文件 %1.jgp 失败").arg(picName);
         throw BaseException(1, "响应失败: 读取图片文件失败");

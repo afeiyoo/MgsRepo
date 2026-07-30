@@ -18,10 +18,10 @@ GlobalManager::GlobalManager(QObject *parent)
 {
     m_configMan = new ConfigManager(this);
     m_dtpSender = new DtpSender(this);
-    m_confPath = FileUtils::curApplicationDirPath() + "/config/config.ini";
+    m_confPath = QDir(FileUtils::curApplicationDirPath()).filePath("config/config.ini");
 
-    m_pictureDir = FileName::fromString(FileUtils::curApplicationDirPath() + "/pictures");
-    FileUtils::makeSureDirExist(m_pictureDir);
+    m_pictureDir = QDir(FileUtils::curApplicationDirPath() + "/pictures");
+    m_pictureCleanupTimer = new QTimer(this);
 
     m_ds = new DataService();
 }
@@ -34,6 +34,14 @@ GlobalManager::~GlobalManager()
 GlobalManager *GlobalManager::instance()
 {
     return ins();
+}
+
+void GlobalManager::onCleanExpiredPictures()
+{
+    QString error;
+    const bool ok = FileUtils::autoDeleteFiles(m_pictureDir.absolutePath(), ".jpg", 30 * 24, &error);
+    if (!ok)
+        LOG_INFO().noquote() << "定期删除" << m_pictureDir.absolutePath() << "下过期文件失败:" << error;
 }
 
 int GlobalManager::init()
@@ -52,19 +60,23 @@ int GlobalManager::init()
     rollingFileAppender->setDatePattern(RollingFileAppender::DatePattern::DailyRollover);
     cuteLogger->registerAppender(rollingFileAppender);
 
+    LOG_INFO().noquote() << "开始进行程序初始化...";
+
     // 配置加载
-    FileName configPath = FileName::fromString(m_confPath);
-    if (!configPath.exists())
+    if (!QFileInfo::exists(m_confPath)) {
+        LOG_ERROR().noquote() << "程序初始化失败: 配置文件不存在" << m_confPath;
         return -100;
+    }
     m_configMan->loadConfig(m_confPath);
 
     // 系统环境初始化
-    QString error;
-    FileUtils::autoDeleteFiles(m_pictureDir.toString(), ".jpg", 30 * 24, &error);
-    if (!error.isEmpty())
-        LOG_INFO().noquote() << error;
-
+    FileUtils::makeSureDirExist(FileName::fromString(m_pictureDir.absolutePath()));
     FileUtils::makeSureDirExist(FileName::fromString(GM_INSTANCE->m_configMan->m_baseConfig.cachePath));
+
+    m_pictureCleanupTimer->setInterval(30 * 60 * 1000);
+    connect(m_pictureCleanupTimer, &QTimer::timeout, this, &GlobalManager::onCleanExpiredPictures);
+    onCleanExpiredPictures();
+    m_pictureCleanupTimer->start();
 
 #if QT_VERSION <= QT_VERSION_CHECK(5, 10, 0)
     qsrand(QTime(0, 0, 0).secsTo(QTime::currentTime())); // 随机数种子初始化
@@ -72,14 +84,19 @@ int GlobalManager::init()
 
     // 数据库连接初始化
     QString dbType = m_configMan->m_dbConfig.type;
-    bool dbOk = m_ds->init(dbType, m_configMan->m_dbConfig.driver, m_configMan->m_dbConfig.user, m_configMan->m_dbConfig.password, m_configMan->m_dbConfig.dbName);
-    if (!dbOk)
+    bool dbOk = m_ds->init(dbType, m_configMan->m_dbConfig.driver, m_configMan->m_dbConfig.user, m_configMan->m_dbConfig.password,
+                           m_configMan->m_dbConfig.dbName);
+    if (!dbOk) {
+        LOG_ERROR().noquote() << "程序初始化失败: 数据库初始化异常";
         return -101;
+    }
 
     // Dtp发送对象初始化
     bool dtpOk = m_dtpSender->initDtp("./libDtp-Client.so");
-    if (!dtpOk)
+    if (!dtpOk) {
+        LOG_ERROR().noquote() << "程序初始化失败: DTP初始化失败";
         return -102;
+    }
 
     // 云坐席台账接口URI初始化
     m_remoteURIs.insert(11, "/adminlogin/login");

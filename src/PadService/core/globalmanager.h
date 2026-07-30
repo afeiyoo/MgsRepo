@@ -1,8 +1,10 @@
 #pragma once
 
+#include <QDir>
 #include <QMap>
 #include <QObject>
 #include <QSet>
+#include <QTimer>
 
 #include "utils/fileutils.h"
 
@@ -22,6 +24,9 @@ public:
 
     int init();
 
+private slots:
+    void onCleanExpiredPictures();
+
 public:
     // 配置文件路径
     QString m_confPath;
@@ -30,9 +35,12 @@ public:
     // 数据库操作对象
     DataService *m_ds = nullptr;
     // 图片保存目录
-    Utils::FileName m_pictureDir;
+    QDir m_pictureDir;
     // DTP传输对象
     DtpSender *m_dtpSender = nullptr;
     // 云坐席台账接口URI
     QMap<int, QString> m_remoteURIs;
+
+private:
+    QTimer *m_pictureCleanupTimer = nullptr;
 };
