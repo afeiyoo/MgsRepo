@@ -2248,8 +2248,8 @@ void BizHandler::saveAndReplaceContainerPic(const QString &base64Data, QVariantM
 #else
     QString picUUID = QUuid::createUuid().toString(QUuid::WithoutBraces);
 #endif
-    QString picName = QString("/%1.jpg").arg(picUUID);
-    QString targetPath = (GM_INSTANCE->m_pictureDir + picName).toString();
+    QString picName = QString("%1.jpg").arg(picUUID);
+    QString targetPath = GM_INSTANCE->m_pictureDir.filePath(picName);
 
     Utils::FileSaver saver(targetPath);
     bool ok = saver.write(QByteArray::fromBase64(base64Data.toUtf8()));
