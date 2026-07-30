@@ -1131,7 +1131,5 @@ bool DataService::testConnection() const
         LOG_ERROR().noquote() << "数据库连接初始化失败:" << query.lastError().text() << "\t" << testSql;
         return false;
     }
-
-    LOG_INFO().noquote() << "数据库连接初始化成功";
     return true;
 }
