@@ -287,27 +287,46 @@ FileNameList FileUtils::getFilesWithSuffix(const FileName &dirPath, const QStrin
     return result;
 }
 
-void FileUtils::autoDeleteFiles(const QString &path, const QString &fileExtension, qint64 expiredHour, QString *lastError)
+bool FileUtils::autoDeleteFiles(const QString &path, const QString &fileExtension, qint64 expiredHour, QString *lastError)
 {
-    qint64 var = expiredHour * 3600 * (-1);
-    QDateTime deleteDay = QDateTime::currentDateTime().addSecs(var);
-    QDir dir(path);
-    if (!dir.exists()) {
-        *lastError = QString("%1 Not Exist").arg(path);
-        return;
+    lastError->clear();
+
+    if (expiredHour < 0) {
+        *lastError = "expiredHour不能小于0";
+        return false;
     }
 
-    QStringList filters;
-    filters << QString("*%1").arg(fileExtension);
-    dir.setNameFilters(filters);
-    QFileInfoList fileList = dir.entryInfoList();
+    QDateTime expiredTime = QDateTime::currentDateTime().addSecs(-expiredHour * 3600);
+    QDir dir(path);
+    if (!dir.exists())
+        return true;
+
+    QString extension = fileExtension;
+    if (!extension.startsWith('.'))
+        extension.prepend('.');
+
+    const QStringList filters{QString("*%1").arg(extension)};
+    const QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoSymLinks);
+
+    QStringList failedEntries;
     for (const QFileInfo &item : fileList) {
-        if (item.lastModified() <= deleteDay) {
-            FileName file(item);
-            if (!removeRecursively(file, lastError))
-                return;
+        if (item.lastModified() > expiredTime)
+            continue;
+
+        QString removeError;
+        FileName file(item);
+        bool removed = removeRecursively(file, &removeError);
+        if (!removed) {
+            failedEntries.append(removeError.isEmpty() ? file.fileName() : QString("%1 (%2)").arg(file.fileName(), removeError));
         }
     }
+
+    if (failedEntries.isEmpty()) {
+        return true;
+    }
+
+    *lastError = failedEntries.join(", ");
+    return false;
 }
 
 QString FileUtils::curApplicationDirPath()
