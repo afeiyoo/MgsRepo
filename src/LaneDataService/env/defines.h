@@ -12,7 +12,7 @@ enum EM_FullBlackStatus {
     FullBlackVerifying = 3,        // 正在校验远程全量
     FullBlackPublishing = 4,       // 正在发布已校验的远程全量
     FullBlackCheckFailed = -1,     // 本地、远程清单均无效
-    FullBlackLocalBatchAhead = -2, // 本地批次高于远程批次，正在按远程批次修复
+    FullBlackLocalBatchAhead = -2, // 本地批次高于远程权威批次，禁止加载本地全量
     FullBlackLocalLoadFailed = -3, // 本地全量加载失败且无法远程恢复，可用性按原值处理
     FullBlackDownloadFailed = -4,  // 远程全量下载失败
     FullBlackVerifyFailed = -5,    // 远程全量完整性或数据库校验失败

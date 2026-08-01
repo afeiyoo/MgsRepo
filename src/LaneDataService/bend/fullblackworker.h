@@ -23,80 +23,79 @@ public slots:
     void onCleanETCBlackCardFinished(int affected);
 
 private:
-    // 获取并校验全量临时目录路径，确保它严格位于fullBlackPath下
-    bool resolveStagingPath(QString *path, QString *error) const;
+    enum class FullUpdateMode {
+        RemoteManifest, // 远程清单权威：缓存不可用时下载切片，成功后清理其他批次ZIP
+        LocalCacheOnly  // 远程不可用：只允许使用本地清单恢复缓存ZIP，并保留其他批次ZIP
+    };
 
-    // 清理.staging中的切片、写入临时文件和异常目录，仅保留普通完整ZIP文件
-    bool cleanupStagingTransientFiles(QString *error) const;
-
+    // ---------- 清单检查与批次决策 ----------
     // 读取本地BlackUpdate.xml
     bool readLocalManifest(ST_FullManifest *manifest, QString *error) const;
-
     // 获取远程BlackUpdate.xml
     bool fetchRemoteManifest(ST_FullManifest *manifest, QString *error) const;
-
     // 解析并校验BlackUpdate.xml。manifestUrl非空时，同时生成切片下载地址
     bool parseFullManifest(const QByteArray &data, const QUrl &manifestUrl, ST_FullManifest *manifest, QString *error) const;
-
-    // 保存待更新清单，优先复用完整ZIP；允许回退时才启动切片下载
-    void prepareFullUpdate(const ST_FullManifest &manifest, EM_FullBlackStatus status = FullBlackDownloading, bool allowDownloadFallback = true);
-
-    // 获取并创建.staging目录
-    bool prepareStagingDirectory(QString *path, QString *error);
-
-    // 按清单顺序下载下一个全量切片
-    void downloadNextFullSlice();
-
+    // 本地清单可用且不需要切换远程批次时，加载本地全量或按条件恢复；remoteManifest为nullptr表示远程不可用
+    void loadOrRecoverLocalFullBlack(const ST_FullManifest &localManifest, const ST_FullManifest *remoteManifest);
+    // 当前活动批次已与远程一致时，只修复本地清单，不重新发布数据库
+    void repairLocalManifestForActiveBatch(const ST_FullManifest &remoteManifest);
+    // 标记首次全量检查完成并发送一次通知
+    void finishFirstCheck();
     // 当前检查周期结束后，重新计时下一次全量检查
     void scheduleNextCheck();
 
-    // 标记首次全量检查完成并发送一次通知
-    void finishFirstCheck();
-
-    // 清理全量目录下除当前批次外的其他数据库文件
-    void pruneOtherFullBlackFiles(int batchNo);
-
-    // 清理.staging目录下除当前批次外的其他完整ZIP
-    void pruneOtherFullZipFiles(int batchNo);
-
-    // 更新当前全量状态
-    void setStatus(bool isValid, EM_FullBlackStatus status);
-
-    // 加载全量
-    bool loadFullBlack(int batchNo, const QString &path);
-
-    // 使用候选连接打开并校验全量，成功后保持候选连接打开
-    bool openAndValidateFullBlack(int batchNo, const QString &path, QString *version, QString *cleanTable, QString *error);
-
-    // 校验全量数据库
-    bool validateFullBlack(const QSqlDatabase &dao, int batchNo, QString *version, QString *cleanTable);
-
+    // ---------- 更新准备与下载 ----------
+    // 启动全量更新：优先复用完整ZIP，再根据更新模式决定是否下载远程切片
+    void startFullUpdate(const ST_FullManifest &manifest, EM_FullBlackStatus status = FullBlackDownloading,
+                         FullUpdateMode mode = FullUpdateMode::RemoteManifest);
+    // 清空一次更新流程产生的临时状态，不影响当前活动全量
+    void resetUpdateContext();
+    // 获取并校验全量临时目录路径，确保它严格位于fullBlackPath下
+    bool resolveStagingPath(QString *path, QString *error) const;
+    // 获取并创建.staging目录
+    bool prepareStagingDirectory(QString *path, QString *error);
+    // 清理.staging中的切片、写入临时文件和异常目录，仅保留普通完整ZIP文件
+    bool cleanupStagingTempFiles(QString *error) const;
+    // 按清单顺序下载下一个全量切片
+    void downloadNextFullSlice();
     // 校验单个已下载切片的MD5
     bool validateFullSlice(const ST_FullSliceInfo &slice, const QString &filePath, QString *error) const;
-
     // 校验完整ZIP的totalmd5
     bool validateFullZip(const QString &zipPath, QString *error) const;
-
     // 按清单顺序拼接切片，并校验完整ZIP的MD5
     bool mergeAndValidateFullZip(QString *zipPath, QString *error) const;
 
+    // ---------- 校验、发布与切换 ----------
     // 将已通过totalmd5校验的完整ZIP解压、校验并发布
     void publishValidatedFullZip();
-
-    // 校验ZIP条目并将唯一的全量数据库原子解压到正式目录
+    // 将全量数据库原子解压到正式目录
     bool extractFullDatabase(QString *dbPath, QString *error) const;
-
-    // 原子提交远程BlackUpdate.xml到本地正式目录
-    bool publishLocalManifest(QString *error) const;
-
+    // 原子提交指定BlackUpdate.xml到本地正式目录
+    bool publishLocalManifest(const ST_FullManifest &manifest, QString *error) const;
     // 从正式路径加载新数据库并切换活动连接
     bool activatePublishedDatabase(QString *error, EM_FullBlackStatus *failureStatus);
-
     // 结束失败的更新流程并清理下载切片，保留完整ZIP
     void failFullUpdate(const QString &error, EM_FullBlackStatus status);
-
-    // 完成成功的更新流程，保留当前完整ZIP并清理其他临时文件
+    // 完成成功的数据库更新流程并请求清理该全量指定的增量表
     void finishFullUpdate();
+
+    // ---------- 数据库加载与校验 ----------
+    // 加载全量并切换活动连接
+    bool loadFullBlack(int batchNo, const QString &path);
+    // 使用候选连接打开并校验全量，成功后保持候选连接打开
+    bool openAndValidateFullBlack(int batchNo, const QString &path, QString *version, QString *cleanTable, QString *error);
+    // 校验全量数据库业务元数据
+    bool validateFullBlack(const QSqlDatabase &dao, int batchNo, QString *version, QString *cleanTable);
+
+    // ---------- 状态与文件清理 ----------
+    // 清理全量目录下除当前批次外的其他数据库文件
+    void pruneOtherFullBlackFiles(int batchNo);
+    // 清理.staging目录下除当前批次外的其他完整ZIP
+    void pruneOtherFullZipFiles(int batchNo);
+    // 更新当前全量状态
+    void setStatus(bool isValid, EM_FullBlackStatus status);
+    // 请求增量模块清理当前活动全量指定的cleanTable
+    void requestDeltaTableCleanup();
 
 private:
     // 当前是否存在已加载、可查询的活动全量
@@ -121,8 +120,8 @@ private:
     QString m_fullZipPath;
     // 已发布到正式目录、尚未切换连接的数据库路径
     QString m_publishedDbPath;
-    // 当前清单来自远程权威来源，成功后可以安全裁剪其他批次完整ZIP
-    bool m_pruneFullZipCacheOnSuccess = false;
+    // 当前更新模式，决定能否下载远程切片以及成功后能否清理其他批次ZIP
+    FullUpdateMode m_updateMode = FullUpdateMode::RemoteManifest;
     // 全量数据库连接 [0]: 活动连接 [1]: 候选连接，非加载期间处于关闭状态
     QSqlDatabase m_dao[2];
     // 定时器

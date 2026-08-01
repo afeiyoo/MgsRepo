@@ -11,8 +11,8 @@ SUBDIRS += \
     # LaneMaster \
     # MgsToolsKit \
     # SmartLaneController \
-    # LaneDataService \
-    PadService \
+    LaneDataService \
+    # PadService \
     # ETC \
     # StationService \
     # ServiceHub \
