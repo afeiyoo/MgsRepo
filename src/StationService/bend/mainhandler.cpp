@@ -1,5 +1,6 @@
 #include "mainhandler.h"
 
+#include <QDir>
 #include <QJsonDocument>
 #include <QVariantMap>
 
@@ -278,7 +279,7 @@ QString MainHandler::dealQueryETCBlack(const QVariantMap &aMap) const
         version = aMap["version"].toString();
 
     if (version.isEmpty())
-        throw BaseException(BaseException::QUERY_ETC_BLACK, 3, "参数错误");
+        throw BaseException(BaseException::QUERY_ETC_BLACK, 3, version); // version参数错误
 
     QString dealtData = checkETCBlackInfo(version);
     return dealtData;
@@ -286,27 +287,27 @@ QString MainHandler::dealQueryETCBlack(const QVariantMap &aMap) const
 
 QString MainHandler::checkETCBlackInfo(const QString &version) const
 {
-    QString filePath = QString("%1/download/%2/%3_queryETCBlack.json").arg(FileUtils::curApplicationDirPath(), version.left(8), version);
+    const QString filePath = QDir(FileUtils::curApplicationDirPath())
+                                 .filePath(QString("download/%1/%2_queryETCBlack.json").arg(version.left(8), version));
 
     QString result;
-    FileName file = FileName::fromString(filePath);
-    if (!file.exists()) {
+    if (!QFileInfo::exists(filePath)) {
         QString curVersion = GM_INS->getCurBlackVersion();
         if (curVersion < version) {
-            throw BaseException(BaseException::QUERY_ETC_BLACK, 2, version);
+            throw BaseException(BaseException::QUERY_ETC_BLACK, 2, version); // 请求version数据未准备好
         } else {
-            throw BaseException(BaseException::QUERY_ETC_BLACK, 0, version);
+            throw BaseException(BaseException::QUERY_ETC_BLACK, 0, version); // 请求version无数据
         }
     }
 
-    FileReader reader;
     QString errStr;
-    if (!reader.fetch(file.toString(), &errStr))
+    FileReader reader;
+    if (!reader.fetch(filePath, &errStr))
         throw BaseException(BaseException::QUERY_ETC_BLACK, 4, version);
 
     QString jsonData = reader.data();
     if (jsonData.isEmpty())
-        throw BaseException(BaseException::QUERY_ETC_BLACK, 4, version);
+        throw BaseException(BaseException::QUERY_ETC_BLACK, 0, version);
 
     // 文件内容存在，则直接读取文件内容返回
     return jsonData;
