@@ -2,6 +2,7 @@
 
 #include <QButtonGroup>
 #include <QHBoxLayout>
+#include <QSignalBlocker>
 
 #include "ElaLineEdit.h"
 #include "ElaMessageBar.h"
@@ -10,7 +11,6 @@
 #include "ElaRadioButton.h"
 #include "ElaText.h"
 #include "ElaToggleButton.h"
-#include "ElaToggleSwitch.h"
 #include "Logger.h"
 #include "qhostaddress.h"
 #include "smartlanecontroller.h"
@@ -31,34 +31,48 @@ T_SmartController::T_SmartController(QWidget *parent)
 
     initContent();
 
+    for (int i = 1; i <= 16; ++i) {
+        m_lastRelayMap.insert(i, false);
+    }
+
     m_heartTimer = new QTimer(this);
-    m_heartTimer->setInterval(5000); // 5秒
+    m_heartTimer->setInterval(6000); // 6秒
 
     m_heartTimer->setSingleShot(true);
     connect(m_heartTimer, &QTimer::timeout, this, [=]() {
         // 超时：认为心跳异常
-        LOG_CWARNING("smartctrl").noquote() << "心跳超时（>5s）";
+        LOG_CWARNING("smartctrl").noquote() << "心跳超时（>6s）";
 
         m_heartStatusText->setText("设备心跳异常");
         m_heartStatusText->setStyleSheet("color: #ff0000");
     });
 
     connect(m_connectButton, &ElaPushButton::clicked, this, &T_SmartController::onConnectServer);
-    connect(m_sendButton, &ElaPushButton::clicked, this, &T_SmartController::onSendToSmartLaneController);
 
     connect(m_inputButton, &ElaPushButton::toggled, this, [=](bool checked) {
         Q_UNUSED(checked);
         // 偏移位按钮重置
+        const QSignalBlocker offsetBlocker(m_offsetButton);
         m_offsetButton->setIsToggled(false);
         // 控制位按钮重置
         for (auto btn : m_controlButton) {
+            const QSignalBlocker blocker(btn);
             btn->setIsToggled(false);
         }
         // 电平位按钮重置
         for (auto btn : m_triggerButton) {
+            const QSignalBlocker blocker(btn);
             btn->setIsToggled(false);
         }
     });
+
+    connect(m_offsetButton, &ElaToggleButton::toggled, this, [=](bool) { syncOutputState(); });
+    for (auto btn : m_controlButton) {
+        connect(btn, &ElaToggleButton::toggled, this, [=](bool) { syncOutputState(); });
+    }
+    for (auto btn : m_triggerButton) {
+        connect(btn, &ElaToggleButton::toggled, this, [=](bool) { syncOutputState(); });
+    }
 
     connect(m_smartController, &SmartLaneController::sigNetworkStatusChanged, this, [=](bool isOnline) {
         m_isTcpConnected = isOnline;
@@ -95,14 +109,6 @@ void T_SmartController::initContent()
     m_connectInfoEdit->setPlaceholderText("请输入IP地址与端口,用冒号分隔");
     m_connectInfoEdit->setFixedSize(240, 35);
     m_connectButton = new ElaPushButton("连接", this);
-    m_sendButton = new ElaPushButton("发送", this);
-
-    ElaText *devCtrlTip = new ElaText("设备开关", this);
-    devCtrlTip->setTextPixelSize(15);
-    devCtrlTip->setIsWrapAnywhere(false);
-
-    m_devSwitch = new ElaToggleSwitch(this);
-    m_devSwitch->setFixedHeight(20);
 
     ElaText *modeTip = new ElaText("模式", this);
     modeTip->setTextPixelSize(15);
@@ -120,11 +126,7 @@ void T_SmartController::initContent()
     partHLayout1->setContentsMargins(0, 0, 0, 0);
     partHLayout1->addWidget(m_connectInfoEdit);
     partHLayout1->addWidget(m_connectButton);
-    partHLayout1->addWidget(m_sendButton);
     partHLayout1->addStretch();
-    partHLayout1->addWidget(devCtrlTip);
-    partHLayout1->addWidget(m_devSwitch);
-    partHLayout1->addSpacing(13);
     partHLayout1->addWidget(modeTip);
     partHLayout1->addWidget(m_outputButton);
     partHLayout1->addWidget(m_inputButton);
@@ -181,6 +183,7 @@ void T_SmartController::initContent()
                 // 选中当前 → 取消其他，如果是取消选中，不做处理（允许全不选）
                 for (auto btn : m_triggerButton) {
                     if (btn != triggerButton) {
+                        const QSignalBlocker blocker(btn);
                         btn->setIsToggled(false);
                     }
                 }
@@ -320,65 +323,45 @@ void T_SmartController::onRecvFromSmartLaneController(uchar type, QByteArray dat
     }
 }
 
-void T_SmartController::onSendToSmartLaneController()
+void T_SmartController::syncOutputState()
 {
-    if (!m_isTcpConnected) {
-        ElaMessageBar::error(ElaMessageBarType::BottomRight, "发送失败", "与智能网关未建立连接，请注意", 1000, this);
-        LOG_CERROR("infoboard").noquote() << "数据发送失败：未与智能网关建立连接";
+    if (!m_isTcpConnected)
         return;
-    }
 
-    if (!m_outputButton->isChecked()) {
-        ElaMessageBar::error(ElaMessageBarType::BottomRight, "发送失败", "未设置输出模式", 1000, this);
-        LOG_CERROR("infoboard").noquote() << "数据发送失败：未设置输出模式";
+    if (!m_outputButton->isChecked())
         return;
-    }
 
-    bool isControlButtonSet = false;
-    bool isOffsetButtonSet = false;
-    bool isTriggerButtonSet = false;
-    for (auto btn : m_controlButton) {
-        if (btn->getIsToggled()) {
-            isControlButtonSet = true;
-            break;
-        }
-    }
-    for (auto btn : m_triggerButton) {
-        if (btn->getIsToggled()) {
-            isTriggerButtonSet = true;
-            break;
-        }
-    }
-    isOffsetButtonSet = m_offsetButton->getIsToggled();
-
-    if (!isControlButtonSet || !isOffsetButtonSet || !isTriggerButtonSet) {
-        ElaMessageBar::error(ElaMessageBarType::BottomRight, "发送失败", "输出内容设置错误", 1000, this);
-        LOG_CERROR("infoboard").noquote() << "数据发送失败：输出内容设置错误";
-        return;
-    }
+    bool canOpenRelay = m_offsetButton->getIsToggled() && (m_triggerButton[0]->getIsToggled() || m_triggerButton[1]->getIsToggled());
 
     // 控制第i+1路
-    bool devSwitch = m_devSwitch->getIsToggled();
     QMap<int, bool> relayMap;
     for (int i = 0; i < m_controlButton.size(); ++i) {
         relayMap.insert(i + 1, 0); // 所有路默认关闭
         if (i == 0)                // 输出的话，路数从1开始排序（相当于按钮0是废了）
             continue;
-        if (m_controlButton[i]->getIsToggled() && devSwitch) {
+        if (m_controlButton[i]->getIsToggled() && canOpenRelay) {
             relayMap[i] = 1;
         }
     }
-    // 0: 低电平触发 1: 高电平触发
-    int triggerLevel = 0;
+    // 0: 低电平触发 1: 高电平触发；未选择电平时沿用上一次电平关闭输出
+    int triggerLevel = m_lastTriggerLevel;
     if (m_triggerButton[0]->getIsToggled()) {
         triggerLevel = 0;
-    } else {
+    } else if (m_triggerButton[1]->getIsToggled()) {
         triggerLevel = 1;
     }
+
+    bool hasOpenRelay = relayMap.values().contains(true);
+    bool relayStateChanged = relayMap != m_lastRelayMap; // 比较当前状态和上一次发送状态：
+    bool triggerLevelChanged = hasOpenRelay && triggerLevel != m_lastTriggerLevel;
+    if (!relayStateChanged && !triggerLevelChanged)
+        return;
 
     QByteArray sendData = packSendData(relayMap, triggerLevel);
 
     m_smartController->sendCommand("A1", sendData);
+    m_lastRelayMap = relayMap;
+    m_lastTriggerLevel = triggerLevel;
 }
 
 QByteArray T_SmartController::packSendData(const QMap<int, bool> &relayMap, int triggerLevel)
