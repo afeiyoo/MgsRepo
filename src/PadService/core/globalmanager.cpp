@@ -22,7 +22,7 @@ GlobalManager::GlobalManager(QObject *parent)
     m_confPath = QDir(FileUtils::curApplicationDirPath()).filePath("config/config.ini");
 
     m_pictureDir.setPath(QDir(FileUtils::curApplicationDirPath()).filePath("pictures"));
-    m_pictureCleanupTimer = new QTimer(this);
+    m_cleanupTimer = new QTimer(this);
 
     m_ds = new DataService();
 }
@@ -43,6 +43,14 @@ void GlobalManager::onCleanExpiredPictures()
     const bool ok = FileUtils::autoDeleteFiles(m_pictureDir.absolutePath(), ".jpg", 30 * 24, &error);
     if (!ok)
         LOG_WARNING().noquote() << "定期删除" << m_pictureDir.absolutePath() << "下过期文件失败:" << error;
+}
+
+void GlobalManager::onCleanExpiredCaches()
+{
+    QString error;
+    const bool ok = FileUtils::autoDeleteFiles(m_configMan->m_baseConfig.cachePath, ".cache", 15 * 24, &error);
+    if (!ok)
+        LOG_WARNING().noquote() << "定期删除" << m_configMan->m_baseConfig.cachePath << "下过期文件失败:" << error;
 }
 
 int GlobalManager::init()
@@ -92,10 +100,12 @@ int GlobalManager::init()
     FileUtils::makeSureDirExist(FileName::fromString(m_pictureDir.absolutePath()));
     FileUtils::makeSureDirExist(FileName::fromString(m_configMan->m_baseConfig.cachePath));
 
-    m_pictureCleanupTimer->setInterval(30 * 60 * 1000);
-    connect(m_pictureCleanupTimer, &QTimer::timeout, this, &GlobalManager::onCleanExpiredPictures);
+    m_cleanupTimer->setInterval(30 * 60 * 1000);
+    connect(m_cleanupTimer, &QTimer::timeout, this, &GlobalManager::onCleanExpiredPictures);
+    connect(m_cleanupTimer, &QTimer::timeout, this, &GlobalManager::onCleanExpiredCaches);
     onCleanExpiredPictures();
-    m_pictureCleanupTimer->start();
+    onCleanExpiredCaches();
+    m_cleanupTimer->start();
 
 #if QT_VERSION <= QT_VERSION_CHECK(5, 10, 0)
     qsrand(QTime(0, 0, 0).secsTo(QTime::currentTime())); // 随机数种子初始化

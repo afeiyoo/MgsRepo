@@ -9,6 +9,8 @@
 #include "core/globalmanager.h"
 #include "utils/datadealutils.h"
 
+using namespace Utils;
+
 DataService::DataService() {}
 
 DataService::~DataService() {}
@@ -561,64 +563,49 @@ QVariantList DataService::getFreeTempVehicles(const QString &plate)
     }
 }
 
-QString DataService::getEmgcSeqNum(const QString &stationId)
+int DataService::allocateEmgcSeqNum(const QString &stationId, bool *ok)
 {
-    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
-    QString sql(R"(SELECT kitem FROM t_emgcdict WHERE stationid = ? AND laneid = 0 AND ktype = 1)");
+    *ok = false;
 
+    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
     EasyQtSql::Transaction t(sdb);
     try {
-        EasyQtSql::PreparedQuery query = t.prepare(sql);
-        EasyQtSql::QueryResult res = query.exec(stationId);
+        bool exists = true;
+        int allocatedSeqNum = -1;
 
-        LOG_INFO().noquote() << "执行SQL语句: " << Utils::DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
+        const QString selectSql = "SELECT kitem FROM t_emgcdict WHERE stationid = ? AND laneid = 0 AND ktype = 1 FOR UPDATE";
+        EasyQtSql::PreparedQuery selectQuery = t.prepare(selectSql);
+        EasyQtSql::QueryResult result = selectQuery.exec(stationId);
+        LOG_INFO().noquote() << "执行SQL语句: " << DataDealUtils::fullExecutedQuery(result.unwrappedQuery());
+        if (!result.next()) {
+            exists = false;
+        } else {
+            exists = true;
+            allocatedSeqNum = result.value("kitem").toInt();
+        }
 
-        if (!res.next())
-            return "0";
+        // 如果存在，则更新，不存在，则插入
+        if (exists) {
+            EasyQtSql::PreparedQuery updateQuery = t.prepare("UPDATE t_emgcdict SET kitem = ? WHERE stationid = ? AND laneid = 0 AND ktype = 1");
+            EasyQtSql::QueryResult updateResult = updateQuery.exec(allocatedSeqNum + 1, stationId);
+            LOG_INFO().noquote() << "执行SQL语句: " << DataDealUtils::fullExecutedQuery(updateResult.unwrappedQuery());
+        } else {
+            // 本次分配序号1，因此数据库保存下一个可用序号2。
+            allocatedSeqNum = 1;
+            EasyQtSql::NonQueryResult insertResult = t.insertInto("t_emgcdict (stationid, laneid, ktype, kitem, kvalueint, kvaluestring)")
+                                                         .values(stationId, 0, 1, QString::number(allocatedSeqNum + 1), 0, "")
+                                                         .exec();
+            LOG_INFO().noquote() << "执行SQL语句: " << DataDealUtils::fullExecutedQuery(insertResult.unwrappedQuery());
+        }
 
-        QString data = res.value("kitem").toString();
-        return data;
+        if (!t.commit())
+            return -1;
+
+        *ok = true;
+        return allocatedSeqNum;
     } catch (EasyQtSql::DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
-        return "";
-    }
-}
-
-bool DataService::updateEmgcSeqNum(const QString &stationId)
-{
-    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
-    QString sql = QString("UPDATE t_emgcdict SET kitem = kitem+1 WHERE stationid = %1 AND laneid = 0 AND ktype = 1").arg(stationId);
-
-    EasyQtSql::Transaction t(sdb);
-    try {
-        EasyQtSql::NonQueryResult res = t.execNonQuery(sql);
-
-        LOG_INFO().noquote() << "执行SQL语句: " << Utils::DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
-
-        return t.commit();
-    } catch (EasyQtSql::DBException &e) {
-        t.rollback();
-        LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
-        return false;
-    }
-}
-
-bool DataService::insertEmgcSeqNum(const QString &stationId)
-{
-    QSqlDatabase sdb = m_dbFactory->getDatabase("oracle");
-
-    EasyQtSql::Transaction t(sdb);
-    try {
-        EasyQtSql::NonQueryResult res
-            = t.insertInto("t_emgcdict (stationid, laneid, ktype, kitem, kvalueint, kvaluestring)").values(stationId, 0, 1, "1", 0, "").exec();
-
-        LOG_INFO().noquote() << "执行SQL语句: " << Utils::DataDealUtils::fullExecutedQuery(res.unwrappedQuery());
-
-        return t.commit();
-    } catch (EasyQtSql::DBException &e) {
-        t.rollback();
-        LOG_ERROR().noquote() << e.lastError.text() << '\t' << e.lastQuery.left(1024);
-        return false;
+        return -1;
     }
 }
 
@@ -867,39 +854,41 @@ int DataService::getOutShiftSettleCount(const QString &stationId, const QString 
                               .arg(stationId);
     sendMap["dataType"] = 4;
 
-    NloJson nloJson;
+    QByteArray sendData = DataDealUtils::mapToJson(sendMap);
+    LOG_INFO().noquote() << "请求相关稽查班次条数查询:" << sendData.left(1024);
 
-    QString sendData = nloJson.serialize(sendMap);
-    LOG_INFO().noquote() << "查询相关班次信息条数: " << sendData.left(1024);
-
-    QVariantList records;
     QByteArray result;
     Http client;
-    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
-    if (ok) {
-        LOG_INFO().noquote() << "返回相关班次信息条数查询结果: " << result.left(1024);
-        QVariant parsed = nloJson.parse(result);
-        if (!parsed.isValid() || !parsed.canConvert<QVariantMap>()) {
-            throw BaseException(1, QString("响应失败: 站级服务响应数据异常!"));
-        }
-
-        QVariantMap resMap = parsed.toMap();
-        if (resMap["errCode"].toInt() == 1) {
-            QString errorMessage = resMap["errorMessage"].toString();
-            throw BaseException(1, QString("响应失败: 站级服务返回失败 %1").arg(errorMessage));
-        } else {
-            records = resMap["data"].toList();
-        }
-    } else {
-        throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
+    bool ok = client.postSync(result, url, sendData, "application/json");
+    if (!ok) {
+        LOG_ERROR().noquote() << "站级服务返回失败:" << result;
+        return -1;
     }
 
+    LOG_INFO().noquote() << "返回相关稽查班次条数查询结果:" << result.left(1024);
+    bool jsonOk = false;
+    QString jsonErr;
+    QVariantMap resMap = DataDealUtils::jsonToMap(result, &jsonOk, &jsonErr);
+    if (!jsonOk) {
+        LOG_ERROR().noquote() << "站级服务返回数据解析异常";
+        return -1;
+    }
+
+    int errCode = resMap["errCode"].toInt();
+    QString errorMessage = resMap["errorMessage"].toString();
+    if (errCode == 1) {
+        LOG_ERROR().noquote() << "相关稽查班次条数查询失败:" << errorMessage;
+        return -1;
+    }
+
+    QVariantList records = resMap["data"].toList();
     if (records.isEmpty()) {
-        throw BaseException(1, QString("响应失败: 未查询到相关班次信息"));
+        LOG_ERROR().noquote() << "相关稽查班次条数查询结果为空";
+        return -1;
     }
 
-    QVariantMap resMap = records.first().toMap();
-    return resMap["cnt"].toInt();
+    QVariantMap aMap = records.first().toMap();
+    return aMap["cnt"].toInt();
 }
 
 bool DataService::insertOutShiftSettle(const QString &dataId, const QString &shiftDate, int shiftId, const QString &stationId,
@@ -923,34 +912,35 @@ bool DataService::insertOutShiftSettle(const QString &dataId, const QString &shi
     sendMap["tableKey"] = "recordid";
     sendMap["saveData"] = map;
 
-    NloJson nloJson;
+    QByteArray sendData = DataDealUtils::mapToJson(sendMap);
+    LOG_INFO().noquote() << "请求相关稽查班次插入: " << sendData.left(1024);
 
-    QString sendData = nloJson.serialize(sendMap);
-    LOG_INFO().noquote() << "请求插入工班信息: " << sendData.left(1024);
-
-    bool isSuccessful = false;
     QByteArray result;
     Http client;
-    bool ok = client.postSync(result, url, sendData.toUtf8(), "application/json");
-    if (ok) {
-        LOG_INFO().noquote() << "插入工班信息返回结果: " << result.left(1024);
-        QVariant parsed = nloJson.parse(result);
-        if (!parsed.isValid() || !parsed.canConvert<QVariantMap>()) {
-            throw BaseException(1, QString("响应失败: 站级服务响应数据异常!"));
-        }
-
-        QVariantMap resMap = parsed.toMap();
-        if (resMap["errCode"].toInt() == 1) {
-            QString errorMessage = resMap["errorMessage"].toString();
-            throw BaseException(1, QString("响应失败: 站级服务返回失败 %1").arg(errorMessage));
-        } else {
-            isSuccessful = true;
-        }
-    } else {
-        throw BaseException(1, QString("响应失败: %1").arg(QString(result)));
+    bool ok = client.postSync(result, url, sendData, "application/json");
+    if (!ok) {
+        LOG_ERROR().noquote() << "站级服务返回失败:" << result;
+        return false;
     }
 
-    return isSuccessful;
+    LOG_INFO().noquote() << "返回相关稽查班次插入结果: " << result.left(1024);
+
+    bool jsonOk = false;
+    QString jsonErr;
+    QVariantMap resMap = DataDealUtils::jsonToMap(result, &jsonOk, &jsonErr);
+    if (!jsonOk) {
+        LOG_ERROR().noquote() << "站级服务返回数据解析异常";
+        return false;
+    }
+
+    int errCode = resMap["errCode"].toInt();
+    QString errorMessage = resMap["errorMessage"].toString();
+    if (errCode == 1) {
+        LOG_ERROR().noquote() << "相关稽查班次插入失败:" << errorMessage;
+        return false;
+    }
+
+    return true;
 }
 
 bool DataService::insertTicketReviewPic(const T_DiscardTicketReview &review, QUrl url)

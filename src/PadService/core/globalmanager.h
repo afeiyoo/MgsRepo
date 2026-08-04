@@ -26,6 +26,7 @@ private:
 
 private slots:
     void onCleanExpiredPictures();
+    void onCleanExpiredCaches();
 
 public:
     // 配置文件路径
@@ -42,5 +43,5 @@ public:
     QMap<int, QString> m_remoteURIs;
 
 private:
-    QTimer *m_pictureCleanupTimer = nullptr;
+    QTimer *m_cleanupTimer = nullptr;
 };

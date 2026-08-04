@@ -81,7 +81,13 @@ private:
     // 3.3.31 省内逃漏费车辆补费上传
     QString doDealCmd31(QVariantMap aMap);
     // 第三方支付请求
-    QVariantMap cloudPay(const QString &tradeNum, const QVariantMap &aMap);
+    QVariantMap cloudPay(const QString &tradeNum, const QString &authCode, const QString &vehicleId, const QString &exStationId, int factPay);
+    // 上传稽核补费结果到省中心
+    bool postAuditInfoToProvince(const QUrl &url, const QByteArray &data, QString *error);
+    // 发送稽核补费流水到站级
+    bool sendAuditInfoToStation(const QString &ip, const QByteArray &data, QString *error);
+    // 生成稽查补费工班
+    bool insertOutShiftSettle(const QUrl &url, const QString &stationId, const QString &shiftDate, const QString &operatorId, int shiftId);
     // 核单请求
     QVariantMap getBillState(const QString &tradeNum);
     // 退款
