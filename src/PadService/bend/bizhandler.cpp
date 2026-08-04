@@ -124,8 +124,6 @@ QString BizHandler::doDealCmd01(const QVariantMap &aMap)
     if (stationID.isEmpty())
         throw BaseException(1, "响应失败: 站代码为空");
 
-    NloJson nloJson;
-
     QString stationName = GM_INSTANCE->m_ds->getStationName("3501" + stationID);
 
     QString msg = QString("%1(%2), 车道号: %3, 工号: %4").arg(stationName, stationID).arg(laneID).arg(operatorID);
@@ -136,8 +134,7 @@ QString BizHandler::doDealCmd01(const QVariantMap &aMap)
     resMap["desc"] = msg;
     resMap["loginCode"] = QString("%1%2").arg(stationID, Utils::DataDealUtils::padValue(laneID, 2));
 
-    QString dealtData = nloJson.serialize(resMap);
-    return dealtData;
+    return DataDealUtils::mapToJson(resMap);
 }
 
 QString BizHandler::doDealCmd16(const QVariantMap &aMap)
@@ -2032,7 +2029,6 @@ bool BizHandler::sendAuditInfoToStation(const QString &ip, const QByteArray &dat
         return false;
     }
 
-    LOG_INFO().noquote() << "稽核流水发送站级成功";
     return true;
 }
 
@@ -2899,14 +2895,12 @@ bool BizHandler::repostAuditData(const QString &fileName, const QString &station
         if (!postOk)
             return false;
 
-        // 更新缓存文件
         updateCache(fileName, "stage", 1);
 
         bool sendOk = sendAuditInfoToStation(stationIP, stationData.toUtf8(), errDesc);
         if (!sendOk)
             return false;
 
-        // 更新缓存文件
         updateCache(fileName, "stage", 2);
 
     } else if (stage == 1) {
@@ -2915,7 +2909,6 @@ bool BizHandler::repostAuditData(const QString &fileName, const QString &station
         if (!sendOk)
             return false;
 
-        // 更新缓存文件
         updateCache(fileName, "stage", 2);
     }
 
@@ -2925,7 +2918,6 @@ bool BizHandler::repostAuditData(const QString &fileName, const QString &station
         return false;
     }
 
-    // 更新缓存文件
     updateCache(fileName, "stage", 3);
 
     return true;
