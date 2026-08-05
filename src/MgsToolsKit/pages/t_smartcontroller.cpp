@@ -35,36 +35,18 @@ T_SmartController::T_SmartController(QWidget *parent)
         m_lastRelayMap.insert(i, false);
     }
 
-    m_heartTimer = new QTimer(this);
-    m_heartTimer->setInterval(6000); // 6秒
-
-    m_heartTimer->setSingleShot(true);
-    connect(m_heartTimer, &QTimer::timeout, this, [=]() {
-        // 超时：认为心跳异常
-        LOG_CWARNING("smartctrl").noquote() << "心跳超时（>6s）";
-
-        m_heartStatusText->setText("设备心跳异常");
-        m_heartStatusText->setStyleSheet("color: #ff0000");
-    });
-
     connect(m_connectButton, &ElaPushButton::clicked, this, &T_SmartController::onConnectServer);
 
     connect(m_inputButton, &ElaPushButton::toggled, this, [=](bool checked) {
-        Q_UNUSED(checked);
-        // 偏移位按钮重置
-        const QSignalBlocker offsetBlocker(m_offsetButton);
-        m_offsetButton->setIsToggled(false);
-        // 控制位按钮重置
-        for (auto btn : m_controlButton) {
-            const QSignalBlocker blocker(btn);
-            btn->setIsToggled(false);
-        }
-        // 电平位按钮重置
-        for (auto btn : m_triggerButton) {
-            const QSignalBlocker blocker(btn);
-            btn->setIsToggled(false);
+        setIoButtonsReadOnly(checked);
+        resetIoButtons();
+
+        // D2可能在输出模式到达；进入输入模式时显示最近一次D2状态
+        if (checked && m_hasLastCtrlStatus) {
+            updateIoButtons(m_lastCtrlStatus);
         }
     });
+    setIoButtonsReadOnly(m_inputButton->isChecked());
 
     connect(m_offsetButton, &ElaToggleButton::toggled, this, [=](bool) { syncOutputState(); });
     for (auto btn : m_controlButton) {
@@ -78,13 +60,20 @@ T_SmartController::T_SmartController(QWidget *parent)
         m_isTcpConnected = isOnline;
         if (!isOnline) {
             m_connectButton->setText("连接");
-            m_heartStatusText->setText("设备心跳异常");
-            m_heartStatusText->setStyleSheet("color: #ff0000");
-
-            m_heartTimer->stop(); // 断线停止
+            resetIoButtons();
+            m_hasLastCtrlStatus = false;
         } else {
             m_connectButton->setText("断连");
-            m_heartTimer->start();
+        }
+    });
+
+    connect(m_smartController, &SmartLaneController::sigHeartbeatStatusChanged, this, [=](bool normal) {
+        if (normal) {
+            m_heartStatusText->setText("设备心跳正常");
+            m_heartStatusText->setStyleSheet("color: #28bf74");
+        } else {
+            m_heartStatusText->setText("设备心跳异常");
+            m_heartStatusText->setStyleSheet("color: #ff0000");
         }
     });
 
@@ -286,41 +275,78 @@ void T_SmartController::onRecvFromSmartLaneController(uchar type, QByteArray dat
 {
     switch (type) {
     case 0xD2: {
-        if (!m_inputButton->isChecked())
-            return;
-
         uchar high = static_cast<uchar>(data.at(1));
         uchar low = static_cast<uchar>(data.at(2));
-        quint16 value = (high << 8) | low;
-        // 控制位按钮更新
-        for (int i = 0; i < m_controlButton.size(); ++i) {
-            bool checked = value & (1 << i);
-            m_controlButton[i]->setIsToggled(checked);
+        quint16 status = (static_cast<quint16>(high) << 8) | low;
+        m_lastCtrlStatus = status;
+        m_hasLastCtrlStatus = true;
+
+        if (m_inputButton->isChecked()) {
+            updateIoButtons(status);
         }
-        // 偏移位按钮更新
-        m_offsetButton->setIsToggled(true);
-        // 电平位按钮更新  NOTE: 电平位无法得知，默认高电平触发（需要依据现场环境调整）
-        m_triggerButton[1]->setIsToggled(true);
     } break;
     case 0xD3:
         // TODO 称重数据
         break;
-    case 0xD6: {
-        uchar heartStatus = static_cast<uchar>(data.at(1));
-        // 每次收到心跳 → 重置计时器
-        m_heartTimer->start();
-
-        if (heartStatus != 0x00) {
-            m_heartStatusText->setText("设备心跳异常");
-            m_heartStatusText->setStyleSheet("color: #ff0000");
-        } else {
-            m_heartStatusText->setText("设备心跳正常");
-            m_heartStatusText->setStyleSheet("color: #28bf74");
-        }
-    } break;
+    case 0xD6:
+        // 心跳状态由 SmartLaneController::sigHeartbeatStatusChanged 统一更新
+        break;
     default:
         break;
     }
+}
+
+void T_SmartController::setIoButtonsReadOnly(bool readOnly)
+{
+    m_offsetButton->setAttribute(Qt::WA_TransparentForMouseEvents, readOnly);
+    m_offsetButton->setFocusPolicy(readOnly ? Qt::NoFocus : Qt::StrongFocus);
+
+    for (int i = 0; i < m_controlButton.size(); ++i) {
+        const bool buttonReadOnly = readOnly || i == 0;
+        m_controlButton[i]->setAttribute(Qt::WA_TransparentForMouseEvents, buttonReadOnly);
+        m_controlButton[i]->setFocusPolicy(buttonReadOnly ? Qt::NoFocus : Qt::StrongFocus);
+    }
+
+    for (auto btn : m_triggerButton) {
+        btn->setAttribute(Qt::WA_TransparentForMouseEvents, readOnly);
+        btn->setFocusPolicy(readOnly ? Qt::NoFocus : Qt::StrongFocus);
+    }
+}
+
+void T_SmartController::resetIoButtons()
+{
+    const QSignalBlocker offsetBlocker(m_offsetButton);
+    m_offsetButton->setIsToggled(false);
+
+    for (auto btn : m_controlButton) {
+        const QSignalBlocker blocker(btn);
+        btn->setIsToggled(false);
+    }
+
+    for (auto btn : m_triggerButton) {
+        const QSignalBlocker blocker(btn);
+        btn->setIsToggled(false);
+    }
+}
+
+void T_SmartController::updateIoButtons(quint16 status)
+{
+    const bool hasTriggeredIo = status != 0;
+
+    for (int i = 0; i < m_controlButton.size(); ++i) {
+        const QSignalBlocker blocker(m_controlButton[i]);
+        bool checked = status & (1 << i);
+        m_controlButton[i]->setIsToggled(checked);
+    }
+
+    const QSignalBlocker offsetBlocker(m_offsetButton);
+    m_offsetButton->setIsToggled(hasTriggeredIo);
+
+    // D2无法得知触发电平，输入状态默认显示为高电平触发
+    const QSignalBlocker lowLevelBlocker(m_triggerButton[0]);
+    const QSignalBlocker highLevelBlocker(m_triggerButton[1]);
+    m_triggerButton[0]->setIsToggled(false);
+    m_triggerButton[1]->setIsToggled(hasTriggeredIo);
 }
 
 void T_SmartController::syncOutputState()

@@ -25,6 +25,9 @@ public slots:
     void onRecvFromSmartLaneController(uchar type, QByteArray data);
 
 private:
+    void setIoButtonsReadOnly(bool readOnly);
+    void resetIoButtons();
+    void updateIoButtons(quint16 status);
     void syncOutputState();
     QByteArray packSendData(const QMap<int, bool> &relayMap, int triggerLevel);
 
@@ -47,7 +50,9 @@ private:
     // 后台
     SmartLaneController *m_smartController = nullptr;
     bool m_isTcpConnected = false;  // tcp连接是否正常
-    QMap<int, bool> m_lastRelayMap;  // 上一次发送的继电器状态
-    int m_lastTriggerLevel = 0;      // 电平位取消时，沿用上一次电平关闭输出
-    QTimer *m_heartTimer = nullptr; // 心跳定时器
+    QMap<int, bool> m_lastRelayMap; // 上一次发送的继电器状态
+    int m_lastTriggerLevel = 0;     // 电平位取消时，沿用上一次电平关闭输出
+
+    quint16 m_lastCtrlStatus = 0;   // 最近一次D2上报的IO状态
+    bool m_hasLastCtrlStatus = false;
 };
