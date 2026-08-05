@@ -100,8 +100,9 @@ void SmartLaneController::onStateChanged(QAbstractSocket::SocketState state)
         LOG_CINFO("smartctrl").noquote() << QString("连接智能网关成功(IP: %1, port: %2)").arg(m_peerAddr).arg(m_peerPort);
         m_isForceDisconnect = false;
         m_connected = true;
-        m_reconnectCount = 0;
-        m_reconnectAfterHeartbeatTimeout = false;
+        // TCP 连接成功不代表网关已恢复；心跳超时后的重连计数只能在收到 D6 后清零。
+        if (!m_reconnectAfterHeartbeatTimeout)
+            m_reconnectCount = 0;
         m_reconnectTimer->stop();
         m_heartbeatTimer->start();
         emit sigNetworkStatusChanged(true);
@@ -214,7 +215,7 @@ void SmartLaneController::sendCommand(const QString &type, QByteArray data)
         connect(cmd->timer, &QTimer::timeout, this, [=]() {
             if (cmd->retryCount < 3) {
                 cmd->retryCount += 1;
-                LOG_CINFO("smartctrl").noquote() << QString("向智能网关发送%1帧[%2]超时，进行第%2次重传(重传最新帧)")
+                LOG_CINFO("smartctrl").noquote() << QString("向智能网关发送%1帧[%2]超时，进行第%3次重传(重传最新帧)")
                                                         .arg(type)
                                                         .arg(cmd->seq, 2, 16, QLatin1Char('0'))
                                                         .arg(cmd->retryCount);
@@ -326,8 +327,14 @@ void SmartLaneController::dealCommand(uchar seq, const QByteArray &command)
     case 0xD3:
     case 0xD6: {
         // IO状态信息,透传接收信息,心跳及设备状态
-        if (cmdType == 0xD6)
+        if (cmdType == 0xD6) {
             m_heartbeatTimer->start();
+            if (m_reconnectAfterHeartbeatTimeout) {
+                m_reconnectAfterHeartbeatTimeout = false;
+                m_reconnectCount = 0;
+                LOG_CINFO("smartctrl").noquote() << "已收到D6心跳帧，智能网关恢复正常";
+            }
+        }
         sendResponse(cmdType, 0x01, seq << 4);
         emit sigRecvFromSmartLaneController(cmdType, command);
     } break;
