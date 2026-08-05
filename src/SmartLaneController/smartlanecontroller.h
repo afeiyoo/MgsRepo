@@ -51,6 +51,7 @@ public slots:
 signals:
     void sigRecvFromSmartLaneController(uchar type, QByteArray data); // 智能网关消息
     void sigNetworkStatusChanged(bool status);                        // 网络连接状态
+    void sigHeartbeatStatusChanged(bool normal);                      // 心跳状态
 
 private:
     void dealCommand(uchar seq, const QByteArray &command);

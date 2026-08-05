@@ -106,6 +106,7 @@ void SmartLaneController::onStateChanged(QAbstractSocket::SocketState state)
         m_reconnectTimer->stop();
         m_heartbeatTimer->start();
         emit sigNetworkStatusChanged(true);
+        emit sigHeartbeatStatusChanged(false); // TCP 已连接，等待首帧 D6 心跳
         break;
     case QAbstractSocket::UnconnectedState:
         LOG_CINFO("smartctrl").noquote() << "智能网关断开连接";
@@ -116,6 +117,7 @@ void SmartLaneController::onStateChanged(QAbstractSocket::SocketState state)
             m_reconnectTimer->start();
         }
         emit sigNetworkStatusChanged(false);
+        emit sigHeartbeatStatusChanged(false);
         break;
     default:
         break;
@@ -161,6 +163,7 @@ void SmartLaneController::onHeartbeatTimeout()
     LOG_CWARNING("smartctrl").noquote() << QString("连续%1秒未收到D6心跳帧，判定与智能网关的网络连接异常，断开并重新连接")
                                                .arg(HEARTBEAT_TIMEOUT_MS / 1000);
 
+    emit sigHeartbeatStatusChanged(false);
     m_reconnectAfterHeartbeatTimeout = true;
     m_tcpSocket->abort();
 
@@ -329,10 +332,13 @@ void SmartLaneController::dealCommand(uchar seq, const QByteArray &command)
         // IO状态信息,透传接收信息,心跳及设备状态
         if (cmdType == 0xD6) {
             m_heartbeatTimer->start();
+            const bool heartbeatNormal = command.size() > 1 && static_cast<uchar>(command.at(1)) == 0x00;
+            emit sigHeartbeatStatusChanged(heartbeatNormal);
+
             if (m_reconnectAfterHeartbeatTimeout) {
                 m_reconnectAfterHeartbeatTimeout = false;
                 m_reconnectCount = 0;
-                LOG_CINFO("smartctrl").noquote() << "已收到D6心跳帧，智能网关恢复正常";
+                LOG_CINFO("smartctrl").noquote() << "已收到D6心跳帧，智能网关通信恢复正常";
             }
         }
         sendResponse(cmdType, 0x01, seq << 4);
