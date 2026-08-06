@@ -22,6 +22,9 @@ public:
     // 读取配置
     ST_ConfigSnap getConfigSnap() const;
 
+    // 保存最近一次成功完增量清表的全量批次
+    void saveFullBlackBatch(int batchNo);
+
 private:
     // 数据库配置
     uint m_dbType;
@@ -41,6 +44,7 @@ private:
     // 状态名单配置
     QString m_fullBlackPath;  // 全量文件所在路径
     QString m_deltaBlackPath; // 增量文件保存路径
+    int m_fullBlackBatch = 0; // 最近一次成功完成增量清表的全量批次
 
     // 服务配置
     QString m_stationServiceURL; // 站级服务

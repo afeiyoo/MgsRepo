@@ -28,6 +28,8 @@ FullBlackWorker::FullBlackWorker(QObject *parent)
 {
     m_timer = new QTimer(this);
     m_http = new Http();
+
+    connect(GM_INS->m_sigMan, &SignalManager::sigCleanETCBlackCardFinished, this, &FullBlackWorker::onCleanETCBlackCardFinished);
 }
 
 FullBlackWorker::~FullBlackWorker()
@@ -71,8 +73,6 @@ void FullBlackWorker::onCheckFullBlack()
 
     // 以本轮检查真正结束的时间作为下一次检查的计时起点。
     m_timer->stop();
-    setStatus(m_isValid, FullBlackChecking);
-
     ST_FullManifest localManifest;
     ST_FullManifest remoteManifest;
     QString localError;
@@ -91,16 +91,12 @@ void FullBlackWorker::onCheckFullBlack()
         LOG_WARNING().noquote() << "远程BlackUpdate.xml无效:" << remoteError;
     }
 
-    // 远程不可用时，只能依赖本地清单。两端都不可用则无法确定全量批次。
+    // 远程清单是全量批次的唯一权威来源。远程不可用时，不允许根据本地清单加载或恢复全量。
     if (!remoteOk) {
-        if (!localOk) {
-            setStatus(m_isValid, FullBlackCheckFailed);
-            finishFirstCheck();
-            scheduleNextCheck();
-            return;
-        }
-
-        loadOrRecoverLocalFullBlack(localManifest, nullptr);
+        LOG_ERROR().noquote() << "远程BlackUpdate.xml不可用，无法确认当前权威全量批次:" << remoteError;
+        setStatus(m_isValid, FullBlackCheckFailed);
+        finishFirstCheck();
+        scheduleNextCheck();
         return;
     }
 
@@ -118,17 +114,12 @@ void FullBlackWorker::onCheckFullBlack()
 
     // 从这里开始，本地和远程清单都有效，可以安全比较批次。
 
-    // 本地批次异常超前：只记录异常并更新状态，不加载本地全量，也不自动回退。
-    if (localManifest.batchNo > remoteManifest.batchNo) {
-        LOG_ERROR().noquote() << "本地batchno高于远程batchno。本地batchno:" << localManifest.batchNo << "远程batchno:" << remoteManifest.batchNo;
-        setStatus(m_isValid, FullBlackLocalBatchAhead);
-        finishFirstCheck();
-        scheduleNextCheck();
-        return;
-    }
+    // 本地批次与远程权威批次不一致时，统一向远程批次收敛，包括必要的版本回退。
+    if (localManifest.batchNo != remoteManifest.batchNo) {
+        LOG_WARNING().noquote() << "本地全量批次与远程权威批次不一致。本地batchno:" << localManifest.batchNo
+                                << "远程batchno:" << remoteManifest.batchNo;
 
-    // 本地批次落后：活动全量已是权威批次时只修复清单，否则更新权威批次。
-    if (localManifest.batchNo < remoteManifest.batchNo) {
+        // 当前活动全量已经是远程权威批次时，只需修复本地清单；否则按远程清单更新或回退。
         if (m_isValid && m_activeBatchNo == remoteManifest.batchNo) {
             repairLocalManifestForActiveBatch(remoteManifest);
         } else {
@@ -138,13 +129,11 @@ void FullBlackWorker::onCheckFullBlack()
     }
 
     // 两端清单批次相等：加载本地全量；当前连接已加载该批次时直接复用。
-    loadOrRecoverLocalFullBlack(localManifest, &remoteManifest);
+    loadOrRecoverLocalFullBlack(localManifest, remoteManifest);
 }
 
 void FullBlackWorker::repairLocalManifestForActiveBatch(const ST_FullManifest &remoteManifest)
 {
-    setStatus(m_isValid, FullBlackPublishing);
-
     QString error;
     if (!publishLocalManifest(remoteManifest, &error)) {
         LOG_ERROR().noquote() << error;
@@ -162,15 +151,13 @@ void FullBlackWorker::repairLocalManifestForActiveBatch(const ST_FullManifest &r
     LOG_INFO().noquote() << "当前活动全量与远程权威批次相同，仅修复本地BlackUpdate.xml，批次:" << m_activeBatchNo;
 }
 
-void FullBlackWorker::loadOrRecoverLocalFullBlack(const ST_FullManifest &localManifest, const ST_FullManifest *remoteManifest)
+void FullBlackWorker::loadOrRecoverLocalFullBlack(const ST_FullManifest &localManifest, const ST_FullManifest &remoteManifest)
 {
     const int batchNo = localManifest.batchNo;
-    const bool remoteAvailable = remoteManifest != nullptr;
 
     if (!m_isFirstCheck && m_isValid && batchNo == m_activeBatchNo) {
         LOG_INFO().noquote() << "当前活动全量与本地BlackUpdate.xml中相同，无需重复加载，批次:" << batchNo;
-        if (remoteAvailable)
-            pruneOtherFullZipFiles(batchNo);
+        pruneOtherFullZipFiles(batchNo);
         setStatus(true, FullBlackReady);
         scheduleNextCheck();
         return;
@@ -180,26 +167,16 @@ void FullBlackWorker::loadOrRecoverLocalFullBlack(const ST_FullManifest &localMa
     const QString dbPath = QDir(snap.fullBlackPath).filePath(QString("ETCBlackCard_%1.db").arg(batchNo));
     if (!loadFullBlack(batchNo, dbPath)) {
         LOG_ERROR().noquote() << "本地全量加载失败，批次:" << batchNo;
-
-        // 远程清单可用时，从权威批次恢复；否则只尝试本地缓存的完整ZIP。比如，本地全量SQLite文件不存在
-        if (remoteAvailable) {
-            startFullUpdate(*remoteManifest);
-        } else {
-            startFullUpdate(localManifest, FullBlackLocalLoadFailed, FullUpdateMode::LocalCacheOnly);
-        }
+        startFullUpdate(remoteManifest);
         return;
     }
 
     LOG_INFO().noquote() << "本地全量加载成功，批次:" << batchNo;
     setStatus(true, FullBlackReady);
     pruneOtherFullBlackFiles(batchNo);
-    if (remoteAvailable) {
-        pruneOtherFullZipFiles(batchNo);
-    } else {
-        LOG_INFO().noquote() << "远程BlackUpdate.xml不可用，暂不清理其他批次完整全量ZIP";
-    }
-    finishFirstCheck();
+    pruneOtherFullZipFiles(batchNo);
     requestDeltaTableCleanup();
+    finishFirstCheck();
     scheduleNextCheck();
 }
 
@@ -246,10 +223,12 @@ bool FullBlackWorker::cleanupStagingTempFiles(QString *error) const
         if (fullZipRegex.match(fileName).hasMatch())
             continue;
 
-        QString removeError;
-        bool removed = FileUtils::removeRecursively(FileName::fromString(entry.absoluteFilePath()), &removeError);
-        if (!removed)
-            failedEntries.append(removeError.isEmpty() ? fileName : QString("%1（%2）").arg(fileName, removeError));
+        QFile file(entry.absoluteFilePath());
+        file.setPermissions(file.permissions() | QFileDevice::WriteUser);
+        if (!file.remove()) {
+            const QString detail = file.errorString();
+            failedEntries.append(detail.isEmpty() ? fileName : QString("%1（%2）").arg(fileName, detail));
+        }
     }
 
     if (!failedEntries.isEmpty()) {
@@ -262,16 +241,17 @@ bool FullBlackWorker::cleanupStagingTempFiles(QString *error) const
 
 bool FullBlackWorker::readLocalManifest(ST_FullManifest *manifest, QString *error) const
 {
+    LOG_INFO().noquote() << "开始读取本地BlackUpdate.xml文件信息";
     const ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
 
-    const FileName localFile = FileUtils::canonicalPath(FileName::fromString(snap.fullBlackPath + "/BlackUpdate.xml"));
-    if (!localFile.exists()) {
+    const QString localFile = QDir(snap.fullBlackPath).filePath("BlackUpdate.xml");
+    if (!QFile::exists(localFile)) {
         *error = "本地BlackUpdate.xml不存在";
         return false;
     }
 
     FileReader reader;
-    if (!reader.fetch(localFile.toString())) {
+    if (!reader.fetch(localFile)) {
         *error = QString("读取本地BlackUpdate.xml失败: %1").arg(reader.errorString());
         return false;
     }
@@ -281,6 +261,7 @@ bool FullBlackWorker::readLocalManifest(ST_FullManifest *manifest, QString *erro
 
 bool FullBlackWorker::fetchRemoteManifest(ST_FullManifest *manifest, QString *error) const
 {
+    LOG_INFO().noquote() << "开始读取远程BlackUpdate.xml文件信息";
     const ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
 
     QString baseUrl = snap.stationServiceURL.trimmed();
@@ -295,10 +276,6 @@ bool FullBlackWorker::fetchRemoteManifest(ST_FullManifest *manifest, QString *er
     QByteArray data;
     if (!m_http->getSync(data, manifestUrl)) {
         *error = QString("远程BlackUpdate.xml获取失败: %1").arg(QString::fromUtf8(data));
-        return false;
-    }
-    if (data.isEmpty()) {
-        *error = "远程BlackUpdate.xml内容为空";
         return false;
     }
 
@@ -409,18 +386,16 @@ bool FullBlackWorker::prepareStagingDirectory(QString *path, QString *error)
     return true;
 }
 
-void FullBlackWorker::startFullUpdate(const ST_FullManifest &manifest, EM_FullBlackStatus status, FullUpdateMode mode)
+void FullBlackWorker::startFullUpdate(const ST_FullManifest &manifest)
 {
-    const bool canDownloadRemoteSlices = mode == FullUpdateMode::RemoteManifest;
     resetUpdateContext();
-    m_updateMode = mode;
 
     QString stagingError;
     QString stagingPath;
     if (!prepareStagingDirectory(&stagingPath, &stagingError)) {
         LOG_ERROR().noquote() << "准备全量临时目录失败:" << stagingError;
         resetUpdateContext();
-        setStatus(m_isValid, canDownloadRemoteSlices ? FullBlackDownloadFailed : status);
+        setStatus(m_isValid, FullBlackDownloadFailed);
         finishFirstCheck();
         scheduleNextCheck();
         return;
@@ -434,8 +409,6 @@ void FullBlackWorker::startFullUpdate(const ST_FullManifest &manifest, EM_FullBl
     // 优先使用本地缓存
     const QString reusableZipPath = QDir(m_stagingPath).filePath(QString("ETCBlackCard_%1.zip").arg(manifest.batchNo));
     if (QFileInfo::exists(reusableZipPath)) {
-        setStatus(m_isValid, FullBlackVerifying);
-
         QString verifyError;
         if (validateFullZip(reusableZipPath, &verifyError)) {
             m_fullZipPath = reusableZipPath;
@@ -444,24 +417,16 @@ void FullBlackWorker::startFullUpdate(const ST_FullManifest &manifest, EM_FullBl
             return;
         }
 
-        LOG_WARNING().noquote() << (canDownloadRemoteSlices ? "本地完整全量ZIP不可复用，将重新下载，批次:"
-                                                            : "本地完整全量ZIP不可复用，无法进行本地恢复，批次:")
-                                << manifest.batchNo << "原因:" << verifyError;
+        LOG_WARNING().noquote() << "本地完整全量ZIP不可复用，将重新下载，批次:" << manifest.batchNo << "原因:" << verifyError;
 
         if (!QFile::remove(reusableZipPath)) {
-            failFullUpdate(QString("删除无效完整全量ZIP失败: %1").arg(reusableZipPath), canDownloadRemoteSlices ? FullBlackVerifyFailed : status);
+            failFullUpdate(QString("删除无效完整全量ZIP失败: %1").arg(reusableZipPath), FullBlackVerifyFailed);
             return;
         }
     }
 
-    // 缓存找不到才开始下载全量
-    if (!canDownloadRemoteSlices) {
-        failFullUpdate(QString("远程BlackUpdate.xml不可用，且本地完整全量ZIP不可复用: %1").arg(reusableZipPath), status);
-        return;
-    }
-
+    // 缓存找不到或不可复用时，按远程权威清单下载全量
     LOG_INFO().noquote() << "需要下载远程全量，批次:" << manifest.batchNo << "切片数量:" << manifest.slices.size() << "临时目录:" << m_stagingPath;
-    setStatus(m_isValid, status);
     downloadNextFullSlice();
 }
 
@@ -474,7 +439,6 @@ void FullBlackWorker::resetUpdateContext()
     m_stagingPath.clear();
     m_fullZipPath.clear();
     m_publishedDbPath.clear();
-    m_updateMode = FullUpdateMode::RemoteManifest;
 }
 
 void FullBlackWorker::downloadNextFullSlice()
@@ -484,8 +448,6 @@ void FullBlackWorker::downloadNextFullSlice()
 
     // 所有全量切片已下载，进行校验
     if (m_downloadSliceIndex >= m_pendingManifest.slices.size()) {
-        setStatus(m_isValid, FullBlackVerifying);
-
         QString zipPath;
         QString verifyError;
         if (!mergeAndValidateFullZip(&zipPath, &verifyError)) {
@@ -618,8 +580,6 @@ void FullBlackWorker::publishValidatedFullZip()
     if (!m_updateRunning || m_fullZipPath.isEmpty())
         return;
 
-    setStatus(m_isValid, FullBlackPublishing);
-
     QString dbPath;
     QString extractError;
     if (!extractFullDatabase(&dbPath, &extractError)) {
@@ -747,23 +707,17 @@ void FullBlackWorker::failFullUpdate(const QString &error, EM_FullBlackStatus st
 void FullBlackWorker::finishFullUpdate()
 {
     const int activeBatchNo = m_activeBatchNo;
-    const bool pruneFullZipCache = m_updateMode == FullUpdateMode::RemoteManifest;
-
     QString cleanupError;
     if (!cleanupStagingTempFiles(&cleanupError))
         LOG_WARNING().noquote() << "全量更新成功后清理暂存文件失败:" << cleanupError;
 
     pruneOtherFullBlackFiles(activeBatchNo);
-    if (pruneFullZipCache) {
-        pruneOtherFullZipFiles(activeBatchNo);
-    } else {
-        LOG_INFO().noquote() << "本次使用本地清单恢复全量，暂不清理其他批次完整全量ZIP";
-    }
+    pruneOtherFullZipFiles(activeBatchNo);
 
     resetUpdateContext();
     setStatus(true, FullBlackReady);
-    finishFirstCheck();
     requestDeltaTableCleanup();
+    finishFirstCheck();
     scheduleNextCheck();
     LOG_INFO().noquote() << "全量更新流程完成，当前活动批次:" << activeBatchNo;
 }
@@ -783,12 +737,10 @@ void FullBlackWorker::scheduleNextCheck()
 
 void FullBlackWorker::onInit()
 {
-    connect(GM_INS->m_sigMan, &SignalManager::sigCleanETCBlackCardFinished, this, &FullBlackWorker::onCleanETCBlackCardFinished);
-
     // 清理上次异常退出遗留的切片和写入临时文件，保留普通完整ZIP供本轮检查复用
     QString stagingError;
     if (!cleanupStagingTempFiles(&stagingError))
-        LOG_WARNING().noquote() << "全量检查进程启动时，清理全量暂存文件失败:" << stagingError;
+        LOG_WARNING().noquote() << "全量检查启动时，清理全量暂存文件失败:" << stagingError;
 
     // 全量数据库连接初始化
     for (int i = 0; i < 2; ++i) {
@@ -805,9 +757,14 @@ void FullBlackWorker::onInit()
     onCheckFullBlack();
 }
 
-void FullBlackWorker::onCleanETCBlackCardFinished(int affected)
+void FullBlackWorker::onCleanETCBlackCardFinished(int fullBatchNo, const QString &tableName, bool success, int affected, const QString &error)
 {
-    LOG_INFO().noquote() << "清理增量表完成: 影响行数" << affected;
+    if (success) {
+        GM_INS->m_conf->saveFullBlackBatch(fullBatchNo);
+        LOG_INFO().noquote() << "清理增量表完成: 全量批次" << fullBatchNo << "表" << tableName << "影响行数" << affected;
+    } else {
+        LOG_ERROR().noquote() << "清理增量表失败: 全量批次" << fullBatchNo << "表" << tableName << "错误" << error << "影响行数" << affected;
+    }
 }
 
 void FullBlackWorker::pruneOtherFullBlackFiles(int batchNo)
@@ -827,7 +784,7 @@ void FullBlackWorker::pruneOtherFullBlackFiles(int batchNo)
         if (fileName == activeFileName)
             continue;
 
-        if (!FileUtils::removeRecursively(file)) {
+        if (!QFile::remove(file.toString())) {
             delErrors.append(fileName);
             continue;
         }
@@ -837,8 +794,6 @@ void FullBlackWorker::pruneOtherFullBlackFiles(int batchNo)
         LOG_WARNING().noquote() << "删除废弃全量数据库文件失败:" << delErrors.join(", ");
         return;
     }
-
-    LOG_INFO().noquote() << "删除废弃全量数据库文件成功";
 }
 
 void FullBlackWorker::pruneOtherFullZipFiles(int batchNo)
@@ -872,8 +827,6 @@ void FullBlackWorker::pruneOtherFullZipFiles(int batchNo)
         LOG_WARNING().noquote() << "删除其他批次完整全量ZIP失败:" << delErrors.join(", ");
         return;
     }
-
-    LOG_INFO().noquote() << "删除其他批次完整全量ZIP成功";
 }
 
 void FullBlackWorker::setStatus(bool isValid, EM_FullBlackStatus status)
@@ -884,8 +837,14 @@ void FullBlackWorker::setStatus(bool isValid, EM_FullBlackStatus status)
 
 void FullBlackWorker::requestDeltaTableCleanup()
 {
+    const int cleanedBatch = GM_INS->m_conf->getConfigSnap().fullBlackBatch;
+    if (cleanedBatch == m_activeBatchNo) {
+        LOG_INFO().noquote() << "当前全量批次已完成过增量表清理，跳过重复清理，批次:" << m_activeBatchNo << "表:" << m_cleanTable;
+        return;
+    }
+
     LOG_INFO().noquote() << "请求清理全量指定的增量表:" << m_cleanTable << "全量批次:" << m_activeBatchNo;
-    emit GM_INS->m_sigMan->sigCleanETCBlackCard(m_cleanTable);
+    emit GM_INS->m_sigMan->sigCleanETCBlackCard(m_activeBatchNo, m_cleanTable);
 }
 
 bool FullBlackWorker::loadFullBlack(int batchNo, const QString &path)

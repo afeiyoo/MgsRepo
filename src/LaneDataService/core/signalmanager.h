@@ -10,6 +10,6 @@ public:
 
 signals:
     void sigFullBlackFirstCheckFinished();
-    void sigCleanETCBlackCard(QString tableName);
-    void sigCleanETCBlackCardFinished(int affected);
+    void sigCleanETCBlackCard(int fullBatchNo, QString tableName);
+    void sigCleanETCBlackCardFinished(int fullBatchNo, QString tableName, bool success, int affected, QString error);
 };

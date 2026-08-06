@@ -14,7 +14,7 @@ SUBDIRS += \
     LaneDataService \
     # PadService \
     # ETC \
-    # StationService \
+    StationService \
     # ServiceHub \
     # CardService
 

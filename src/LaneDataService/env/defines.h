@@ -3,27 +3,34 @@
 #include <QObject>
 #include <QUrl>
 
-// 全量状态只描述当前处理阶段或最近一次失败原因。
+// 全量状态只描述最近一次检查或更新的最终结果。
 // 全量当前是否可查询，以ST_EnvSnap::isFullBlackValid为准。
 enum EM_FullBlackStatus {
-    FullBlackReady = 0,            // 当前全量已加载，可正常使用
-    FullBlackChecking = 1,         // 正在检查本地、远程全量清单
-    FullBlackDownloading = 2,      // 正在下载远程全量
-    FullBlackVerifying = 3,        // 正在校验远程全量
-    FullBlackPublishing = 4,       // 正在发布已校验的远程全量
-    FullBlackCheckFailed = -1,     // 本地、远程清单均无效
-    FullBlackLocalBatchAhead = -2, // 本地批次高于远程权威批次，禁止加载本地全量
-    FullBlackLocalLoadFailed = -3, // 本地全量加载失败且无法远程恢复，可用性按原值处理
+    FullBlackReady = 0,            // 最近一次检查或更新成功
+    FullBlackCheckFailed = -1,     // 远程权威清单不可用，无法确认当前全量批次
     FullBlackDownloadFailed = -4,  // 远程全量下载失败
     FullBlackVerifyFailed = -5,    // 远程全量完整性或数据库校验失败
     FullBlackPublishFailed = -6    // 远程全量发布失败
 };
 
+// 增量状态只描述当前处理阶段或最近一次失败原因。
+// 增量当前是否可用于业务查询，以ST_EnvSnap::isDeltaBlackValid为准。
+enum EM_DeltaBlackStatus {
+    DeltaBlackReady = 0,                // 已追平站级当前增量版本
+    DeltaBlackWaitingForCheck = 1,      // 数据库已就绪，等待首次检查
+    DeltaBlackApplying = 2,             // 正在保存并连续追赶增量版本
+    DeltaBlackDBUnavailable = -1,       // 增量SQLite不可访问或结构无效
+    DeltaBlackBaselineUnavailable = -2, // 无法确定增量请求基线
+    DeltaBlackRequestFailed = -3,       // 向站级请求增量失败
+    DeltaBlackResponseInvalid = -4,     // 响应内容无效或目标表不匹配
+    DeltaBlackApplyFailed = -5          // 清表、保存或事务提交失败
+};
+
 struct ST_EnvSnap
 {
-    bool isDeltaBlackValid;    // 当前增量是否可用
-    int deltaBlackStatus = -1; // 增量状态
-    QString deltaBlackVersion; // 增量版本
+    bool isDeltaBlackValid = false;                 // 当前是否存在一致、可查询的增量数据视图
+    int deltaBlackStatus = DeltaBlackDBUnavailable; // 当前处理阶段或最近一次失败原因
+    QString deltaBlackVersion;                      // 最近一次成功提交的增量版本
 
     bool isFullBlackValid = false;              // 当前全量是否可用
     int fullBlackStatus = FullBlackCheckFailed; // 全量状态
@@ -46,6 +53,7 @@ struct ST_ConfigSnap
 
     QString fullBlackPath;  // 全量文件所在路径
     QString deltaBlackPath; // 增量文件所在路径
+    int fullBlackBatch = 0; // 最近一次成功完成增量清表的全量批次
 
     QString stationServiceURL; // 站级服务URL
 };

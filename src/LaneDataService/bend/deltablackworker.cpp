@@ -23,7 +23,11 @@ DeltaBlackWorker::DeltaBlackWorker(QObject *parent)
     : QObject{parent}
 {
     m_timer = new QTimer(this);
-    m_client = new Http();
+    m_http = new Http();
+
+    // 首次全量检查完成后，立即进行增量检查
+    connect(GM_INS->m_sigMan, &SignalManager::sigFullBlackFirstCheckFinished, this, &DeltaBlackWorker::onCheckDeltaBlack);
+    connect(GM_INS->m_sigMan, &SignalManager::sigCleanETCBlackCard, this, &DeltaBlackWorker::onCleanETCBlackCard);
 }
 
 DeltaBlackWorker::~DeltaBlackWorker()
@@ -35,27 +39,25 @@ DeltaBlackWorker::~DeltaBlackWorker()
 
     m_timer->stop();
 
-    SAFE_DELETE(m_client);
+    SAFE_DELETE(m_http);
 }
 
 void DeltaBlackWorker::onInit()
 {
-    // 首次全量检查完成后，立即进行增量检查
-    connect(GM_INS->m_sigMan, &SignalManager::sigFullBlackFirstCheckFinished, this, &DeltaBlackWorker::onCheckDeltaBlack);
-    connect(GM_INS->m_sigMan, &SignalManager::sigCleanETCBlackCard, this, &DeltaBlackWorker::onCleanETCBlackCard);
-
     // 每隔5分钟检查一次增量
     m_timer->setInterval(5 * 60 * 1000);
+    m_timer->setSingleShot(true);
     connect(m_timer, &QTimer::timeout, this, &DeltaBlackWorker::onCheckDeltaBlack);
+
+    // 启动时先尝试连接；失败不影响后续收到信号或定时重试
+    if (ensureDatabaseConnected())
+        setStatus(false, DeltaBlackWaitingForCheck);
 }
 
-bool DeltaBlackWorker::batchUpsertDeltaBlack(int operateTable, const QVariantList &blackDetails)
+bool DeltaBlackWorker::applyDeltaBatch(int operateTable, const QVariantList &blackDetails, const QString &version)
 {
-    if (blackDetails.isEmpty())
-        return true;
-
     try {
-        Transaction t(m_dao);
+        Transaction transaction(m_dao);
         int insertCount = 0;
         int updateCount = 0;
 
@@ -74,6 +76,13 @@ bool DeltaBlackWorker::batchUpsertDeltaBlack(int operateTable, const QVariantLis
                 return false;
             }
 
+            const QDateTime insertDateTime = QDateTime::fromString(insertTime, QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+            const QDateTime creationDateTime = QDateTime::fromString(creationTime, QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+            if (!insertDateTime.isValid() || !creationDateTime.isValid()) {
+                LOG_ERROR().noquote() << "保存增量数据失败: 第" << i << "条blackDetail时间格式无效";
+                return false;
+            }
+
             // 构造对象
             std::unique_ptr<QObject> record;
             if (operateTable == 1) {
@@ -83,8 +92,8 @@ bool DeltaBlackWorker::batchUpsertDeltaBlack(int operateTable, const QVariantLis
             }
 
             QVariantMap recordData = detail;
-            recordData["InsertTime"] = QDateTime::fromString(insertTime, QStringLiteral("yyyy-MM-dd HH:mm:ss"));
-            recordData["CreationTime"] = QDateTime::fromString(creationTime, QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+            recordData["InsertTime"] = insertDateTime;
+            recordData["CreationTime"] = creationDateTime;
             recordData["CardID"] = cardId;
             recordData["UpdateTime"] = QDateTime::currentDateTime();
             DataDealUtils::qvariant2qobject(recordData, record.get());
@@ -95,14 +104,14 @@ bool DeltaBlackWorker::batchUpsertDeltaBlack(int operateTable, const QVariantLis
                 return false;
             }
 
-            const bool exists = t.scalar<int>(existSql) > 0;
+            const bool exists = transaction.scalar<int>(existSql) > 0;
             const QString saveSql = exists ? DataDealUtils::getUpdateSql(record.get()) : DataDealUtils::getInsertSql(record.get());
             if (saveSql.isEmpty()) {
                 LOG_ERROR().noquote() << "保存增量数据失败: 第" << i << "条数据无法生成" << (exists ? "更新" : "插入") << "SQL";
                 return false;
             }
 
-            t.execNonQuery(saveSql);
+            transaction.execNonQuery(saveSql);
 
             if (exists) {
                 ++updateCount;
@@ -111,13 +120,20 @@ bool DeltaBlackWorker::batchUpsertDeltaBlack(int operateTable, const QVariantLis
             }
         }
 
-        if (!t.commit()) {
-            LOG_ERROR().noquote() << "提交增量SQLite事务失败";
+        const NonQueryResult versionResult = transaction.update("t_lanebaseenv").set("envvalue", version).where("envkey='BlackVer'");
+        if (versionResult.numRowsAffected() != 1) {
+            LOG_ERROR().noquote() << "保存增量数据失败: 更新增量版本影响行数" << versionResult.numRowsAffected();
             return false;
         }
 
+        if (!transaction.commit()) {
+            LOG_ERROR().noquote() << "提交增量数据与版本事务失败";
+            return false;
+        }
+
+        m_version = version;
         LOG_INFO().noquote() << "增量SQLite保存成功: table" << (operateTable == 1 ? "T_ETCBlackCardList_1" : "T_ETCBlackCardList_2") << "接收数量"
-                             << blackDetails.size() << "插入数量" << insertCount << "更新数量" << updateCount;
+                             << blackDetails.size() << "插入数量" << insertCount << "更新数量" << updateCount << "版本" << version;
         return true;
     } catch (const DBException &e) {
         LOG_ERROR().noquote() << e.lastError << "\t" << e.lastQuery;
@@ -125,223 +141,339 @@ bool DeltaBlackWorker::batchUpsertDeltaBlack(int operateTable, const QVariantLis
     }
 }
 
-void DeltaBlackWorker::setStatus(bool isValid, int status)
+void DeltaBlackWorker::setStatus(bool isValid, EM_DeltaBlackStatus status)
 {
     m_isValid = isValid;
-    m_curStatus = status;
-    GM_INS->m_env->updateDeltaBlackEnvs(m_isValid, m_curStatus, m_version);
-}
-
-void DeltaBlackWorker::onFullBlackReady()
-{
-    if (!GM_INS->m_env->getEnvSnap().isFullBlackValid)
-        return;
-
-    if (!m_timer->isActive())
-        m_timer->start();
-
-    onCheckDeltaBlack();
+    m_status = status;
+    GM_INS->m_env->updateDeltaBlackEnvs(m_isValid, m_status, m_version);
 }
 
 void DeltaBlackWorker::onCheckDeltaBlack()
 {
+    if (m_checkInProgress) {
+        LOG_INFO().noquote() << "增量检查正在进行，本次触发跳过";
+        return;
+    }
+
     LOG_INFO().noquote() << "开始检查增量...";
 
-    // 增量数据库连接初始化
-    const QString targetPath = QDir(GM_INS->m_conf->getConfigSnap().deltaBlackPath).filePath("ETCBlackListDelta.db");
-    FileName dbPath = FileUtils::canonicalPath(FileName::fromString(targetPath));
-    if (!dbPath.exists()) {
-        LOG_INFO().noquote() << "增量异常: 增量SQLite文件不存在";
-        setStatus(false, -1);
-        return;
-    }
-
-    m_dao = QSqlDatabase::addDatabase("QSQLITE", "deltaBlack");
-    m_dao.setDatabaseName(dbPath.toString());
-    if (!m_dao.isOpen() && !m_dao.open()) {
-        LOG_ERROR().noquote() << "增量异常: 初始化增量SQLite数据库失败" << m_dao.lastError().text();
-        setStatus(false, -2);
-        return;
-    }
-
-    while (1) {
-        QByteArray data = getDeltaBlackJson();
-        if (data.isEmpty())
-            break;
-
-        bool saveOk = saveDeltaBlackJson(data);
-        if (!saveOk)
-            break;
-        QThread::msleep(1000);
-    }
+    m_timer->stop();
+    m_checkInProgress = true;
+    processNextDeltaBatch();
 }
 
-void DeltaBlackWorker::onCleanETCBlackCard(QString tableName)
+void DeltaBlackWorker::processNextDeltaBatch()
 {
+    if (!ensureDatabaseConnected()) {
+        finishCurrentCheck();
+        return;
+    }
+
+    QByteArray responseData;
+    if (!requestNextDeltaData(responseData)) {
+        finishCurrentCheck();
+        return;
+    }
+
+    if (!processDeltaResponse(responseData)) {
+        finishCurrentCheck();
+        return;
+    }
+
+    // 让出工作线程事件循环，使已经排队的全量清表信号先得到处理。
+    QTimer::singleShot(1000, this, &DeltaBlackWorker::processNextDeltaBatch);
+}
+
+void DeltaBlackWorker::finishCurrentCheck()
+{
+    m_checkInProgress = false;
+    scheduleNextCheck();
+}
+
+void DeltaBlackWorker::onCleanETCBlackCard(int fullBatchNo, QString tableName)
+{
+    tableName = tableName.trimmed();
+    if (tableName.compare("T_ETCBlackCardList_1", Qt::CaseInsensitive) == 0) {
+        tableName = "T_ETCBlackCardList_1";
+    } else if (tableName.compare("T_ETCBlackCardList_2", Qt::CaseInsensitive) == 0) {
+        tableName = "T_ETCBlackCardList_2";
+    } else {
+        const QString error = QString("非法增量清理表名: %1").arg(tableName);
+        LOG_ERROR().noquote() << error;
+        emit GM_INS->m_sigMan->sigCleanETCBlackCardFinished(fullBatchNo, tableName, false, 0, error);
+        return;
+    }
+
+    m_pendingCleanBatches.insert(tableName, fullBatchNo);
+
+    int affected = 0;
+    QString error;
+    const bool success = tryCleanETCBlackCard(tableName, affected, error);
+    if (success)
+        m_pendingCleanBatches.remove(tableName);
+    emit GM_INS->m_sigMan->sigCleanETCBlackCardFinished(fullBatchNo, tableName, success, affected, error);
+}
+
+bool DeltaBlackWorker::tryCleanETCBlackCard(const QString &tableName, int &affected, QString &error)
+{
+    affected = 0;
+    error.clear();
+
+    if (!m_dao.isValid() || !m_dao.isOpen()) {
+        error = "增量数据库未连接";
+        return false;
+    }
+
     try {
-        Transaction t(m_dao);
-        NonQueryResult res = t.deleteFrom(tableName).where("1=1");
-        if (!t.commit()) {
-            emit GM_INS->m_sigMan->sigCleanETCBlackCardFinished(res.numRowsAffected());
-            return;
+        Transaction transaction(m_dao);
+        const NonQueryResult result = transaction.deleteFrom(tableName).where("1=1");
+        affected = result.numRowsAffected();
+        if (!transaction.commit()) {
+            error = transaction.lastError().text();
+            return false;
         }
-        emit GM_INS->m_sigMan->sigCleanETCBlackCardFinished(res.numRowsAffected());
+
+        return true;
     } catch (const DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
-        emit GM_INS->m_sigMan->sigCleanETCBlackCardFinished(0);
-        return;
+        error = e.lastError.text();
+        return false;
     }
 }
 
-QByteArray DeltaBlackWorker::getDeltaBlackJson()
+bool DeltaBlackWorker::ensureDatabaseConnected()
 {
-    QString curFullBlackVersion = GM_INS->m_env->getEnvSnap().fullBlackVersion; // 获取当前全量版本
-    QString curDeltaBlackVersion = getDeltaBlackVersion();                      // 获取当前增量版本
+    if (m_dao.isValid() && m_dao.isOpen())
+        return true;
 
-    if (!curDeltaBlackVersion.isEmpty())
-        m_version = curDeltaBlackVersion;
-
-    LOG_INFO().noquote() << "当前全量版本号:" << curFullBlackVersion << "当前增量版本号:" << curDeltaBlackVersion;
-
-    if (curDeltaBlackVersion.isEmpty() && curFullBlackVersion.isEmpty()) {
-        LOG_ERROR().noquote() << "当前全量版本号和增量版本号都为空，无法获取增量数据";
-        setStatus(m_isValid, -3);
-        return "";
+    const QString dbPath = QDir(GM_INS->m_conf->getConfigSnap().deltaBlackPath).filePath("ETCBlackListDelta.db");
+    if (!QFileInfo::exists(dbPath)) {
+        LOG_ERROR().noquote() << "增量SQLite数据库文件不存在";
+        setStatus(false, DeltaBlackDBUnavailable);
+        return false;
     }
 
-    if (curDeltaBlackVersion.isEmpty()) {
-        // 当前没有增量版本，以全量版本当天零点为基准
-        LOG_INFO().noquote() << "当前增量版本号为空，以全量版本号为基线开始获取增量数据";
-        QString tempStr = curFullBlackVersion + QStringLiteral("0000");
-        curDeltaBlackVersion = QDateTime::fromString(tempStr, "yyyyMMddhhmm").addSecs(-5 * 60).toString("yyyyMMddhhmm");
-    } else if (!curFullBlackVersion.isEmpty() && curDeltaBlackVersion.left(8) < curFullBlackVersion) {
-        // 全量版本和增量版本都有，但是全量版本日期更新
-        LOG_INFO().noquote() << "当前增量版本号不为空，但是小于全量版本号，以全量版本号为基线重新获取增量数据";
-        QString tempStr = curFullBlackVersion + QStringLiteral("0000");
-        curDeltaBlackVersion = QDateTime::fromString(tempStr, "yyyyMMddhhmm").addSecs(-5 * 60).toString("yyyyMMddhhmm");
+    if (!m_dao.isValid()) {
+        m_dao = QSqlDatabase::addDatabase("QSQLITE", "deltaBlack");
+        m_dao.setDatabaseName(dbPath);
     }
 
-    // 开始获取增量数据
-    QDateTime nextDt = QDateTime::fromString(curDeltaBlackVersion, "yyyyMMddhhmm").addSecs(5 * 60);
-    QString reqDeltaBlackVersion = nextDt.toString("yyyyMMddhhmm");
-
-    QVariantMap reqMap;
-    reqMap["version"] = reqDeltaBlackVersion;
-    reqMap["queryType"] = "queryETCBlack";
-    QByteArray reqData = DataDealUtils::mapToJson(reqMap);
-
-    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
-    LOG_INFO().noquote() << "请求获取增量数据:" << snap.stationServiceURL << "版本:" << reqDeltaBlackVersion;
-
-    QByteArray resp;
-    bool netOk = m_client->postSync(resp, QUrl(snap.stationServiceURL), reqData, "application/json");
-    if (!netOk) {
-        LOG_ERROR().noquote() << QString("增量异常: 获取增量数据失败. 原因 %1").arg(QString::fromUtf8(resp));
-        setStatus(m_isValid, -4);
-        return "";
-    }
-    if (resp.isEmpty()) {
-        LOG_ERROR().noquote() << QString("增量异常: 获取增量数据返回为空");
-        setStatus(m_isValid, -5);
-        return "";
+    if (!m_dao.open()) {
+        LOG_ERROR().noquote() << "增量SQLite数据库初始化失败" << m_dao.lastError().text();
+        setStatus(false, DeltaBlackDBUnavailable);
+        return false;
     }
 
-    return resp;
+    QString error;
+    if (!validateDatabase(error)) {
+        LOG_ERROR().noquote() << "增量SQLite数据库结构无效" << error;
+        m_dao.close();
+        setStatus(false, DeltaBlackDBUnavailable);
+        return false;
+    }
+
+    LOG_INFO().noquote() << "增量SQLite数据库连接成功:" << dbPath;
+    return true;
 }
 
-bool DeltaBlackWorker::saveDeltaBlackJson(const QByteArray &data)
+bool DeltaBlackWorker::validateDatabase(QString &error)
 {
-    bool jsonOk = false;
-    QString jsonErrDesc;
-    QVariantMap oneMap = DataDealUtils::jsonToMap(data, &jsonOk, &jsonErrDesc);
-    if (!jsonOk) {
-        LOG_ERROR().noquote() << "增量异常: 增量数据解析失败 原因" << jsonErrDesc;
-        setStatus(m_isValid, -5);
-        return false;
-    }
+    error.clear();
 
-    int queryRes = -1;
-    QString version;
-    int amount = 0;
-    int operateTable = -1;
-    QString errMsg;
-    QVariantList blackDetails;
-    if (oneMap.contains("queryResult"))
-        queryRes = oneMap["queryResult"].toInt();
-    if (oneMap.contains("version"))
-        version = oneMap["version"].toString();
-    if (oneMap.contains("amount"))
-        amount = oneMap["amount"].toInt();
-    if (oneMap.contains("OperateTable"))
-        operateTable = oneMap["OperateTable"].toInt();
-    if (oneMap.contains("errorMessage"))
-        errMsg = oneMap["errorMessage"].toString();
-    if (oneMap.contains("blackDetail"))
-        blackDetails = oneMap["blackDetail"].toList();
+    const QStringList tables = m_dao.tables(QSql::Tables);
+    const auto containsTable = [&tables](const QString &requiredTable) {
+        for (const QString &table : tables) {
+            if (table.compare(requiredTable, Qt::CaseInsensitive) == 0)
+                return true;
+        }
+        return false;
+    };
 
-    LOG_INFO().noquote() << "下载得到的增量数据: version" << version << "amount:" << amount << "operateTable:" << operateTable
-                         << "errorMessage:" << errMsg;
-
-    if (queryRes == 2) { // 增量已追平，等待下一版本
-        setStatus(true, 0);
-        return false;
-    }
-    if (queryRes != 1) {
-        LOG_ERROR().noquote() << "增量异常: 返回增量状态查询结果" << queryRes << errMsg;
-        setStatus(m_isValid, -6);
-        return false;
-    }
-    if (version.isEmpty()) {
-        LOG_ERROR().noquote() << "增量异常: 返回version为空";
-        setStatus(m_isValid, -5);
-        return false;
-    }
-    if (amount != blackDetails.size()) {
-        LOG_ERROR().noquote() << "增量异常: amount和blackDetail数量不一致 amount" << amount << "blackDetail" << blackDetails.size();
-        setStatus(m_isValid, -5);
-        return false;
-    }
-
-    // 有增量数据，将增量插入SQLite表
-    if (queryRes == 1) {
-        if (!batchUpsertDeltaBlack(operateTable, blackDetails)) {
-            setStatus(m_isValid, -7);
+    const QStringList requiredTables = {"T_ETCBlackCardList_1", "T_ETCBlackCardList_2", "T_LaneBaseEnv"};
+    for (const QString &table : requiredTables) {
+        if (!containsTable(table)) {
+            error = QString("缺少必需表%1").arg(table);
             return false;
         }
     }
 
-    int affected = updateDeltaBlackVersion(version);
-    if (affected == 1) {
-        m_version = version;
-        setStatus(true, 0);
-        return true;
-    } else {
-        setStatus(m_isValid, -8);
+    try {
+        Database database(m_dao);
+        const QString versionCountSql = R"(SELECT COUNT(*) FROM T_LaneBaseEnv WHERE envkey='BlackVer')";
+        const int versionRows = database.scalar<int>(versionCountSql);
+        if (versionRows != 1) {
+            error = QString("BlackVer记录数量异常:%1").arg(versionRows);
+            return false;
+        }
+    } catch (const DBException &e) {
+        error = e.lastError.text();
         return false;
     }
+
+    return true;
 }
 
-QString DeltaBlackWorker::getDeltaBlackVersion()
+void DeltaBlackWorker::scheduleNextCheck()
 {
-    QString sql = R"(SELECT envvalue FROM t_lanebaseenv WHERE envkey='BlackVer')";
+    m_timer->start();
+}
+
+bool DeltaBlackWorker::requestNextDeltaData(QByteArray &responseData)
+{
+    responseData.clear();
+
+    const QString fullVersion = GM_INS->m_env->getEnvSnap().fullBlackVersion;
+    const QString deltaVersion = fetchDeltaVersion();
+
+    LOG_INFO().noquote() << "当前全量版本号:" << fullVersion << "当前增量版本号:" << deltaVersion;
+
+    // 读取SQLite是在恢复最后成功提交的版本；只有落库事务成功才会推进该值。
+    if (!deltaVersion.isEmpty())
+        m_version = deltaVersion;
+
+    if (deltaVersion.isEmpty() && fullVersion.isEmpty()) {
+        LOG_ERROR().noquote() << "当前全量版本号和增量版本号都为空，无法获取增量数据";
+        setStatus(m_isValid, DeltaBlackBaselineUnavailable);
+        return false;
+    }
+
+    QString requestBaselineVersion = deltaVersion;
+    if (requestBaselineVersion.isEmpty()) {
+        LOG_INFO().noquote() << "当前增量版本号为空，以全量版本号为基线开始获取增量数据";
+        const QDateTime fullBaseline = QDateTime::fromString(fullVersion + "0000", "yyyyMMddhhmm");
+        requestBaselineVersion = fullBaseline.addSecs(-5 * 60).toString("yyyyMMddhhmm");
+    } else if (!fullVersion.isEmpty() && requestBaselineVersion.left(8) < fullVersion) {
+        LOG_INFO().noquote() << "当前增量版本号不为空，但是小于全量版本号，以全量版本号为基线重新获取增量数据";
+        const QDateTime fullBaseline = QDateTime::fromString(fullVersion + "0000", "yyyyMMddhhmm");
+        requestBaselineVersion = fullBaseline.addSecs(-5 * 60).toString("yyyyMMddhhmm");
+    }
+
+    const QDateTime nextVersionTime = QDateTime::fromString(requestBaselineVersion, "yyyyMMddhhmm").addSecs(5 * 60);
+    const QString requestedVersion = nextVersionTime.toString("yyyyMMddhhmm");
+
+    QVariantMap reqMap;
+    reqMap["version"] = requestedVersion;
+    reqMap["queryType"] = "queryETCBlack";
+    QByteArray reqData = DataDealUtils::mapToJson(reqMap);
+
+    ST_ConfigSnap snap = GM_INS->m_conf->getConfigSnap();
+    LOG_INFO().noquote() << "请求获取增量数据:" << snap.stationServiceURL << "版本:" << requestedVersion;
+
+    QByteArray response;
+    const bool netOk = m_http->postSync(response, QUrl(snap.stationServiceURL), reqData, "application/json");
+    if (!netOk) {
+        LOG_ERROR().noquote() << QString("获取增量数据失败. 原因 %1").arg(QString::fromUtf8(response));
+        setStatus(m_isValid, DeltaBlackRequestFailed);
+        return false;
+    }
+    LOG_INFO().noquote() << "增量数据获取成功: data size" << response.size();
+    responseData = response;
+
+    return true;
+}
+
+bool DeltaBlackWorker::processDeltaResponse(const QByteArray &responseData)
+{
+    if (responseData.isEmpty()) {
+        LOG_ERROR().noquote() << "增量数据内容为空";
+        setStatus(m_isValid, DeltaBlackResponseInvalid);
+        return false;
+    }
+
+    bool jsonOk = false;
+    QString jsonErr;
+    const QVariantMap responseMap = DataDealUtils::jsonToMap(responseData, &jsonOk, &jsonErr);
+    if (!jsonOk) {
+        LOG_ERROR().noquote() << "增量数据解析失败 原因" << jsonErr;
+        setStatus(m_isValid, DeltaBlackResponseInvalid);
+        return false;
+    }
+
+    int queryResult = -1;
+    QString version;
+    int amount = 0;
+    int operateTable = -1;
+    QVariantList blackDetails;
+    if (responseMap.contains("queryResult"))
+        queryResult = responseMap["queryResult"].toInt();
+    if (responseMap.contains("version"))
+        version = responseMap["version"].toString();
+    if (responseMap.contains("amount"))
+        amount = responseMap["amount"].toInt();
+    if (responseMap.contains("OperateTable"))
+        operateTable = responseMap["OperateTable"].toInt();
+    if (responseMap.contains("blackDetail"))
+        blackDetails = responseMap["blackDetail"].toList();
+
+    LOG_INFO().noquote() << "下载得到的增量数据: queryResult:" << queryResult << "version:" << version << "amount:" << amount
+                         << "operateTable:" << operateTable << "blackDetails:" << blackDetails.size();
+
+    // 增量已追平，等待下一版本
+    if (queryResult == 2) {
+        LOG_INFO().noquote() << "当前增量版本已为最新";
+        setStatus(true, DeltaBlackReady);
+        return false;
+    }
+
+    if (queryResult != 1) {
+        LOG_ERROR().noquote() << "增量数据返回queryResult异常";
+        setStatus(m_isValid, DeltaBlackResponseInvalid);
+        return false;
+    }
+
+    if (version.isEmpty() || !QDateTime::fromString(version, "yyyyMMddhhmm").isValid()) {
+        LOG_ERROR().noquote() << "增量数据返回version无效";
+        setStatus(m_isValid, DeltaBlackResponseInvalid);
+        return false;
+    }
+    if (amount != blackDetails.size()) {
+        LOG_ERROR().noquote() << "增量数据返回amount和blackDetail数量不一致 amount" << amount << "blackDetail" << blackDetails.size();
+        setStatus(m_isValid, DeltaBlackResponseInvalid);
+        return false;
+    }
+    if (operateTable != 1 && operateTable != 2) {
+        LOG_ERROR().noquote() << "增量数据返回OperateTable无效" << operateTable;
+        setStatus(m_isValid, DeltaBlackResponseInvalid);
+        return false;
+    }
+
+    const QString targetTable = operateTable == 1 ? "T_ETCBlackCardList_1" : "T_ETCBlackCardList_2";
+    if (m_pendingCleanBatches.contains(targetTable)) {
+        LOG_INFO().noquote() << "增量目标表中存在历史数据，需要进行清理";
+
+        const int fullBatchNo = m_pendingCleanBatches.value(targetTable);
+        int affected = 0;
+        QString error;
+        const bool cleanupOk = tryCleanETCBlackCard(targetTable, affected, error);
+        if (!cleanupOk) {
+            LOG_ERROR().noquote() << "增量目标表历史数据清理失败，禁止写入" << targetTable << error;
+            // 数据库断连时，ensureDatabaseConnected() 已设置 DBUnavailable，此处仅处理数据库仍可访问但目标表清理失败的情况。
+            if (m_dao.isValid() && m_dao.isOpen())
+                setStatus(m_isValid, DeltaBlackApplyFailed);
+            return false;
+        }
+
+        m_pendingCleanBatches.remove(targetTable);
+        emit GM_INS->m_sigMan->sigCleanETCBlackCardFinished(fullBatchNo, targetTable, true, affected, QString());
+    }
+
+    if (!applyDeltaBatch(operateTable, blackDetails, version)) {
+        setStatus(m_isValid, DeltaBlackApplyFailed);
+        return false;
+    }
+
+    setStatus(true, DeltaBlackApplying);
+    return true;
+}
+
+QString DeltaBlackWorker::fetchDeltaVersion()
+{
+    const QString sql = R"(SELECT envvalue FROM t_lanebaseenv WHERE envkey='BlackVer')";
     try {
-        Database db(m_dao);
-        QString version = db.scalar<QString>(sql);
-        return version;
+        Database database(m_dao);
+        return database.scalar<QString>(sql);
     } catch (const DBException &e) {
         LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
         return "";
-    }
-}
-
-int DeltaBlackWorker::updateDeltaBlackVersion(const QString &ver)
-{
-    try {
-        Database db(m_dao);
-        NonQueryResult res = db.update("t_lanebaseenv").set("envvalue", ver).where("envkey='BlackVer'");
-        return res.numRowsAffected();
-    } catch (const DBException &e) {
-        LOG_ERROR().noquote() << e.lastError.text() << "\t" << e.lastQuery;
-        return -1;
     }
 }

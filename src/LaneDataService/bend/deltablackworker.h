@@ -1,8 +1,11 @@
 #pragma once
 
 #include <QObject>
+#include <QHash>
 #include <QSqlDatabase>
 #include <QTimer>
+
+#include "env/defines.h"
 
 class Http;
 
@@ -15,47 +18,45 @@ public:
 
 public slots:
     void onInit();
-    void onFullBlackReady();
     void onCheckDeltaBlack();
-    void onCleanETCBlackCard(QString tableName);
+    void onCleanETCBlackCard(int fullBatchNo, QString tableName);
 
 private:
-    bool batchUpsertDeltaBlack(int operateTable, const QVariantList &blackDetails);
+    // 增量检查调度：每次只处理一个批次，让事件循环能够及时处理全量切表信号。
+    void processNextDeltaBatch();
+    void finishCurrentCheck();
+    void scheduleNextCheck();
 
-    // 更新当前增量状态
-    void setStatus(bool isValid, int status);
+    // 站级请求与响应处理。
+    bool requestNextDeltaData(QByteArray &responseData);
+    // 返回true继续追赶下一批，返回false结束本轮检查。
+    bool processDeltaResponse(const QByteArray &responseData);
 
-    // 请求获取增量数据
-    QByteArray getDeltaBlackJson();
+    // 增量SQLite连接、校验及版本读取。
+    bool ensureDatabaseConnected();
+    bool validateDatabase(QString &error);
+    QString fetchDeltaVersion();
 
-    // 保存增量数据
-    bool saveDeltaBlackJson(const QByteArray &data);
+    // 清表和增量落库。
+    bool tryCleanETCBlackCard(const QString &tableName, int &affected, QString &error);
+    bool applyDeltaBatch(int operateTable, const QVariantList &blackDetails, const QString &version);
 
-    // 获取增量版本号
-    QString getDeltaBlackVersion();
-    // 更新增量版本号
-    int updateDeltaBlackVersion(const QString &ver);
+    void setStatus(bool isValid, EM_DeltaBlackStatus status);
 
 private:
-    // 当前增量是否正常 true:增量正常 false:增量异常
+    // 当前是否存在一致、可查询的增量数据视图
     bool m_isValid = false;
-    // 0: 增量获取成功 => 增量正常
-    // -1: 增量SQLite文件不存在 => 增量异常
-    // -2: 初始化增量SQLite数据库失败 => 增量异常
-    // -3: 增量版本号和全量版本号都空，无法获取增量数据 => 取决上一次的增量状态
-    // -4: 向站级服务请求获取增量数据失败（网络原因） => 取决与上一次的增量状态
-    // -5: 向站级服务请求获取增量数据，但内容异常 => 取决于上一次的增量状态
-    // -6: 站级服务返回无数据、参数错误或系统异常 => 取决于上一次的增量状态
-    // -7: 增量数据插入SQLite数据库失败 => 取决于上一次的增量状态
-    // -8: 增量版本号更新失败 => 取决上一次的增量状态
-    int m_curStatus = -1;
-    // 增量版本
+    // 当前处理阶段或最近一次失败原因
+    EM_DeltaBlackStatus m_status = DeltaBlackDBUnavailable;
+    // SQLite中最后一次成功提交的BlackVer；读取数据库是在恢复该值，事务成功才会推进该值。
     QString m_version;
-    // 全量指定要清空的表
-    QString m_cleanTable;
+    // 等待在下次写入前清理的历史增量表及对应全量批次；清理失败不阻塞另一张活动表
+    QHash<QString, int> m_pendingCleanBatches;
+    // 防止定时器或信号重复启动多条增量追赶链
+    bool m_checkInProgress = false;
 
     QSqlDatabase m_dao;
 
     QTimer *m_timer = nullptr;
-    Http *m_client = nullptr;
+    Http *m_http = nullptr;
 };
