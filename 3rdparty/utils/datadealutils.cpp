@@ -1224,20 +1224,39 @@ QVariantMap DataDealUtils::xmlToMap(const QByteArray &data, bool *ok, QString *e
 {
     QXmlStreamReader reader(data);
 
-    *ok = true;
+    *ok = false;
     errDesc->clear();
     while (!reader.atEnd()) {
         reader.readNext();
 
         if (reader.isStartElement()) {
             // 跳过根节点，只返回根节点内部内容
-            return parseXmlElement(reader).toMap();
+            const QVariantMap result = parseXmlElement(reader).toMap();
+
+            // parseXmlElement可能因XML格式错误到达文档末尾，返回后必须检查解析状态
+            if (reader.hasError()) {
+                *errDesc = reader.errorString();
+                return QVariantMap();
+            }
+
+            // 继续读取根节点后的内容，确保整个XML文档格式有效
+            while (!reader.atEnd())
+                reader.readNext();
+
+            if (reader.hasError()) {
+                *errDesc = reader.errorString();
+                return QVariantMap();
+            }
+
+            *ok = true;
+            return result;
         }
     }
 
     if (reader.hasError()) {
-        *ok = false;
         *errDesc = reader.errorString();
+    } else {
+        *errDesc = QStringLiteral("XML中未找到根节点");
     }
 
     return QVariantMap();
