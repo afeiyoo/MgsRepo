@@ -23,7 +23,7 @@ public:
 
 private:
     mutable QReadWriteLock m_lock;
-    bool m_isDeltaBlackValid = false;                 // 当前是否存在一致、可查询的增量数据视图
+    bool m_isDeltaBlackValid = false;                 // 最近一次向站级检查时是否已确认追平最新增量版本
     int m_deltaBlackStatus = DeltaBlackDBUnavailable; // 当前处理阶段或最近一次失败原因
     QString m_deltaBlackVersion;                      // 最近一次成功提交的增量版本
 

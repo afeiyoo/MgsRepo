@@ -3,7 +3,6 @@
 #include <QObject>
 #include <QThread>
 
-class DeltaBlackWorker;
 class DeltaBlackMaster : public QObject
 {
     Q_OBJECT
@@ -15,5 +14,4 @@ public:
 
 private:
     QThread *m_td = nullptr;
-    DeltaBlackWorker *m_worker = nullptr;
 };

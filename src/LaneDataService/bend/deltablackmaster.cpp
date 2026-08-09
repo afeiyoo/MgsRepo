@@ -21,10 +21,10 @@ DeltaBlackMaster::~DeltaBlackMaster()
 
 void DeltaBlackMaster::init()
 {
-    m_worker = new DeltaBlackWorker();
-    connect(m_td, &QThread::finished, m_worker, &DeltaBlackWorker::deleteLater);
-    connect(m_td, &QThread::started, m_worker, &DeltaBlackWorker::onInit);
+    DeltaBlackWorker *worker = new DeltaBlackWorker();
+    connect(m_td, &QThread::finished, worker, &DeltaBlackWorker::deleteLater);
+    connect(m_td, &QThread::started, worker, &DeltaBlackWorker::onInit);
 
-    m_worker->moveToThread(m_td);
+    worker->moveToThread(m_td);
     m_td->start();
 }

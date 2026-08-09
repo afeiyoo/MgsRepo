@@ -10,11 +10,12 @@ enum EM_FullBlackStatus {
     FullBlackCheckFailed = -1,     // 远程权威清单不可用，无法确认当前全量批次
     FullBlackDownloadFailed = -4,  // 远程全量下载失败
     FullBlackVerifyFailed = -5,    // 远程全量完整性或数据库校验失败
-    FullBlackPublishFailed = -6    // 远程全量发布失败
+    FullBlackPublishFailed = -6,   // 远程全量发布失败
+    FullBlackCleanupFailed = -7    // 候选全量指定的增量表清理失败
 };
 
 // 增量状态只描述当前处理阶段或最近一次失败原因。
-// 增量当前是否可用于业务查询，以ST_EnvSnap::isDeltaBlackValid为准。
+// 增量是否已由站级确认追平最新版本，以ST_EnvSnap::isDeltaBlackValid为准。
 enum EM_DeltaBlackStatus {
     DeltaBlackReady = 0,                // 已追平站级当前增量版本
     DeltaBlackWaitingForCheck = 1,      // 数据库已就绪，等待首次检查
@@ -28,7 +29,7 @@ enum EM_DeltaBlackStatus {
 
 struct ST_EnvSnap
 {
-    bool isDeltaBlackValid = false;                 // 当前是否存在一致、可查询的增量数据视图
+    bool isDeltaBlackValid = false;                 // 最近一次向站级检查时是否已确认追平最新增量版本
     int deltaBlackStatus = DeltaBlackDBUnavailable; // 当前处理阶段或最近一次失败原因
     QString deltaBlackVersion;                      // 最近一次成功提交的增量版本
 
@@ -53,7 +54,6 @@ struct ST_ConfigSnap
 
     QString fullBlackPath;  // 全量文件所在路径
     QString deltaBlackPath; // 增量文件所在路径
-    int fullBlackBatch = 0; // 最近一次成功完成增量清表的全量批次
 
     QString stationServiceURL; // 站级服务URL
 };

@@ -58,7 +58,6 @@ void Config::loadConfig(const Utils::FileName &path)
     if (m_deltaBlackPath.isEmpty())
         m_deltaBlackPath = FileUtils::curApplicationDirPath() + "/deltaBlack";
 
-    m_fullBlackBatch = m_confUtil->getValue("BlackList/FullBlackBatch", 0).toInt();
 #else
     // TODO
 #endif
@@ -83,16 +82,7 @@ ST_ConfigSnap Config::getConfigSnap() const
 
     snap.fullBlackPath = m_fullBlackPath;
     snap.deltaBlackPath = m_deltaBlackPath;
-    snap.fullBlackBatch = m_fullBlackBatch;
-
     snap.stationServiceURL = m_stationServiceURL;
 
     return snap;
-}
-
-void Config::saveFullBlackBatch(int batchNo)
-{
-    QWriteLocker locker(&m_lock);
-    m_confUtil->setValue("BlackList/FullBlackBatch", batchNo);
-    m_fullBlackBatch = batchNo;
 }
