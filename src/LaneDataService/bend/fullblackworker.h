@@ -69,7 +69,7 @@ private:
     // 候选全量已校验完成，请求增量线程清表并暂停增量追赶
     void requestCandidateTableCleanup();
     // 清表成功后提交候选全量；此时不再允许继续使用旧全量
-    void commitPreparedFull();
+    bool commitPreparedFull();
     // 清表失败时放弃候选全量并保留旧活动全量
     void abandonPreparedFull(const QString &error);
     // 结束失败的更新流程并清理下载切片，保留完整ZIP
@@ -78,12 +78,14 @@ private:
     void finishFullUpdate(EM_FullBlackStatus status = FullBlackReady, bool pruneFiles = true);
 
     // ---------- 数据库加载与校验 ----------
-    // 加载全量并切换活动连接
+    // 加载并校验全量文件，成功后将其声明为当前活动全量
     bool loadFullBlack(int batchNo, const QString &path);
-    // 使用候选连接打开并校验全量，成功后保持候选连接打开
+    // 使用临时连接打开并校验全量，校验结束后关闭连接
     bool openAndValidateFullBlack(int batchNo, const QString &path, QString *version, QString *cleanTable, QString *error);
     // 校验全量数据库业务元数据
     bool validateFullBlack(const QSqlDatabase &dao, int batchNo, QString *version, QString *cleanTable);
+    // 将已校验的全量文件声明为当前活动全量，并通知查询线程自行建立连接
+    void activateFullBlack(int batchNo, const QString &path, const QString &version);
 
     // ---------- 状态与文件清理 ----------
     // 清理全量目录下除当前批次外的其他数据库文件
@@ -100,6 +102,8 @@ private:
     QString m_version;
     // 当前进程实际加载的全量批次
     int m_activeBatchNo = 0;
+    // 当前活动全量数据库文件路径；FullBlackWorker不持有其查询连接
+    QString m_activeDbPath;
     // 是否已经发送过增量启动通知
     bool m_deltaReadyNotified = false;
     // 是否已经进入全量更新流程
@@ -121,11 +125,9 @@ private:
     bool m_cleanupRequired = true;
     // 是否已发出清表请求、正在等待增量线程回应
     bool m_waitingForDeltaCleanup = false;
-    // 全量数据库连接 [0]: 活动连接 [1]: 候选连接，非加载期间处于关闭状态
-    QSqlDatabase m_dao[2];
-    // 定时器
-    QTimer *m_timer = nullptr;
 
+    QSqlDatabase m_dao;
+    QTimer *m_timer = nullptr;
     Http *m_http = nullptr;
     // 当前流式下载任务
     QPointer<HttpDownloadReply> m_downloadReply;

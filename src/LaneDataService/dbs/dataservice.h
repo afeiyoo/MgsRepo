@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QReadWriteLock>
+#include <QSqlDatabase>
 
 namespace EasyQtSql {
 class SqlFactory;
@@ -40,12 +41,25 @@ public:
     // 整表删除（不删除表结构） 返回值>=0表示影响行数，<0表示执行失败
     int truncateTable(const QString &table);
 
+    // 检查是否黑名单卡
+    bool checkBlackCard(const QString &cardID);
+
 private:
     int updateRecordsImpl(EasyQtSql::Database &db, const QString &table, const QVariantMap &updateParams, const QString &whereClause);
     int insertRecordsImpl(EasyQtSql::Database &db, const QString &table, const QVariantMap &insertParams);
     int deleteRecordsImpl(EasyQtSql::Database &db, const QString &table, const QString &whereClause);
 
+private slots:
+    // 切换全量数据库连接
+    void onFullBlackActivated(QString dbPath);
+    // 打开增量数据库连接
+    void onDeltaBlackActivated(QString dbPath);
+
 private:
-    // 数据库连接池
+    // 主数据库连接池
     EasyQtSql::SqlFactory *m_dbFactory = nullptr;
+    // 全量只读查询连接：[0]活动连接，[1]候选连接；始终在DataService所在线程使用
+    QSqlDatabase m_fbDao[2];
+    // 增量只读查询连接，后续由checkBlackCard使用
+    QSqlDatabase m_dbDao;
 };

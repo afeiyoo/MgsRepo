@@ -34,7 +34,6 @@ private:
     bool processDeltaResponse(const QByteArray &responseData);
 
     // 增量SQLite连接、校验及版本读取。
-    bool ensureDatabaseConnected();
     bool validateDatabase(QString &error);
     QString fetchDeltaVersion();
 
@@ -43,6 +42,7 @@ private:
     bool applyDeltaBatch(int operateTable, const QVariantList &blackDetails, const QString &version);
 
     void setStatus(bool isValid, EM_DeltaBlackStatus status);
+    bool checkDatabase();
 
 private:
     // 最近一次向站级检查时是否已确认追平最新增量版本
@@ -51,6 +51,8 @@ private:
     EM_DeltaBlackStatus m_status = DeltaBlackDBUnavailable;
     // SQLite中最后一次成功提交的BlackVer；读取数据库是在恢复该值，事务成功才会推进该值。
     QString m_version;
+    // 增量SQLite数据库文件路径，用于通知查询线程建立自己的只读连接。
+    QString m_dbPath;
     // 首次活动全量就绪后才允许启动增量检查
     bool m_fullBlackReady = false;
     // 候选全量清表及切换期间暂停继续追赶增量
@@ -58,6 +60,8 @@ private:
     int m_switchFullBatchNo = 0;
     // 防止定时器或信号重复启动多条增量追赶链
     bool m_checkInProgress = false;
+    // 数据库是否正常
+    bool m_isDBNormal = false;
 
     QSqlDatabase m_dao;
 

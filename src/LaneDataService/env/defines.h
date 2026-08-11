@@ -6,25 +6,24 @@
 // 全量状态只描述最近一次检查或更新的最终结果。
 // 全量当前是否可查询，以ST_EnvSnap::isFullBlackValid为准。
 enum EM_FullBlackStatus {
-    FullBlackReady = 0,            // 最近一次检查或更新成功
-    FullBlackCheckFailed = -1,     // 远程权威清单不可用，无法确认当前全量批次
-    FullBlackDownloadFailed = -4,  // 远程全量下载失败
-    FullBlackVerifyFailed = -5,    // 远程全量完整性或数据库校验失败
-    FullBlackPublishFailed = -6,   // 远程全量发布失败
-    FullBlackCleanupFailed = -7    // 候选全量指定的增量表清理失败
+    FullBlackReady = 0,           // 最近一次检查或更新成功
+    FullBlackCheckFailed = -1,    // 远程权威清单不可用，无法确认当前全量批次
+    FullBlackDownloadFailed = -4, // 远程全量下载失败
+    FullBlackVerifyFailed = -5,   // 远程全量完整性或数据库校验失败
+    FullBlackPublishFailed = -6,  // 远程全量发布失败
+    FullBlackCleanupFailed = -7   // 候选全量指定的增量表清理失败
 };
 
 // 增量状态只描述当前处理阶段或最近一次失败原因。
-// 增量是否已由站级确认追平最新版本，以ST_EnvSnap::isDeltaBlackValid为准。
+// 增量当前是否可查询，以ST_EnvSnap::isDeltaBlackValid为准
 enum EM_DeltaBlackStatus {
-    DeltaBlackReady = 0,                // 已追平站级当前增量版本
-    DeltaBlackWaitingForCheck = 1,      // 数据库已就绪，等待首次检查
-    DeltaBlackApplying = 2,             // 正在保存并连续追赶增量版本
-    DeltaBlackDBUnavailable = -1,       // 增量SQLite不可访问或结构无效
-    DeltaBlackBaselineUnavailable = -2, // 无法确定增量请求基线
-    DeltaBlackRequestFailed = -3,       // 向站级请求增量失败
-    DeltaBlackResponseInvalid = -4,     // 响应内容无效或目标表不匹配
-    DeltaBlackApplyFailed = -5          // 清表、保存或事务提交失败
+    DeltaBlackReady = 0,            // 已追平站级当前增量版本
+    DeltaBlackIdle = 1,             // 数据库已就绪，等待首次检查
+    DeltaBlackApplying = 2,         // 正在保存并连续追赶增量版本
+    DeltaBlackDBUnavailable = -1,   // 增量SQLite不可访问或结构无效
+    DeltaBlackRequestFailed = -3,   // 向站级请求增量失败
+    DeltaBlackResponseInvalid = -4, // 响应内容无效或目标表不匹配
+    DeltaBlackApplyFailed = -5      // 清表、保存或事务提交失败
 };
 
 struct ST_EnvSnap

@@ -43,18 +43,11 @@ FullBlackWorker::~FullBlackWorker()
     if (!cleanupStagingTempFiles(&stagingError))
         LOG_WARNING().noquote() << "析构时清理全量暂存文件失败:" << stagingError;
 
-    QString connectionNames[2];
-    for (int i = 0; i < 2; ++i) {
-        connectionNames[i] = m_dao[i].connectionName();
-        if (m_dao[i].isOpen())
-            m_dao[i].close();
-    }
-
-    // 先释放所有QSqlDatabase句柄
-    m_dao[0] = QSqlDatabase();
-    m_dao[1] = QSqlDatabase();
-    for (const QString &name : connectionNames)
-        QSqlDatabase::removeDatabase(name);
+    // 数据库连接释放
+    if (m_dao.isOpen())
+        m_dao.close();
+    m_dao = QSqlDatabase();
+    QSqlDatabase::removeDatabase("fullBlackWorker");
 
     m_timer->stop();
 
@@ -406,7 +399,6 @@ void FullBlackWorker::startFullUpdate(const ST_FullManifest &manifest, bool clea
         }
 
         LOG_WARNING().noquote() << "本地完整全量ZIP不可复用，将重新下载，批次:" << manifest.batchNo << "原因:" << verifyError;
-
         if (!QFile::remove(reusableZipPath)) {
             failFullUpdate(QString("删除无效完整全量ZIP失败: %1").arg(reusableZipPath), FullBlackVerifyFailed);
             return;
@@ -421,8 +413,8 @@ void FullBlackWorker::startFullUpdate(const ST_FullManifest &manifest, bool clea
 void FullBlackWorker::resetUpdateContext()
 {
     m_downloadReply.clear();
-    if (m_dao[1].isOpen())
-        m_dao[1].close();
+    if (m_dao.isOpen())
+        m_dao.close();
     m_downloadSliceIndex = 0;
     m_pendingManifest = ST_FullManifest();
     m_updateRunning = false;
@@ -641,30 +633,28 @@ void FullBlackWorker::requestCandidateTableCleanup()
     emit GM_INS->m_sigMan->sigCleanETCBlackCard(m_pendingManifest.batchNo, m_candidateCleanTable);
 }
 
-void FullBlackWorker::commitPreparedFull()
+bool FullBlackWorker::commitPreparedFull()
 {
-    if (!m_updateRunning || !m_dao[1].isOpen())
-        return;
+    if (!m_updateRunning || m_publishedDbPath.isEmpty() || m_candidateVersion.isEmpty()) {
+        failFullUpdate("候选全量提交上下文无效", FullBlackPublishFailed);
+        return false;
+    }
 
     const int batchNo = m_pendingManifest.batchNo;
     QString manifestError;
     const bool manifestPublished = publishLocalManifest(m_pendingManifest, &manifestError);
 
     // 清表一旦成功，旧全量已不再是完整视图。即使本地清单提交失败，也必须激活候选全量。
-    std::swap(m_dao[0], m_dao[1]);
-    if (m_dao[1].isOpen())
-        m_dao[1].close();
-
-    m_version = m_candidateVersion;
-    m_activeBatchNo = batchNo;
+    activateFullBlack(batchNo, m_publishedDbPath, m_candidateVersion);
     if (!manifestPublished) {
         LOG_ERROR().noquote() << "增量表已清理且候选全量已激活，但本地BlackUpdate.xml提交失败:" << manifestError;
         finishFullUpdate(FullBlackPublishFailed, false);
-        return;
+        return true;
     }
 
     LOG_INFO().noquote() << "新全量数据库及本地清单提交完成，批次:" << batchNo << "正式路径:" << m_publishedDbPath;
     finishFullUpdate();
+    return true;
 }
 
 void FullBlackWorker::abandonPreparedFull(const QString &error)
@@ -672,8 +662,8 @@ void FullBlackWorker::abandonPreparedFull(const QString &error)
     const int batchNo = m_pendingManifest.batchNo;
     const QString candidatePath = m_publishedDbPath;
 
-    if (m_dao[1].isOpen())
-        m_dao[1].close();
+    if (m_dao.isOpen())
+        m_dao.close();
     if (QFile::exists(candidatePath) && !QFile::remove(candidatePath))
         LOG_WARNING().noquote() << "放弃候选全量时删除数据库失败:" << candidatePath;
 
@@ -763,11 +753,8 @@ void FullBlackWorker::onInit()
         LOG_WARNING().noquote() << "全量检查启动时，清理全量暂存文件失败:" << stagingError;
     }
 
-    // 全量数据库连接初始化
-    for (int i = 0; i < 2; ++i) {
-        const QString connName = QString("fullBlack_%1").arg(i, 2, 10, QChar('0'));
-        m_dao[i] = QSqlDatabase::addDatabase("QSQLITE", connName);
-    }
+    // 该连接只用于打开和校验全量文件，不提供给其他线程查询。
+    m_dao = QSqlDatabase::addDatabase("QSQLITE", "fullBlackWorker");
 
     // 每隔10分钟检查一次全量
     m_timer->setInterval(10 * 60 * 1000);
@@ -796,8 +783,8 @@ void FullBlackWorker::onCleanETCBlackCardFinished(int fullBatchNo, const QString
 
     LOG_INFO().noquote() << "增量表清理完成，批次:" << fullBatchNo << "表:" << tableName << "影响行数:" << affected;
 
-    commitPreparedFull();
-    emit GM_INS->m_sigMan->sigFullBlackSwitchFinished(fullBatchNo, true);
+    const bool activated = commitPreparedFull();
+    emit GM_INS->m_sigMan->sigFullBlackSwitchFinished(fullBatchNo, activated);
 }
 
 void FullBlackWorker::pruneOtherFullBlackFiles(int batchNo)
@@ -878,13 +865,7 @@ bool FullBlackWorker::loadFullBlack(int batchNo, const QString &path)
         return false;
     }
 
-    // 交换活动连接
-    std::swap(m_dao[0], m_dao[1]);
-    if (m_dao[1].isOpen())
-        m_dao[1].close();
-
-    m_version = candidateVersion;
-    m_activeBatchNo = batchNo;
+    activateFullBlack(batchNo, path, candidateVersion);
     return true;
 }
 
@@ -895,25 +876,36 @@ bool FullBlackWorker::openAndValidateFullBlack(int batchNo, const QString &path,
     error->clear();
 
     LOG_INFO().noquote() << "加载并校核全量文件:" << path << "批次:" << batchNo;
-    if (m_dao[1].isOpen())
-        m_dao[1].close();
-    m_dao[1].setDatabaseName(path);
-    if (!m_dao[1].open()) {
-        *error = QString("全量文件打开失败: %1").arg(m_dao[1].lastError().text());
-        m_dao[1].close();
+    if (m_dao.isOpen())
+        m_dao.close();
+    m_dao.setDatabaseName(path);
+    if (!m_dao.open()) {
+        *error = QString("全量文件打开失败: %1").arg(m_dao.lastError().text());
+        m_dao.close();
         return false;
     }
 
-    if (!validateFullBlack(m_dao[1], batchNo, version, cleanTable)) {
+    if (!validateFullBlack(m_dao, batchNo, version, cleanTable)) {
         *error = QString("全量文件业务校验失败，批次:%1").arg(batchNo);
-        m_dao[1].close();
+        m_dao.close();
         version->clear();
         cleanTable->clear();
         return false;
     }
 
+    m_dao.close();
     LOG_INFO().noquote() << "全量文件校核成功，批次:" << batchNo;
     return true;
+}
+
+void FullBlackWorker::activateFullBlack(int batchNo, const QString &path, const QString &version)
+{
+    m_activeBatchNo = batchNo;
+    m_activeDbPath = QDir::cleanPath(path);
+    m_version = version;
+
+    LOG_INFO().noquote() << "活动全量已确定，通知查询线程重新建立连接，批次:" << batchNo << "路径:" << m_activeDbPath << "版本:" << version;
+    emit GM_INS->m_sigMan->sigFullBlackActivated(m_activeDbPath);
 }
 
 bool FullBlackWorker::validateFullBlack(const QSqlDatabase &dao, int batchNo, QString *version, QString *cleanTable)

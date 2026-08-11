@@ -253,40 +253,31 @@ QByteArray LaneDataService::truncateTable(const QByteArray &json)
     }
 }
 
-QByteArray LaneDataService::getBlackStatus(const QByteArray &json)
+QByteArray LaneDataService::checkBlackCard(const QByteArray &json)
 {
-    Q_UNUSED(json);
+    QVariantMap resMap;
+    try {
+        bool ok = false;
+        QString errDesc;
+        QVariantMap oneMap = DataDealUtils::jsonToMap(json, &ok, &errDesc);
+        if (!ok)
+            throw BaseException(-1, errDesc);
 
-    // QVariantMap data;
-    // data["isValid"] = GM_INS->m_env->isFullBlackValid();
-    // data["version"] = GM_INS->m_env->fullBlackVersion();
-    // int status = GM_INS->m_env->fullBlackStatus();
-    // data["status"] = status;
-    // QString desc;
-    // if (status == 0) {
-    //     desc = "全量文件加载成功";
-    // } else if (status == -1) {
-    //     desc = "程序启动，未找到全量文件";
-    // } else if (status == -2) {
-    //     desc = "检查全量时，未找到全量文件";
-    // } else if (status == -3) {
-    //     desc = "程序启动，未找到当前批次全量文件";
-    // } else if (status == -4) {
-    //     desc = "检查全量时，未找到当前批次全量文件";
-    // } else if (status == -5) {
-    //     desc = "程序启动，全量文件加载失败";
-    // } else {
-    //     desc = "检查全量时，全量文件加载失败";
-    // }
-    // data["desc"] = desc;
+        QString cardID;
+        if (oneMap.contains("cardID"))
+            cardID = oneMap["cardID"].toString();
 
-    // QVariantMap resMap;
-    // resMap["code"] = 0; // 接口调用成功
-    // resMap["desc"] = "";
-    // resMap["data"] = data;
+        if (cardID.trimmed().isEmpty())
+            throw BaseException(-1, "cardID字段不能为空");
 
-    // return DataDealUtils::mapToJson(resMap);
-    return "";
+        // 查询增量黑名单和全量黑名单
+        // TODO
+
+    } catch (const BaseException &e) {
+        resMap["code"] = e.code();
+        resMap["desc"] = e.desc();
+        return DataDealUtils::mapToJson(resMap);
+    }
 }
 
 // --------------------------------------------------------
