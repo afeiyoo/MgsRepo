@@ -21,12 +21,6 @@ public:
 
     // 组装F1指令
     virtual QByteArray assembleF1Cmd(const QString &dateTime, uchar type, uchar status, const QString &desc) = 0;
-
-    // 设置版本号
-    void setVersion(const QByteArray &ver);
-
-protected:
-    QByteArray m_ver = QByteArray::fromHex("01"); // 版本号
 };
 
 // 具体策略：针对版本1的命令处理

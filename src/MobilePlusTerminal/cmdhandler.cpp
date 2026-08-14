@@ -6,13 +6,6 @@
 
 using namespace Utils;
 
-void ICmdHandler::setVersion(const QByteArray &ver)
-{
-    m_ver = ver;
-}
-
-// --------------------------------------------------
-
 CmdHandlerV1::CmdHandlerV1() {}
 
 CmdHandlerV1::~CmdHandlerV1() {}
@@ -110,7 +103,7 @@ QByteArray CmdHandlerV1::assembleA1Cmd(uchar type, const QByteArray &data)
 {
     QByteArray cmd;
     cmd.append(uchar(0xA1));
-    cmd.append(DataDealUtils::bcdStrToByteArray(DataDealUtils::curDateStr("yyyyMMddhhmmss")));
+    cmd.append(DataDealUtils::bcdStrToByteArray(DataDealUtils::curDateTimeStr("yyyyMMddhhmmss")));
     cmd.append(type);
     cmd.append(DataDealUtils::intToByte(data.size()));
     cmd.append(data);

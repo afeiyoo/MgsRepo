@@ -8,9 +8,13 @@
 
 using namespace Utils;
 
-MobilePlusTerminal::MobilePlusTerminal(QObject *parent)
+MobilePlusTerminal::MobilePlusTerminal(const QString &stationID, uint laneID, uint seq, QObject *parent)
     : IMobilePlusTerminal{parent}
 {
+    m_stationID = stationID;
+    m_laneID = laneID;
+    m_devSeq = seq;
+
     m_socket = new QTcpSocket(this);
     m_handler = new CmdHandlerV1(); // 默认版本号V1
 
@@ -40,6 +44,25 @@ void MobilePlusTerminal::disconnectServer()
     m_socket->disconnectFromHost();
 }
 
+void MobilePlusTerminal::initialize(const QString &stationID, uint laneID, uint seq)
+{
+    QVariantMap aMap;
+    QString deviceID = QString("3501%1%2%3").arg(stationID).arg(laneID, 2, 10, QLatin1Char('0')).arg(seq, 2, 10, QLatin1Char('0'));
+    aMap["deviceid"] = deviceID;
+    aMap["devicename"] = "车道展码设备";
+    aMap["datetime"] = DataDealUtils::curDateTimeStr("yyyyMMddhhmmss");
+
+    QByteArray jsonData = DataDealUtils::mapToJson(aMap);
+
+    QByteArray cmd = m_handler->assembleA1Cmd(0, jsonData);
+    QByteArray frame = makeFrame(getClientSeq(), cmd);
+
+    LOG_INFO().noquote() << "发送指令 A1 Type:0";
+    // 向服务端发送初始化指令
+    if (!sendFrame(frame))
+        return;
+}
+
 void MobilePlusTerminal::showQRCode(const QString &stationName, const QString &vehClass, const QString &vehPlate, const QString &barCode)
 {
     QVariantMap aMap;
@@ -50,8 +73,12 @@ void MobilePlusTerminal::showQRCode(const QString &stationName, const QString &v
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    QByteArray buffer = m_handler->assembleA1Cmd(1, jsonData);
-    sendFrame(buffer);
+    QByteArray cmd = m_handler->assembleA1Cmd(1, jsonData);
+    QByteArray frame = makeFrame(getClientSeq(), cmd);
+
+    LOG_INFO().noquote() << "发送指令 A1 Type:1";
+    if (!sendFrame(frame))
+        return;
 }
 
 void MobilePlusTerminal::showLED(const QString &text)
@@ -61,19 +88,27 @@ void MobilePlusTerminal::showLED(const QString &text)
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    QByteArray buffer = m_handler->assembleA1Cmd(2, jsonData);
-    sendFrame(buffer);
+    QByteArray cmd = m_handler->assembleA1Cmd(2, jsonData);
+    QByteArray frame = makeFrame(getClientSeq(), cmd);
+
+    LOG_INFO().noquote() << "发送指令 A1 Type:2";
+    if (!sendFrame(frame))
+        return;
 }
 
-void MobilePlusTerminal::showPics(const QString &data)
+void MobilePlusTerminal::showPics(const QByteArray &data)
 {
     QVariantMap aMap;
-    aMap["pic"] = data;
+    aMap["pic"] = QString::fromLatin1(data.toBase64());
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    QByteArray buffer = m_handler->assembleA1Cmd(3, jsonData);
-    sendFrame(buffer);
+    QByteArray cmd = m_handler->assembleA1Cmd(3, jsonData);
+    QByteArray frame = makeFrame(getClientSeq(), cmd);
+
+    LOG_INFO().noquote() << "发送指令 A1 Type:3";
+    if (!sendFrame(frame))
+        return;
 }
 
 void MobilePlusTerminal::setUploadUrl(const QString &url, int time)
@@ -84,8 +119,11 @@ void MobilePlusTerminal::setUploadUrl(const QString &url, int time)
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    QByteArray buffer = m_handler->assembleA1Cmd(4, jsonData);
-    if (!sendFrame(buffer))
+    QByteArray cmd = m_handler->assembleA1Cmd(4, jsonData);
+    QByteArray frame = makeFrame(getClientSeq(), cmd);
+
+    LOG_INFO().noquote() << "发送指令 A1 Type:4";
+    if (!sendFrame(frame))
         return;
 }
 
@@ -100,31 +138,6 @@ void MobilePlusTerminal::setVersion(uchar ver)
     m_ver = ver;
 }
 
-void MobilePlusTerminal::initialize(const QString &stationID, uint laneID, uint seq)
-{
-    if (laneID > 99)
-        laneID = 99;
-    if (seq > 99)
-        seq = 99;
-
-    QVariantMap aMap;
-    QString deviceID = QString("3501%1%2%3").arg(stationID).arg(laneID, 2, 10, QLatin1Char('0')).arg(seq, 2, 10, QLatin1Char('0'));
-    aMap["deviceid"] = deviceID;
-    aMap["devicename"] = "车道展码设备";
-    aMap["datetime"] = DataDealUtils::curDateTimeStr("yyyyMMddhhmmss");
-
-    QByteArray jsonData = DataDealUtils::mapToJson(aMap);
-
-    QByteArray cmd = m_handler->assembleA1Cmd(0, jsonData);
-    QByteArray frame = makeFrame(getClientSeq(), cmd);
-
-    LOG_INFO().noquote() << QString("【TX】[%1:%2]").arg(m_peerAddr).arg(m_peerPort) << DataDealUtils::byteArrayToHexStr(frame);
-    LOG_INFO().noquote() << "发送指令 A1 Type:0";
-    // 向服务端发送初始化指令
-    if (!sendFrame(frame))
-        return;
-}
-
 void MobilePlusTerminal::onStageChanged(QAbstractSocket::SocketState state)
 {
     switch (state) {
@@ -132,6 +145,8 @@ void MobilePlusTerminal::onStageChanged(QAbstractSocket::SocketState state)
         LOG_CINFO("smartctrl").noquote() << "与手机+自助交易终端建立连接";
         m_isForceDisconnect = false;
         m_connected = true;
+
+        initialize(m_stationID, m_laneID, m_devSeq);
         break;
     case QAbstractSocket::UnconnectedState:
         LOG_CERROR("smartctrl").noquote() << "与手机+自助交易终端断开连接";
@@ -226,6 +241,8 @@ void MobilePlusTerminal::onReadyRead()
 
 bool MobilePlusTerminal::sendFrame(const QByteArray &data)
 {
+    LOG_INFO().noquote() << QString("【TX】[%1:%2]").arg(m_peerAddr).arg(m_peerPort) << DataDealUtils::byteArrayToHexStr(data);
+
     if (!m_connected) {
         LOG_CERROR(L_CATE).noquote() << "发送失败: 与服务端网络连接失效!";
         return false;
@@ -281,9 +298,12 @@ void MobilePlusTerminal::dealCommand(uchar seq, const QByteArray &cmd)
 }
 
 // --------------------------------------------------------
-IMobilePlusTerminal *createMobilePlusTerminal()
+IMobilePlusTerminal *createMobilePlusTerminal(const QString &stationID, uint laneID, uint seq)
 {
-    return new MobilePlusTerminal();
+    if (laneID > 99 || seq > 99)
+        return nullptr;
+
+    return new MobilePlusTerminal(stationID, laneID, seq);
 }
 
 void destroyMobilePlusTerminal(IMobilePlusTerminal *terminal)

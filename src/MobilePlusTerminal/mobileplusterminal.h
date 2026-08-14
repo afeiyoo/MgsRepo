@@ -10,7 +10,7 @@ class MobilePlusTerminal : public IMobilePlusTerminal
 {
     Q_OBJECT
 public:
-    explicit MobilePlusTerminal(QObject *parent = nullptr);
+    explicit MobilePlusTerminal(const QString &stationID, uint laneID, uint seq, QObject *parent = nullptr);
     ~MobilePlusTerminal() override;
 
     void connectServer(const QString &ip, quint16 port) override;
@@ -21,26 +21,29 @@ public:
 
     void showLED(const QString &text) override;
 
-    void showPics(const QString &data) override;
+    void showPics(const QByteArray &data) override;
 
     void setUploadUrl(const QString &url, int time) override;
 
     void setVersion(uchar ver) override;
-
-    // 设备初始化
-    void initialize(const QString &stationID, uint laneID, uint seq) override;
 
 private slots:
     void onStageChanged(QAbstractSocket::SocketState state);
     void onReadyRead();
 
 private:
+    void initialize(const QString &stationID, uint laneID, uint seq);
+
     bool sendFrame(const QByteArray &data);
     QByteArray makeFrame(uchar seq, const QByteArray &cmd);
     uchar getClientSeq();
     void dealCommand(uchar seq, const QByteArray &cmd);
 
 private:
+    QString m_stationID;
+    uint m_laneID = 0;
+    uint m_devSeq = 0;
+
     // 是否客户端主动断开连接
     bool m_isForceDisconnect = false;
     // 协议版本号
