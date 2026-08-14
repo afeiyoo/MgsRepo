@@ -508,11 +508,54 @@ QByteArray DataDealUtils::bufferToByteArray(const char *buffer, int bufferSize)
 QString DataDealUtils::byteArrayToBCDStr(const QByteArray &data)
 {
     QString result;
-    for (auto b : data) {
-        quint8 v = static_cast<quint8>(b);
-        result += QString::number((v >> 4) & 0x0F); // 高4位
-        result += QString::number(v & 0x0F);        // 低4位
+    result.reserve(data.size() * 2);
+
+    for (char byte : data) {
+        const quint8 value = static_cast<quint8>(byte);
+
+        const quint8 high = static_cast<quint8>((value >> 4) & 0x0F);
+        const quint8 low = static_cast<quint8>(value & 0x0F);
+
+        // BCD每个半字节只能表示0～9
+        if (high > 9 || low > 9)
+            return QString();
+
+        result.append(QChar(static_cast<ushort>('0' + high)));
+        result.append(QChar(static_cast<ushort>('0' + low)));
     }
+
+    return result;
+}
+
+QByteArray DataDealUtils::bcdStrToByteArray(const QString &data)
+{
+    QByteArray result;
+
+    // 每两个十进制数字组成一个字节
+    if (data.size() % 2 != 0)
+        return QByteArray();
+
+    result.reserve(data.size() / 2);
+
+    for (int i = 0; i < data.size(); i += 2) {
+        const QChar highChar = data.at(i);
+        const QChar lowChar = data.at(i + 1);
+
+        // BCD的每个半字节只能是0～9
+        if (!highChar.isDigit() || !lowChar.isDigit())
+            return QByteArray();
+
+        const int high = highChar.digitValue();
+        const int low = lowChar.digitValue();
+
+        if (high < 0 || high > 9 || low < 0 || low > 9) {
+            return QByteArray();
+        }
+
+        const quint8 value = static_cast<quint8>((high << 4) | low);
+        result.append(static_cast<char>(value));
+    }
+
     return result;
 }
 

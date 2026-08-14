@@ -127,6 +127,7 @@ public:
 
     // 字节数组转bcd编码字符串
     static QString byteArrayToBCDStr(const QByteArray &data);
+    static QByteArray bcdStrToByteArray(const QString &data);
 
     // 16进制字符串转字节数组
     static QByteArray hexStrToByteArray(const QString &str);
