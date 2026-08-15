@@ -55,9 +55,9 @@ bool CmdHandlerV1::handleF1Cmd(const QByteArray &cmd)
     if (type == 0) {
         // 初始化指令返回
         if (status == 0) {
-            LOG_CINFO(L_CATE).noquote() << "服务端返回初始化指令执行成功";
+            LOG_CINFO(L_CATE).noquote() << "服务端返回设备初始化成功";
         } else {
-            LOG_CERROR(L_CATE).noquote() << "服务端返回初始化指令执行失败:" << desc;
+            LOG_CERROR(L_CATE).noquote() << "服务端返回设备初始化失败:" << desc;
         }
         return status == 0;
     } else if (type == 1) {
@@ -121,4 +121,12 @@ QByteArray CmdHandlerV1::assembleF1Cmd(const QString &dateTime, uchar type, ucha
     cmd.append(desc.toUtf8());
 
     return cmd;
+}
+
+QByteArray CmdHandlerV1::makeRequestKey(uchar seq, const QByteArray &cmd)
+{
+    QByteArray key;
+    key.append(seq);
+    key.append(cmd.mid(1, 8)); // DateTime + Type
+    return key;
 }

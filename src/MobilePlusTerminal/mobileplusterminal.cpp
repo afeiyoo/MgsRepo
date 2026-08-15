@@ -30,6 +30,7 @@ MobilePlusTerminal::~MobilePlusTerminal()
 void MobilePlusTerminal::connectServer(const QString &ip, quint16 port)
 {
     m_isForceDisconnect = false;
+    m_initialized = false;
 
     m_peerAddr = ip;
     m_peerPort = port;
@@ -54,12 +55,9 @@ void MobilePlusTerminal::initialize(const QString &stationID, uint laneID, uint 
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    QByteArray cmd = m_handler->assembleA1Cmd(0, jsonData);
-    QByteArray frame = makeFrame(getClientSeq(), cmd);
-
     LOG_INFO().noquote() << "发送指令 A1 Type:0";
     // 向服务端发送初始化指令
-    if (!sendFrame(frame))
+    if (!sendA1Command(0, jsonData, false))
         return;
 }
 
@@ -73,11 +71,8 @@ void MobilePlusTerminal::showQRCode(const QString &stationName, const QString &v
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    QByteArray cmd = m_handler->assembleA1Cmd(1, jsonData);
-    QByteArray frame = makeFrame(getClientSeq(), cmd);
-
     LOG_INFO().noquote() << "发送指令 A1 Type:1";
-    if (!sendFrame(frame))
+    if (!sendA1Command(1, jsonData))
         return;
 }
 
@@ -88,11 +83,8 @@ void MobilePlusTerminal::showLED(const QString &text)
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    QByteArray cmd = m_handler->assembleA1Cmd(2, jsonData);
-    QByteArray frame = makeFrame(getClientSeq(), cmd);
-
     LOG_INFO().noquote() << "发送指令 A1 Type:2";
-    if (!sendFrame(frame))
+    if (!sendA1Command(2, jsonData))
         return;
 }
 
@@ -103,11 +95,8 @@ void MobilePlusTerminal::showPics(const QByteArray &data)
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    QByteArray cmd = m_handler->assembleA1Cmd(3, jsonData);
-    QByteArray frame = makeFrame(getClientSeq(), cmd);
-
     LOG_INFO().noquote() << "发送指令 A1 Type:3";
-    if (!sendFrame(frame))
+    if (!sendA1Command(3, jsonData))
         return;
 }
 
@@ -119,17 +108,15 @@ void MobilePlusTerminal::setUploadUrl(const QString &url, int time)
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    QByteArray cmd = m_handler->assembleA1Cmd(4, jsonData);
-    QByteArray frame = makeFrame(getClientSeq(), cmd);
-
     LOG_INFO().noquote() << "发送指令 A1 Type:4";
-    if (!sendFrame(frame))
+    if (!sendA1Command(4, jsonData))
         return;
 }
 
 void MobilePlusTerminal::setVersion(uchar ver)
 {
     if (ver == 0x01) {
+        delete m_handler;
         m_handler = new CmdHandlerV1();
     } else {
         LOG_CERROR(L_CATE).noquote() << "不支持的协议版本:" << ver;
@@ -151,6 +138,8 @@ void MobilePlusTerminal::onStageChanged(QAbstractSocket::SocketState state)
     case QAbstractSocket::UnconnectedState:
         LOG_CERROR("smartctrl").noquote() << "与手机+自助交易终端断开连接";
         m_connected = false;
+        m_initialized = false;
+        m_pendingRequests.clear();
         m_buffer.clear(); // 清空数据缓冲区
         break;
     default:
@@ -239,6 +228,41 @@ void MobilePlusTerminal::onReadyRead()
     }
 }
 
+bool MobilePlusTerminal::sendA1Command(uchar type, const QByteArray &jsonData, bool requiresInitialized)
+{
+    if (!m_connected) {
+        LOG_CERROR(L_CATE).noquote() << "发送A1失败: 与服务端网络连接失效!";
+        return false;
+    }
+
+    if (requiresInitialized && !m_initialized) {
+        LOG_CERROR(L_CATE).noquote() << "发送A1失败: 设备尚未完成初始化, Type:" << type;
+        return false;
+    }
+
+    uchar seq = getClientSeq();
+    QByteArray cmd = m_handler->assembleA1Cmd(type, jsonData);
+    QByteArray frame = makeFrame(seq, cmd);
+    QByteArray requestKey = m_handler->makeRequestKey(seq, cmd);
+    if (m_pendingRequests.contains(requestKey)) {
+        LOG_CERROR(L_CATE).noquote() << "发送A1失败: 序列号、DateTime和Type存在重复的未响应请求";
+        return false;
+    }
+
+    PendingRequest request;
+    request.seq = seq;
+    request.type = type;
+    request.frame = frame;
+    m_pendingRequests[requestKey] = request;
+
+    if (!sendFrame(frame)) {
+        m_pendingRequests.remove(requestKey);
+        return false;
+    }
+
+    return true;
+}
+
 bool MobilePlusTerminal::sendFrame(const QByteArray &data)
 {
     LOG_INFO().noquote() << QString("【TX】[%1:%2]").arg(m_peerAddr).arg(m_peerPort) << DataDealUtils::byteArrayToHexStr(data);
@@ -291,10 +315,28 @@ void MobilePlusTerminal::dealCommand(uchar seq, const QByteArray &cmd)
         QByteArray resp = m_handler->handleB1Cmd(cmd);
         sendFrame(makeFrame(static_cast<uchar>((seq & 0x0F) | 0x10), resp));
     } else if (cmdType == 0xF1) {
-        m_handler->handleF1Cmd(cmd);
+        handleF1Response(seq, cmd);
     } else {
         LOG_CERROR(L_CATE).noquote() << "未知指令类型:" << QString("%1").arg(cmdType, 2, 16, QLatin1Char('0'));
     }
+}
+
+void MobilePlusTerminal::handleF1Response(uchar seq, const QByteArray &cmd)
+{
+    uchar requestSeq = static_cast<uchar>((seq & 0x0F) | 0x10);
+    QByteArray requestKey = m_handler->makeRequestKey(requestSeq, cmd);
+    auto it = m_pendingRequests.find(requestKey);
+    if (it == m_pendingRequests.end()) {
+        LOG_CWARNING(L_CATE).noquote() << "收到无对应请求的F1应答帧, Seq:" << QString("0x%1").arg(seq, 2, 16, QLatin1Char('0'));
+        return;
+    }
+
+    bool success = m_handler->handleF1Cmd(cmd);
+    uchar requestType = it->type;
+    m_pendingRequests.erase(it);
+
+    if (requestType == 0)
+        m_initialized = success;
 }
 
 // --------------------------------------------------------

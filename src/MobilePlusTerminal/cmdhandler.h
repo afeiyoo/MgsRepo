@@ -21,6 +21,9 @@ public:
 
     // 组装F1指令
     virtual QByteArray assembleF1Cmd(const QString &dateTime, uchar type, uchar status, const QString &desc) = 0;
+
+    // 生成唯一请求标识键
+    virtual QByteArray makeRequestKey(uchar seq, const QByteArray &cmd) = 0;
 };
 
 // 具体策略：针对版本1的命令处理
@@ -37,4 +40,6 @@ public:
     QByteArray assembleA1Cmd(uchar type, const QByteArray &data) override;
 
     QByteArray assembleF1Cmd(const QString &dateTime, uchar type, uchar status, const QString &desc) override;
+
+    QByteArray makeRequestKey(uchar seq, const QByteArray &cmd) override;
 };

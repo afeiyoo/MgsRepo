@@ -19,7 +19,7 @@ public:
     // 与服务端断开连接
     virtual void disconnectServer() = 0;
 
-    // 设置协议版本号
+    // 设置协议版本号，必须在 connectServer() 前调用；默认使用版本 0x01
     virtual void setVersion(uchar ver) = 0;
 
     // 二维码显示

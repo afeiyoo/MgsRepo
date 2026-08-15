@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QObject>
 #include <QTcpSocket>
 
@@ -32,12 +33,21 @@ private slots:
     void onReadyRead();
 
 private:
+    struct PendingRequest
+    {
+        uchar seq = 0;
+        uchar type = 0;
+        QByteArray frame;
+    };
+
     void initialize(const QString &stationID, uint laneID, uint seq);
 
+    bool sendA1Command(uchar type, const QByteArray &jsonData, bool requiresInitialized = true);
     bool sendFrame(const QByteArray &data);
     QByteArray makeFrame(uchar seq, const QByteArray &cmd);
     uchar getClientSeq();
     void dealCommand(uchar seq, const QByteArray &cmd);
+    void handleF1Response(uchar seq, const QByteArray &cmd);
 
 private:
     QString m_stationID;
@@ -50,6 +60,7 @@ private:
     uchar m_ver = 0x01; // 默认版本号0x01
     // 网络信息
     bool m_connected = false;
+    bool m_initialized = false;
     QTcpSocket *m_socket = nullptr;
     QString m_peerAddr;
     quint16 m_peerPort = 0;
@@ -58,6 +69,8 @@ private:
 
     // 客户端序列号
     int m_nextSeq = 1;
+    // 等待F1应答的A1请求，键为“PC端序列号 + DateTime + Type”
+    QHash<QByteArray, PendingRequest> m_pendingRequests;
     // 指令解析器
     ICmdHandler *m_handler = nullptr;
 };
