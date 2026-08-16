@@ -16,3 +16,17 @@ static const int LEN_FIELD_LEN = 4; // 数据长度字段 4 字节（大端）
 static const int CRC_LEN = 2;       // CRC 校验码 2 字节
 
 static const int FIXED_HEADER_LEN = STX_LEN + VER_LEN + SEQ_LEN + LEN_FIELD_LEN; // 固定头长度
+
+static const int MAX_RETRY_TIMES = 3;    // 最大重传尝试次数
+static const int RETRY_INTERVAL = 1000;  // 重传时间间隔，单位ms
+static const int REQUEST_TIMEOUT = 3000; // 请求超时时间，单位ms
+static const int HEARTBEAT_TIMEOUT = 30000; // 心跳超时时间，单位ms
+
+// 重传数据信息
+struct ST_PendingRequest
+{
+    uchar seq = 0;
+    uchar type = 0;
+    int retryCount = 0;
+    QByteArray frame;
+};

@@ -130,3 +130,9 @@ QByteArray CmdHandlerV1::makeRequestKey(uchar seq, const QByteArray &cmd)
     key.append(cmd.mid(1, 8)); // DateTime + Type
     return key;
 }
+
+uchar CmdHandlerV1::getB1Type(const QByteArray &cmd)
+{
+    uchar type = static_cast<uchar>(cmd.at(8));
+    return type;
+}

@@ -1,8 +1,9 @@
 #include "mobileplusterminal.h"
 
+#include <QTimer>
+
 #include "Logger.h"
 #include "cmdhandler.h"
-#include "defines.h"
 #include "utils/datadealutils.h"
 #include "utils/stdafx.h"
 
@@ -16,10 +17,13 @@ MobilePlusTerminal::MobilePlusTerminal(const QString &stationID, uint laneID, ui
     m_devSeq = seq;
 
     m_socket = new QTcpSocket(this);
+    m_heartbeatTimer = new QTimer(this);
+    m_heartbeatTimer->setSingleShot(true);
     m_handler = new CmdHandlerV1(); // 默认版本号V1
 
     connect(m_socket, &QTcpSocket::stateChanged, this, &MobilePlusTerminal::onStageChanged);
     connect(m_socket, &QTcpSocket::readyRead, this, &MobilePlusTerminal::onReadyRead);
+    connect(m_heartbeatTimer, &QTimer::timeout, this, &MobilePlusTerminal::handleHeartbeatTimeout);
 }
 
 MobilePlusTerminal::~MobilePlusTerminal()
@@ -42,6 +46,7 @@ void MobilePlusTerminal::connectServer(const QString &ip, quint16 port)
 void MobilePlusTerminal::disconnectServer()
 {
     m_isForceDisconnect = true;
+    m_heartbeatTimer->stop();
     m_socket->disconnectFromHost();
 }
 
@@ -132,6 +137,7 @@ void MobilePlusTerminal::onStageChanged(QAbstractSocket::SocketState state)
         LOG_CINFO("smartctrl").noquote() << "与手机+自助交易终端建立连接";
         m_isForceDisconnect = false;
         m_connected = true;
+        m_heartbeatTimer->start(HEARTBEAT_TIMEOUT);
 
         initialize(m_stationID, m_laneID, m_devSeq);
         break;
@@ -139,6 +145,7 @@ void MobilePlusTerminal::onStageChanged(QAbstractSocket::SocketState state)
         LOG_CERROR("smartctrl").noquote() << "与手机+自助交易终端断开连接";
         m_connected = false;
         m_initialized = false;
+        m_heartbeatTimer->stop();
         m_pendingRequests.clear();
         m_buffer.clear(); // 清空数据缓冲区
         break;
@@ -249,7 +256,7 @@ bool MobilePlusTerminal::sendA1Command(uchar type, const QByteArray &jsonData, b
         return false;
     }
 
-    PendingRequest request;
+    ST_PendingRequest request;
     request.seq = seq;
     request.type = type;
     request.frame = frame;
@@ -259,6 +266,8 @@ bool MobilePlusTerminal::sendA1Command(uchar type, const QByteArray &jsonData, b
         m_pendingRequests.remove(requestKey);
         return false;
     }
+
+    QTimer::singleShot(REQUEST_TIMEOUT, this, [this, requestKey]() { handleRequestTimeout(requestKey); });
 
     return true;
 }
@@ -312,6 +321,10 @@ void MobilePlusTerminal::dealCommand(uchar seq, const QByteArray &cmd)
 {
     uchar cmdType = static_cast<uchar>(cmd.at(0));
     if (cmdType == 0xB1) {
+        uchar type = m_handler->getB1Type(cmd);
+        if (type == 1)
+            resetHeartbeatWatchdog();
+
         QByteArray resp = m_handler->handleB1Cmd(cmd);
         sendFrame(makeFrame(static_cast<uchar>((seq & 0x0F) | 0x10), resp));
     } else if (cmdType == 0xF1) {
@@ -337,6 +350,43 @@ void MobilePlusTerminal::handleF1Response(uchar seq, const QByteArray &cmd)
 
     if (requestType == 0)
         m_initialized = success;
+}
+
+void MobilePlusTerminal::handleRequestTimeout(const QByteArray &requestKey)
+{
+    auto it = m_pendingRequests.find(requestKey);
+    if (it == m_pendingRequests.end())
+        return; // 已收到匹配的F1应答，或连接已断开
+
+    if (it->retryCount >= MAX_RETRY_TIMES) {
+        LOG_CERROR(L_CATE).noquote() << "A1重传" << MAX_RETRY_TIMES
+                                     << "次后仍未收到F1应答, Seq:" << QString("0x%1").arg(it->seq, 2, 16, QLatin1Char('0')) << "Type:" << it->type;
+        m_pendingRequests.erase(it);
+        return;
+    }
+
+    ++it->retryCount;
+    LOG_CWARNING(L_CATE).noquote() << "A1等待F1应答超时，执行第" << it->retryCount
+                                   << "次重传, Seq:" << QString("0x%1").arg(it->seq, 2, 16, QLatin1Char('0')) << "Type:" << it->type;
+    sendFrame(it->frame);
+
+    QTimer::singleShot(RETRY_INTERVAL, this, [this, requestKey]() { handleRequestTimeout(requestKey); });
+}
+
+void MobilePlusTerminal::resetHeartbeatWatchdog()
+{
+    if (m_connected)
+        m_heartbeatTimer->start(HEARTBEAT_TIMEOUT);
+}
+
+void MobilePlusTerminal::handleHeartbeatTimeout()
+{
+    if (!m_connected || m_isForceDisconnect)
+        return;
+
+    LOG_CERROR(L_CATE).noquote() << "连续" << HEARTBEAT_TIMEOUT / 1000 << "秒未收到有效心跳，连接异常";
+    m_initialized = false;
+    m_socket->abort();
 }
 
 // --------------------------------------------------------

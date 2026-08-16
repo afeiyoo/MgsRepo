@@ -4,9 +4,11 @@
 #include <QObject>
 #include <QTcpSocket>
 
+#include "defines.h"
 #include "imobileplusterminal.h"
 
 class ICmdHandler;
+class QTimer;
 class MobilePlusTerminal : public IMobilePlusTerminal
 {
     Q_OBJECT
@@ -33,13 +35,6 @@ private slots:
     void onReadyRead();
 
 private:
-    struct PendingRequest
-    {
-        uchar seq = 0;
-        uchar type = 0;
-        QByteArray frame;
-    };
-
     void initialize(const QString &stationID, uint laneID, uint seq);
 
     bool sendA1Command(uchar type, const QByteArray &jsonData, bool requiresInitialized = true);
@@ -48,6 +43,9 @@ private:
     uchar getClientSeq();
     void dealCommand(uchar seq, const QByteArray &cmd);
     void handleF1Response(uchar seq, const QByteArray &cmd);
+    void handleRequestTimeout(const QByteArray &requestKey);
+    void resetHeartbeatWatchdog();
+    void handleHeartbeatTimeout();
 
 private:
     QString m_stationID;
@@ -62,6 +60,7 @@ private:
     bool m_connected = false;
     bool m_initialized = false;
     QTcpSocket *m_socket = nullptr;
+    QTimer *m_heartbeatTimer = nullptr;
     QString m_peerAddr;
     quint16 m_peerPort = 0;
     // 数据缓冲区
@@ -70,7 +69,7 @@ private:
     // 客户端序列号
     int m_nextSeq = 1;
     // 等待F1应答的A1请求，键为“PC端序列号 + DateTime + Type”
-    QHash<QByteArray, PendingRequest> m_pendingRequests;
+    QHash<QByteArray, ST_PendingRequest> m_pendingRequests;
     // 指令解析器
     ICmdHandler *m_handler = nullptr;
 };

@@ -24,6 +24,9 @@ public:
 
     // 生成唯一请求标识键
     virtual QByteArray makeRequestKey(uchar seq, const QByteArray &cmd) = 0;
+
+    // 获取A1指令类型
+    virtual uchar getB1Type(const QByteArray &cmd) = 0;
 };
 
 // 具体策略：针对版本1的命令处理
@@ -42,4 +45,6 @@ public:
     QByteArray assembleF1Cmd(const QString &dateTime, uchar type, uchar status, const QString &desc) override;
 
     QByteArray makeRequestKey(uchar seq, const QByteArray &cmd) override;
+
+    uchar getB1Type(const QByteArray &cmd) override;
 };
