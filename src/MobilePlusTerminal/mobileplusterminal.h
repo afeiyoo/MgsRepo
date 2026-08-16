@@ -46,6 +46,8 @@ private:
     void handleRequestTimeout(const QByteArray &requestKey);
     void resetHeartbeatWatchdog();
     void handleHeartbeatTimeout();
+    void scheduleReconnect(int delayMs);
+    void attemptReconnect();
 
 private:
     QString m_stationID;
@@ -61,8 +63,11 @@ private:
     bool m_initialized = false;
     QTcpSocket *m_socket = nullptr;
     QTimer *m_heartbeatTimer = nullptr;
+    QTimer *m_reconnectTimer = nullptr;
     QString m_peerAddr;
     quint16 m_peerPort = 0;
+    int m_reconnectCount = 0;
+    bool m_reconnectFailureNotified = false;
     // 数据缓冲区
     QByteArray m_buffer;
 

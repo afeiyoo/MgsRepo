@@ -33,6 +33,10 @@ public:
 
     // 设置状态上传URL
     virtual void setUploadUrl(const QString &url, int time) = 0;
+
+signals:
+    // 自动重连次数耗尽
+    void reconnectFailed();
 };
 
 extern "C" MOBILEPLUSTERMINAL_EXPORT IMobilePlusTerminal *createMobilePlusTerminal(const QString &stationID, uint laneID, uint seq);

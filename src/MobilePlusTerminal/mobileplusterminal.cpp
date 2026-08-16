@@ -19,11 +19,14 @@ MobilePlusTerminal::MobilePlusTerminal(const QString &stationID, uint laneID, ui
     m_socket = new QTcpSocket(this);
     m_heartbeatTimer = new QTimer(this);
     m_heartbeatTimer->setSingleShot(true);
+    m_reconnectTimer = new QTimer(this);
+    m_reconnectTimer->setSingleShot(true);
     m_handler = new CmdHandlerV1(); // 默认版本号V1
 
     connect(m_socket, &QTcpSocket::stateChanged, this, &MobilePlusTerminal::onStageChanged);
     connect(m_socket, &QTcpSocket::readyRead, this, &MobilePlusTerminal::onReadyRead);
     connect(m_heartbeatTimer, &QTimer::timeout, this, &MobilePlusTerminal::handleHeartbeatTimeout);
+    connect(m_reconnectTimer, &QTimer::timeout, this, &MobilePlusTerminal::attemptReconnect);
 }
 
 MobilePlusTerminal::~MobilePlusTerminal()
@@ -35,6 +38,9 @@ void MobilePlusTerminal::connectServer(const QString &ip, quint16 port)
 {
     m_isForceDisconnect = false;
     m_initialized = false;
+    m_reconnectCount = 0;
+    m_reconnectFailureNotified = false;
+    m_reconnectTimer->stop();
 
     m_peerAddr = ip;
     m_peerPort = port;
@@ -47,6 +53,7 @@ void MobilePlusTerminal::disconnectServer()
 {
     m_isForceDisconnect = true;
     m_heartbeatTimer->stop();
+    m_reconnectTimer->stop();
     m_socket->disconnectFromHost();
 }
 
@@ -133,22 +140,25 @@ void MobilePlusTerminal::setVersion(uchar ver)
 void MobilePlusTerminal::onStageChanged(QAbstractSocket::SocketState state)
 {
     switch (state) {
-    case QAbstractSocket::ConnectedState:
+    case QAbstractSocket::ConnectedState: {
         LOG_CINFO("smartctrl").noquote() << "与手机+自助交易终端建立连接";
-        m_isForceDisconnect = false;
         m_connected = true;
         m_heartbeatTimer->start(HEARTBEAT_TIMEOUT);
 
         initialize(m_stationID, m_laneID, m_devSeq);
-        break;
-    case QAbstractSocket::UnconnectedState:
+    } break;
+    case QAbstractSocket::UnconnectedState: {
         LOG_CERROR("smartctrl").noquote() << "与手机+自助交易终端断开连接";
         m_connected = false;
         m_initialized = false;
         m_heartbeatTimer->stop();
         m_pendingRequests.clear();
         m_buffer.clear(); // 清空数据缓冲区
-        break;
+
+        // 非主动断开，则延迟进行重连
+        if (!m_isForceDisconnect)
+            scheduleReconnect(RECONNECT_INTERVAL);
+    } break;
     default:
         break;
     }
@@ -375,8 +385,11 @@ void MobilePlusTerminal::handleRequestTimeout(const QByteArray &requestKey)
 
 void MobilePlusTerminal::resetHeartbeatWatchdog()
 {
-    if (m_connected)
+    if (m_connected) {
+        m_reconnectCount = 0;
+        m_reconnectFailureNotified = false;
         m_heartbeatTimer->start(HEARTBEAT_TIMEOUT);
+    }
 }
 
 void MobilePlusTerminal::handleHeartbeatTimeout()
@@ -387,6 +400,37 @@ void MobilePlusTerminal::handleHeartbeatTimeout()
     LOG_CERROR(L_CATE).noquote() << "连续" << HEARTBEAT_TIMEOUT / 1000 << "秒未收到有效心跳，连接异常";
     m_initialized = false;
     m_socket->abort();
+}
+
+void MobilePlusTerminal::scheduleReconnect(int delayMs)
+{
+    if (m_isForceDisconnect || m_reconnectTimer->isActive())
+        return;
+
+    if (m_reconnectCount >= MAX_RECONNECT_TIMES) {
+        LOG_CERROR(L_CATE).noquote() << "自动重连已达到最大次数:" << MAX_RECONNECT_TIMES;
+        if (!m_reconnectFailureNotified) {
+            m_reconnectFailureNotified = true;
+            emit reconnectFailed();
+        }
+        return;
+    }
+
+    LOG_CWARNING(L_CATE).noquote() << "将在" << delayMs / 1000 << "秒后尝试自动重连";
+    m_reconnectTimer->start(delayMs);
+}
+
+void MobilePlusTerminal::attemptReconnect()
+{
+    if (m_isForceDisconnect || m_connected || m_socket->state() != QAbstractSocket::UnconnectedState)
+        return;
+
+    if (m_reconnectCount >= MAX_RECONNECT_TIMES)
+        return;
+
+    ++m_reconnectCount;
+    LOG_CWARNING(L_CATE).noquote() << "开始第" << m_reconnectCount << "次自动重连，最大次数:" << MAX_RECONNECT_TIMES;
+    m_socket->connectToHost(m_peerAddr, m_peerPort);
 }
 
 // --------------------------------------------------------

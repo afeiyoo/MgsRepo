@@ -25,7 +25,7 @@ public:
     // 生成唯一请求标识键
     virtual QByteArray makeRequestKey(uchar seq, const QByteArray &cmd) = 0;
 
-    // 获取A1指令类型
+    // 获取B1指令类型
     virtual uchar getB1Type(const QByteArray &cmd) = 0;
 };
 
