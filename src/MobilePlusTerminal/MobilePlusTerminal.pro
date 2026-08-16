@@ -52,12 +52,14 @@ PUBLIC_HEADERS = \
 
 win32 {
     target.path = $$MGS_BIN_PATH/win/$$TARGET/lib
-    public_headers.path = $$MGS_BIN_PATH/win/$$TARGET/include
+    target_headers.path = $$MGS_BIN_PATH/win/$$TARGET/include
 } else {
     target.path = $$MGS_BIN_PATH/linux/$$TARGET/lib
-    public_headers.path = $$MGS_BIN_PATH/linux/$$TARGET/include
+    target_headers.path = $$MGS_BIN_PATH/linux/$$TARGET/include
 }
+public_include.path = $$MGS_INCLUDE_PATH/$$TARGET
 
-public_headers.files = $$PUBLIC_HEADERS
+target_headers.files = $$PUBLIC_HEADERS
+public_include.files = $$PUBLIC_HEADERS
 
-INSTALLS += target public_headers
+INSTALLS += target target_headers public_include
