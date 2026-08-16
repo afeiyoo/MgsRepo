@@ -21,7 +21,6 @@ shared|dll {
     DEFINES += MOBILEPLUSTERMINAL_STATIC
 }
 
-include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 
 # You can make your code fail to compile if it uses deprecated APIs.
@@ -39,8 +38,26 @@ HEADERS += \
     mobileplusterminal.h \
     mobileplusterminal_global.h
 
-# Default rules for deployment.
-unix {
-    target.path = /usr/lib
+# 引入第三方库
+unix:!macx|win32: LIBS += \
+    -l$$qtLibraryTargetName(CuteLogger)
+
+INCLUDEPATH += \
+    $$MGS_INCLUDE_PATH/CuteLogger
+
+# 交付安装
+PUBLIC_HEADERS = \
+    $$PWD/mobileplusterminal_global.h \
+    $$PWD/mobileplusterminal.h
+
+win32 {
+    target.path = $$MGS_BIN_PATH/win/$$TARGET/lib
+    public_headers.path = $$MGS_BIN_PATH/win/$$TARGET/include
+} else {
+    target.path = $$MGS_BIN_PATH/linux/$$TARGET/lib
+    public_headers.path = $$MGS_BIN_PATH/linux/$$TARGET/include
 }
-!isEmpty(target.path): INSTALLS += target
+
+public_headers.files = $$PUBLIC_HEADERS
+
+INSTALLS += target public_headers
