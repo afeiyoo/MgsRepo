@@ -17,10 +17,13 @@ MobilePlusTerminal::MobilePlusTerminal(const QString &stationID, uint laneID, ui
     m_devSeq = seq;
 
     m_socket = new QTcpSocket(this);
+
     m_heartbeatTimer = new QTimer(this);
     m_heartbeatTimer->setSingleShot(true);
+
     m_reconnectTimer = new QTimer(this);
     m_reconnectTimer->setSingleShot(true);
+
     m_handler = new CmdHandlerV1(); // 默认版本号V1
 
     connect(m_socket, &QTcpSocket::stateChanged, this, &MobilePlusTerminal::onStageChanged);

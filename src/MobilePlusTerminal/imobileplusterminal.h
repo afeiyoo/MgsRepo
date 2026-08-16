@@ -9,7 +9,8 @@ class MOBILEPLUSTERMINAL_EXPORT IMobilePlusTerminal : public QObject
     Q_OBJECT
 public:
     IMobilePlusTerminal(QObject *parent = nullptr)
-        : QObject(parent) {};
+        : QObject(parent)
+    {}
 
     virtual ~IMobilePlusTerminal() = default;
 
