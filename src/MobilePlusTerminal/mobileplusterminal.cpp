@@ -146,7 +146,7 @@ void MobilePlusTerminal::onStageChanged(QAbstractSocket::SocketState state)
     case QAbstractSocket::ConnectedState: {
         LOG_CINFO(L_CATE).noquote() << "与手机+自助交易终端建立连接";
         m_connected = true;
-        emit connectionStateChanged(true);
+        emit sigConnectionStateChanged(true);
         m_heartbeatTimer->start(HEARTBEAT_TIMEOUT);
 
         initialize(m_stationID, m_laneID, m_devSeq);
@@ -155,7 +155,7 @@ void MobilePlusTerminal::onStageChanged(QAbstractSocket::SocketState state)
         LOG_CERROR(L_CATE).noquote() << "与手机+自助交易终端断开连接";
         m_connected = false;
         m_initialized = false;
-        emit connectionStateChanged(false);
+        emit sigConnectionStateChanged(false);
         m_heartbeatTimer->stop();
         m_pendingRequests.clear();
         m_buffer.clear(); // 清空数据缓冲区
@@ -365,9 +365,9 @@ void MobilePlusTerminal::handleF1Response(uchar seq, const QByteArray &cmd)
 
     if (requestType == 0) {
         m_initialized = success;
-        emit initializationStateChanged(success);
+        emit sigInitStateChanged(success);
     }
-    emit commandFinished(requestType, success);
+    emit sigCmdFinished(requestType, success);
 }
 
 void MobilePlusTerminal::handleRequestTimeout(const QByteArray &requestKey)
@@ -382,8 +382,8 @@ void MobilePlusTerminal::handleRequestTimeout(const QByteArray &requestKey)
         const uchar requestType = it->type;
         m_pendingRequests.erase(it);
         if (requestType == 0)
-            emit initializationStateChanged(false);
-        emit commandFinished(requestType, false);
+            emit sigInitStateChanged(false);
+        emit sigCmdFinished(requestType, false);
         return;
     }
 
@@ -423,7 +423,7 @@ void MobilePlusTerminal::scheduleReconnect(int delayMs)
         LOG_CERROR(L_CATE).noquote() << "自动重连已达到最大次数:" << MAX_RECONNECT_TIMES;
         if (!m_reconnectFailureNotified) {
             m_reconnectFailureNotified = true;
-            emit reconnectFailed();
+            emit sigReconnectFailed();
         }
         return;
     }
