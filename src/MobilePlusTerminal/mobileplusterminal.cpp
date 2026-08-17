@@ -70,7 +70,7 @@ void MobilePlusTerminal::initialize(const QString &stationID, uint laneID, uint 
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    LOG_INFO().noquote() << "发送指令 A1 Type:0";
+    LOG_CINFO(L_CATE).noquote() << "发送指令 A1 Type:0";
     // 向服务端发送初始化指令
     if (!sendA1Command(0, jsonData, false))
         return;
@@ -86,7 +86,7 @@ void MobilePlusTerminal::showQRCode(const QString &stationName, const QString &v
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    LOG_INFO().noquote() << "发送指令 A1 Type:1";
+    LOG_CINFO(L_CATE).noquote() << "发送指令 A1 Type:1";
     if (!sendA1Command(1, jsonData))
         return;
 }
@@ -98,7 +98,7 @@ void MobilePlusTerminal::showLED(const QString &text)
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    LOG_INFO().noquote() << "发送指令 A1 Type:2";
+    LOG_CINFO(L_CATE).noquote() << "发送指令 A1 Type:2";
     if (!sendA1Command(2, jsonData))
         return;
 }
@@ -110,7 +110,7 @@ void MobilePlusTerminal::showPics(const QByteArray &data)
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    LOG_INFO().noquote() << "发送指令 A1 Type:3";
+    LOG_CINFO(L_CATE).noquote() << "发送指令 A1 Type:3";
     if (!sendA1Command(3, jsonData))
         return;
 }
@@ -123,7 +123,7 @@ void MobilePlusTerminal::setUploadUrl(const QString &url, int time)
 
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
-    LOG_INFO().noquote() << "发送指令 A1 Type:4";
+    LOG_CINFO(L_CATE).noquote() << "发送指令 A1 Type:4";
     if (!sendA1Command(4, jsonData))
         return;
 }
@@ -144,16 +144,18 @@ void MobilePlusTerminal::onStageChanged(QAbstractSocket::SocketState state)
 {
     switch (state) {
     case QAbstractSocket::ConnectedState: {
-        LOG_CINFO("smartctrl").noquote() << "与手机+自助交易终端建立连接";
+        LOG_CINFO(L_CATE).noquote() << "与手机+自助交易终端建立连接";
         m_connected = true;
+        emit connectionStateChanged(true);
         m_heartbeatTimer->start(HEARTBEAT_TIMEOUT);
 
         initialize(m_stationID, m_laneID, m_devSeq);
     } break;
     case QAbstractSocket::UnconnectedState: {
-        LOG_CERROR("smartctrl").noquote() << "与手机+自助交易终端断开连接";
+        LOG_CERROR(L_CATE).noquote() << "与手机+自助交易终端断开连接";
         m_connected = false;
         m_initialized = false;
+        emit connectionStateChanged(false);
         m_heartbeatTimer->stop();
         m_pendingRequests.clear();
         m_buffer.clear(); // 清空数据缓冲区
@@ -287,7 +289,7 @@ bool MobilePlusTerminal::sendA1Command(uchar type, const QByteArray &jsonData, b
 
 bool MobilePlusTerminal::sendFrame(const QByteArray &data)
 {
-    LOG_INFO().noquote() << QString("【TX】[%1:%2]").arg(m_peerAddr).arg(m_peerPort) << DataDealUtils::byteArrayToHexStr(data);
+    LOG_CINFO(L_CATE).noquote() << QString("【TX】[%1:%2]").arg(m_peerAddr).arg(m_peerPort) << DataDealUtils::byteArrayToHexStr(data);
 
     if (!m_connected) {
         LOG_CERROR(L_CATE).noquote() << "发送失败: 与服务端网络连接失效!";
@@ -361,8 +363,11 @@ void MobilePlusTerminal::handleF1Response(uchar seq, const QByteArray &cmd)
     uchar requestType = it->type;
     m_pendingRequests.erase(it);
 
-    if (requestType == 0)
+    if (requestType == 0) {
         m_initialized = success;
+        emit initializationStateChanged(success);
+    }
+    emit commandFinished(requestType, success);
 }
 
 void MobilePlusTerminal::handleRequestTimeout(const QByteArray &requestKey)
@@ -374,7 +379,11 @@ void MobilePlusTerminal::handleRequestTimeout(const QByteArray &requestKey)
     if (it->retryCount >= MAX_RETRY_TIMES) {
         LOG_CERROR(L_CATE).noquote() << "A1重传" << MAX_RETRY_TIMES
                                      << "次后仍未收到F1应答, Seq:" << QString("0x%1").arg(it->seq, 2, 16, QLatin1Char('0')) << "Type:" << it->type;
+        const uchar requestType = it->type;
         m_pendingRequests.erase(it);
+        if (requestType == 0)
+            emit initializationStateChanged(false);
+        emit commandFinished(requestType, false);
         return;
     }
 

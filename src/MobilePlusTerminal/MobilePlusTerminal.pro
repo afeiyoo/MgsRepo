@@ -48,7 +48,7 @@ INCLUDEPATH += \
 # 交付安装
 PUBLIC_HEADERS = \
     $$PWD/mobileplusterminal_global.h \
-    $$PWD/mobileplusterminal.h
+    $$PWD/imobileplusterminal.h
 
 win32 {
     INSTALL_DIR = $$MGS_BIN_PATH/win/$$TARGET
