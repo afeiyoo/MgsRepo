@@ -10,6 +10,9 @@ using namespace Utils;
 
 int main(int argc, char *argv[])
 {
+    // 0.9 表示缩小约 10%；0.8 表示缩小约 20%
+    qputenv("QT_SCALE_FACTOR", "0.9");
+
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     QGuiApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
