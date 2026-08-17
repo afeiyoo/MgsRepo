@@ -9,6 +9,7 @@ SUBDIRS += \
     # QJson \
     # QSimpleUpdater \
     # LaneMaster \
+    MobilePlusTerminal \
     MgsToolsKit \
     # SmartLaneController \
     # LaneDataService \
@@ -17,7 +18,6 @@ SUBDIRS += \
     # StationService \
     # ServiceHub \
     # CardService \
-    MobilePlusTerminal \
 
 LaneMaster.file = src/LaneMaster/LaneMaster.pro
 MgsToolsKit.file = src/MgsToolsKit/MgsToolsKit.pro

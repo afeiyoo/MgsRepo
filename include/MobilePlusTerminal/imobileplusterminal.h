@@ -37,16 +37,16 @@ public:
 
 signals:
     // TCP连接状态变化
-    void connectionStateChanged(bool connected);
+    void sigConnectionStateChanged(bool connected);
 
     // 设备初始化状态变化
-    void initializationStateChanged(bool initialized);
+    void sigInitStateChanged(bool initialized);
 
     // 指令收到应答或最终超时；type对应A1指令类型
-    void commandFinished(uchar type, bool success);
+    void sigCmdFinished(uchar type, bool success);
 
     // 自动重连次数耗尽
-    void reconnectFailed();
+    void sigReconnectFailed();
 };
 
 extern "C" MOBILEPLUSTERMINAL_EXPORT IMobilePlusTerminal *createMobilePlusTerminal(const QString &stationID, uint laneID, uint seq);

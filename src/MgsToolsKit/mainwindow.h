@@ -10,6 +10,7 @@ class T_DeskPrinter;
 class T_InfoBoard;
 class T_SmartController;
 class T_CardRobot;
+class T_MobilePlusTerminal;
 
 class MainWindow : public ElaWindow
 {
@@ -31,4 +32,5 @@ private:
     T_InfoBoard *m_infoBoardPage = nullptr;
     T_SmartController *m_smartControllerPage = nullptr;
     T_CardRobot *m_cardRobotPage = nullptr;
+    T_MobilePlusTerminal *m_mobilePlusTerminalPage = nullptr;
 };
