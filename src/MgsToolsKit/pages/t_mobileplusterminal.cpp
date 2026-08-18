@@ -66,7 +66,7 @@ T_MobilePlusTerminal::~T_MobilePlusTerminal()
 
 void T_MobilePlusTerminal::initContent()
 {
-    auto *connectionBox = new QGroupBox("初始化", this);
+    auto *connectionBox = new QGroupBox("设备初始化", this);
     auto *connectionLayout = new QVBoxLayout(connectionBox);
     connectionLayout->setContentsMargins(12, 12, 12, 10);
     connectionLayout->setSpacing(8);
