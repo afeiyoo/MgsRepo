@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqls namespace="COMMON">
+    <sql id="testConnection">
+        SELECT 1;
+    </sql>
+</sqls>

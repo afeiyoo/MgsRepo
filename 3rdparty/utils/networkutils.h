@@ -13,6 +13,9 @@ public:
 
     // 获取本机所有的IP地址
     static QStringList getLocalAddresses();
+
+    // 拼接URL
+    static QUrl appendUrlPath(const QUrl &baseUrl, const QString &pathPart);
 };
 
 } // namespace Utils

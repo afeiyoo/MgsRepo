@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqls namespace="MTC_IN">	
+	<sql id="select_001">
+        select username from t_user where userid = :userid;
+    </sql>
+</sqls>

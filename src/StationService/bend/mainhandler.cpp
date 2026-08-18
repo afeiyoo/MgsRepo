@@ -1,5 +1,6 @@
 #include "mainhandler.h"
 
+#include <QDir>
 #include <QJsonDocument>
 #include <QVariantMap>
 
@@ -88,12 +89,12 @@ QString MainHandler::dealQueryRepeat(const QVariantMap &aMap) const
         for (const auto &trade : trades) {
             QVariantMap detail;
             QVariantMap oneMap = trade.toMap();
-            detail["tradeId"] = oneMap["TRADEID"].toString();
-            detail["laneID"] = oneMap["LANEID"].toString();
-            detail["tradeTime"] = oneMap["TRADETIME"].toString();
-            detail["vehplate"] = oneMap["VEHPLATE"].toString();
-            detail["cardId"] = oneMap["CARDID"].toString();
-            detail["fee"] = oneMap["FEE"].toString();
+            detail["tradeId"] = oneMap["tradeid"].toString();
+            detail["laneID"] = oneMap["laneid"].toString();
+            detail["tradeTime"] = oneMap["tradetime"].toString();
+            detail["vehplate"] = oneMap["vehplate"].toString();
+            detail["cardId"] = oneMap["cardid"].toString();
+            detail["fee"] = oneMap["fee"].toString();
 
             judgeDetails.append(detail);
         }
@@ -278,7 +279,7 @@ QString MainHandler::dealQueryETCBlack(const QVariantMap &aMap) const
         version = aMap["version"].toString();
 
     if (version.isEmpty())
-        throw BaseException(BaseException::QUERY_ETC_BLACK, 3, "参数错误");
+        throw BaseException(BaseException::QUERY_ETC_BLACK, 3, version); // version参数错误
 
     QString dealtData = checkETCBlackInfo(version);
     return dealtData;
@@ -286,27 +287,27 @@ QString MainHandler::dealQueryETCBlack(const QVariantMap &aMap) const
 
 QString MainHandler::checkETCBlackInfo(const QString &version) const
 {
-    QString filePath = QString("%1/download/%2/%3_queryETCBlack.json").arg(FileUtils::curApplicationDirPath(), version.left(8), version);
+    const QString filePath = QDir(FileUtils::curApplicationDirPath())
+                                 .filePath(QString("download/%1/%2_queryETCBlack.json").arg(version.left(8), version));
 
     QString result;
-    FileName file = FileName::fromString(filePath);
-    if (!file.exists()) {
+    if (!QFileInfo::exists(filePath)) {
         QString curVersion = GM_INS->getCurBlackVersion();
         if (curVersion < version) {
-            throw BaseException(BaseException::QUERY_ETC_BLACK, 2, "数据未准备好");
+            throw BaseException(BaseException::QUERY_ETC_BLACK, 2, version); // 请求version数据未准备好
         } else {
-            throw BaseException(BaseException::QUERY_ETC_BLACK, 0, "该版本无数据");
+            throw BaseException(BaseException::QUERY_ETC_BLACK, 0, version); // 请求version无数据
         }
     }
 
-    FileReader reader;
     QString errStr;
-    if (!reader.fetch(file.toString(), &errStr))
-        throw BaseException(BaseException::QUERY_ETC_BLACK, 4, "增量文件异常");
+    FileReader reader;
+    if (!reader.fetch(filePath, &errStr))
+        throw BaseException(BaseException::QUERY_ETC_BLACK, 4, version);
 
     QString jsonData = reader.data();
     if (jsonData.isEmpty())
-        throw BaseException(BaseException::QUERY_ETC_BLACK, 4, "增量文件异常");
+        throw BaseException(BaseException::QUERY_ETC_BLACK, 0, version);
 
     // 文件内容存在，则直接读取文件内容返回
     return jsonData;

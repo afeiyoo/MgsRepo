@@ -1,5 +1,7 @@
 #include "datadealutils.h"
 
+#include <cstring>
+
 #include <QCryptographicHash>
 #include <QDateTime>
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
@@ -31,7 +33,8 @@ QString DataDealUtils::cryptoMD5(const QString &s, bool bUtf8 /*= true */)
 
 QString DataDealUtils::bigFileMd5(const QString &filePath, bool *ok)
 {
-    *ok = false;
+    if (ok)
+        *ok = false;
 
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -47,7 +50,8 @@ QString DataDealUtils::bigFileMd5(const QString &filePath, bool *ok)
         hash.addData(chunk);
     }
 
-    *ok = true;
+    if (ok)
+        *ok = true;
     return QString(hash.result().toHex()).toUpper();
 }
 
@@ -491,14 +495,67 @@ QString DataDealUtils::byteArrayToAsciiStr(const QByteArray &data)
     return temp.trimmed();
 }
 
+QByteArray DataDealUtils::bufferToByteArray(const char *buffer, int bufferSize)
+{
+    if (!buffer || bufferSize <= 0)
+        return {};
+
+    const void *terminator = std::memchr(buffer, '\0', static_cast<size_t>(bufferSize));
+    const int dataSize = terminator ? static_cast<int>(static_cast<const char *>(terminator) - buffer) : bufferSize;
+    return QByteArray(buffer, dataSize);
+}
+
 QString DataDealUtils::byteArrayToBCDStr(const QByteArray &data)
 {
     QString result;
-    for (auto b : data) {
-        quint8 v = static_cast<quint8>(b);
-        result += QString::number((v >> 4) & 0x0F); // 高4位
-        result += QString::number(v & 0x0F);        // 低4位
+    result.reserve(data.size() * 2);
+
+    for (char byte : data) {
+        const quint8 value = static_cast<quint8>(byte);
+
+        const quint8 high = static_cast<quint8>((value >> 4) & 0x0F);
+        const quint8 low = static_cast<quint8>(value & 0x0F);
+
+        // BCD每个半字节只能表示0～9
+        if (high > 9 || low > 9)
+            return QString();
+
+        result.append(QChar(static_cast<ushort>('0' + high)));
+        result.append(QChar(static_cast<ushort>('0' + low)));
     }
+
+    return result;
+}
+
+QByteArray DataDealUtils::bcdStrToByteArray(const QString &data)
+{
+    QByteArray result;
+
+    // 每两个十进制数字组成一个字节
+    if (data.size() % 2 != 0)
+        return QByteArray();
+
+    result.reserve(data.size() / 2);
+
+    for (int i = 0; i < data.size(); i += 2) {
+        const QChar highChar = data.at(i);
+        const QChar lowChar = data.at(i + 1);
+
+        // BCD的每个半字节只能是0～9
+        if (!highChar.isDigit() || !lowChar.isDigit())
+            return QByteArray();
+
+        const int high = highChar.digitValue();
+        const int low = lowChar.digitValue();
+
+        if (high < 0 || high > 9 || low < 0 || low > 9) {
+            return QByteArray();
+        }
+
+        const quint8 value = static_cast<quint8>((high << 4) | low);
+        result.append(static_cast<char>(value));
+    }
+
     return result;
 }
 
@@ -1066,6 +1123,35 @@ QString DataDealUtils::getUpdateSql(const QObject *obj)
     return sql;
 }
 
+QString DataDealUtils::getExistSql(const QObject *obj)
+{
+    if (!obj)
+        return QString();
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    QStringList pkList = obj->property("tbl_pk").toString().split(",", Qt::SkipEmptyParts);
+#else
+    QStringList pkList = obj->property("tbl_pk").toString().split(",", QString::SkipEmptyParts);
+#endif
+    if (pkList.isEmpty())
+        return QString();
+
+    QStringList whereClauses;
+    whereClauses.reserve(pkList.size());
+
+    for (QString &pk : pkList) {
+        pk = pk.trimmed();
+        if (pk.isEmpty() || obj->metaObject()->indexOfProperty(pk.toUtf8().constData()) < 0)
+            return QString();
+
+        const QVariant val = obj->property(pk.toUtf8().constData());
+        whereClauses << QString("%1=%2").arg(pk.toLower(), formatSqlValue(val));
+    }
+
+    const QString tableName = QString::fromLatin1(obj->metaObject()->className()).toLower();
+    return QString("SELECT COUNT(*) AS zs FROM %1 WHERE %2").arg(tableName, whereClauses.join(" AND "));
+}
+
 QString DataDealUtils::fullExecutedQuery(const QSqlQuery &query)
 {
     QString sql = query.lastQuery();
@@ -1122,7 +1208,7 @@ QString DataDealUtils::fullExecutedQuery(const QSqlQuery &query)
 QVariantMap DataDealUtils::jsonToMap(const QByteArray &data, bool *ok, QString *errDesc)
 {
     *ok = false;
-    (*errDesc).clear();
+    errDesc->clear();
 
     QJsonParseError err;
     QJsonDocument doc = QJsonDocument::fromJson(data, &err);
@@ -1144,7 +1230,7 @@ QVariantMap DataDealUtils::jsonToMap(const QByteArray &data, bool *ok, QString *
 QVariantList DataDealUtils::jsonToList(const QByteArray &data, bool *ok, QString *errDesc)
 {
     *ok = false;
-    (*errDesc).clear();
+    errDesc->clear();
 
     QJsonParseError err;
     QJsonDocument doc = QJsonDocument::fromJson(data, &err);
@@ -1181,20 +1267,39 @@ QVariantMap DataDealUtils::xmlToMap(const QByteArray &data, bool *ok, QString *e
 {
     QXmlStreamReader reader(data);
 
-    *ok = true;
-    (*errDesc).clear();
+    *ok = false;
+    errDesc->clear();
     while (!reader.atEnd()) {
         reader.readNext();
 
         if (reader.isStartElement()) {
             // 跳过根节点，只返回根节点内部内容
-            return parseXmlElement(reader).toMap();
+            const QVariantMap result = parseXmlElement(reader).toMap();
+
+            // parseXmlElement可能因XML格式错误到达文档末尾，返回后必须检查解析状态
+            if (reader.hasError()) {
+                *errDesc = reader.errorString();
+                return QVariantMap();
+            }
+
+            // 继续读取根节点后的内容，确保整个XML文档格式有效
+            while (!reader.atEnd())
+                reader.readNext();
+
+            if (reader.hasError()) {
+                *errDesc = reader.errorString();
+                return QVariantMap();
+            }
+
+            *ok = true;
+            return result;
         }
     }
 
     if (reader.hasError()) {
-        *ok = false;
         *errDesc = reader.errorString();
+    } else {
+        *errDesc = QStringLiteral("XML中未找到根节点");
     }
 
     return QVariantMap();

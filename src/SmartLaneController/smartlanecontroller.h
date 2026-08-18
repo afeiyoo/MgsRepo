@@ -44,12 +44,14 @@ public slots:
     void onStateChanged(QAbstractSocket::SocketState state);
     void onTryConnect();
     void onErrorOccurred(QAbstractSocket::SocketError error);
+    void onHeartbeatTimeout();
 
     void onReadyRead();
 
 signals:
     void sigRecvFromSmartLaneController(uchar type, QByteArray data); // 智能网关消息
     void sigNetworkStatusChanged(bool status);                        // 网络连接状态
+    void sigHeartbeatStatusChanged(bool normal);                      // 心跳状态
 
 private:
     void dealCommand(uchar seq, const QByteArray &command);
@@ -62,10 +64,12 @@ private:
     bool m_isForceDisconnect = false; // 是否客户端主动断连
     bool m_connected = false;         // 网络连接状态
 
-    int m_reconnectCount = 0;            // 重连次数
-    QTimer *m_reconnectTimer = nullptr;  // 重连定时器
-    int m_reconnectMaxTimes = 3;         // 最大重连次数
-    bool m_isEnableRetryConnect = false; // 是否启用掉线重连机制
+    int m_reconnectCount = 0;                      // 重连次数
+    QTimer *m_reconnectTimer = nullptr;            // 重连定时器
+    int m_reconnectMaxTimes = 3;                   // 最大重连次数
+    bool m_isEnableRetryConnect = false;           // 是否启用掉线重连机制
+    bool m_reconnectAfterHeartbeatTimeout = false; // 心跳超时后，即使未开启普通掉线重连，也按重连次数策略尝试连接
+    QTimer *m_heartbeatTimer = nullptr;            // D6心跳超时看门狗
 
     QTcpSocket *m_tcpSocket = nullptr;
     QString m_peerAddr;

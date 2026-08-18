@@ -50,10 +50,9 @@ void HttpHandler::service(stefanfrings::HttpRequest &request, stefanfrings::Http
             resMap["errorMessage"] = e.errDesc();
         } else if (type == BaseException::QUERY_ETC_BLACK) {
             resMap["queryResult"] = e.errCode();
-            resMap["version"] = "";
+            resMap["version"] = e.errDesc();
             resMap["OperateTable"] = 0;
             resMap["amount"] = 0;
-            resMap["errorMessage"] = e.errDesc();
         } else {
             resMap["errCode"] = e.errCode();
             resMap["errorMessage"] = e.errDesc();

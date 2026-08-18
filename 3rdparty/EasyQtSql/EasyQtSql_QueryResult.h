@@ -58,8 +58,8 @@ public:
             QSqlRecord record = m_query.record();
 
             for (int i = 0; i < record.count(); ++i) {
-                // 第三方库修改 2025-11-10 查询记录字段统一大写
-                m_fieldNames.append(record.fieldName(i).toUpper());
+                // 第三方库修改 2025-11-10 查询记录字段统一小写
+                m_fieldNames.append(normalizeFieldName(record.fieldName(i)));
             }
 
             m_firstRowFetched = true;
@@ -188,12 +188,12 @@ public:
    */
     QVariant value(const QString &colName) const
     {
-        // 2025-11-12 第三方库修改 查询字段名统一大写
-        QString upperName = colName.toUpper();
+        // 2025-11-12 第三方库修改 查询字段名统一小写
+        QString normalizedName = normalizeFieldName(colName);
         int index = -1;
 
         for (int i = 0; i < m_fieldNames.size(); ++i) {
-            if (m_fieldNames[i] == upperName) {
+            if (m_fieldNames[i] == normalizedName) {
                 index = i;
                 break;
             }
@@ -726,10 +726,11 @@ public:
             QMetaProperty metaproperty = metaobject.property(i);
 
             if (metaproperty.isWritable()) {
-                QLatin1String sName(metaproperty.name());
+                const QString sName = QString::fromLatin1(metaproperty.name());
+                const QString normalizedName = normalizeFieldName(sName);
 
-                if (map.contains(sName)) {
-                    metaproperty.writeOnGadget(&gadget, map.value(sName));
+                if (map.contains(normalizedName)) {
+                    metaproperty.writeOnGadget(&gadget, map.value(normalizedName));
                 }
             }
         }
@@ -745,8 +746,8 @@ public:
         map.clear();
 
         for (int i = 0; i < m_fieldNames.count(); ++i) {
-            // 第三方库修改 2025-11-10 查询记录字段统一大写
-            map.insert(m_fieldNames.at(i).toUpper(), m_query.value(i));
+            // 第三方库修改 2025-11-10 查询记录字段统一小写
+            map.insert(normalizeFieldName(m_fieldNames.at(i)), m_query.value(i));
         }
     }
 
@@ -804,6 +805,11 @@ private:
         : m_query(query)
         , m_bindValueAlias(bindValueAliasMap)
     {}
+
+    static QString normalizeFieldName(const QString &fieldName)
+    {
+        return fieldName.toLower();
+    }
 
 private:
     QSqlQuery m_query;

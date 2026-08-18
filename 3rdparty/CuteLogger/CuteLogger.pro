@@ -16,8 +16,28 @@ win32 {
 
 include($$PWD/CuteLogger.pri)
 
-# Default rules for deployment.
-unix {
-    target.path = /usr/lib
+# 交付安装
+PUBLIC_HEADERS = \
+    $$PWD/include/Logger.h \
+    $$PWD/include/CuteLogger_global.h \
+    $$PWD/include/AbstractAppender.h \
+    $$PWD/include/AbstractStringAppender.h \
+    $$PWD/include/ConsoleAppender.h \
+    $$PWD/include/FileAppender.h \
+    $$PWD/include/RollingFileAppender.h
+
+win32 {
+    INSTALL_DIR = $$MGS_BIN_PATH/win/$$TARGET
+} else {
+    INSTALL_DIR = $$MGS_BIN_PATH/linux/$$TARGET
 }
-!isEmpty(target.path): INSTALLS += target
+
+target.path = $$INSTALL_DIR/lib
+
+target_headers.files = $$PUBLIC_HEADERS
+target_headers.path = $$INSTALL_DIR/include
+
+public_include.files = $$PUBLIC_HEADERS
+public_include.path = $$MGS_INCLUDE_PATH/$$TARGET
+
+INSTALLS += target target_headers public_include

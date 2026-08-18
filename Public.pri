@@ -193,6 +193,7 @@ MOC_DIR     = $$output/moc
 RCC_DIR     = $$output/rcc
 UI_DIR      = $$output/ui
 OBJECTS_DIR = $$output/obj
+DESTDIR     = $$output/bin
 
 qt {
     contains(QT, core): QT *= concurrent

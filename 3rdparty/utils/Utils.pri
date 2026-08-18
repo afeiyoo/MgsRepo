@@ -17,7 +17,6 @@ HEADERS += \
     $$PWD/qtcassert.h \
     $$PWD/savefile.h \
     $$PWD/sm4.h \
-    $$PWD/sqlutils.h \
     $$PWD/stdafx.h \
     $$PWD/iniutils.h
 
@@ -31,7 +30,6 @@ SOURCES += \
     $$PWD/qtcassert.cpp \
     $$PWD/savefile.cpp \
     $$PWD/sm4.cpp \
-    $$PWD/sqlutils.cpp \
     $$PWD/iniutils.cpp
 
 contains(QT, gui) {

@@ -7,6 +7,8 @@
 #include "global/signalmanager.h"
 #include "utils/fileutils.h"
 
+#include <QDir>
+
 using namespace Utils;
 
 Q_GLOBAL_STATIC(GlobalManager, ins)
@@ -34,19 +36,22 @@ void GlobalManager::init()
     consoleAppender->setFormat(Constant::Log::FORMAT);
     cuteLogger->registerAppender(consoleAppender);
     // 轮转日志 主程序日志
-    FileName mainLogPath = logDir + QString("/main.log");
-    RollingFileAppender *mainAppender = new RollingFileAppender(FileUtils::canonicalPath(mainLogPath).toString());
+    QString mainLogPath = QDir(logDir.toString()).filePath("main.log");
+    RollingFileAppender *mainAppender = new RollingFileAppender(mainLogPath);
     // 轮转日志 情报板日志
-    FileName infoboardLogPath = logDir + QString("/infoboard.log");
-    RollingFileAppender *infoboardAppender = new RollingFileAppender(FileUtils::canonicalPath(infoboardLogPath).toString());
+    QString infoboardLogPath = QDir(logDir.toString()).filePath("infoboard.log");
+    RollingFileAppender *infoboardAppender = new RollingFileAppender(infoboardLogPath);
     // 轮转日志 智能车控器日志
-    FileName smartControllerLogPath = logDir + QString("/smartController.log");
-    RollingFileAppender *smartControllerAppender = new RollingFileAppender(FileUtils::canonicalPath(smartControllerLogPath).toString());
+    QString smartControllerLogPath = QDir(logDir.toString()).filePath("smartController.log");
+    RollingFileAppender *smartControllerAppender = new RollingFileAppender(smartControllerLogPath);
     // 轮转日志 发卡机日志
-    FileName cardRobotLogPath = logDir + QString("/cardRobot.log");
-    RollingFileAppender *cardRobotAppender = new RollingFileAppender(FileUtils::canonicalPath(cardRobotLogPath).toString());
+    QString cardRobotLogPath = QDir(logDir.toString()).filePath("cardRobot.log");
+    RollingFileAppender *cardRobotAppender = new RollingFileAppender(cardRobotLogPath);
+    // 轮转日志 手机+自助交易终端日志
+    QString mobileTerminalLogPath = QDir(logDir.toString()).filePath("mobilePlusTerminal.log");
+    RollingFileAppender *mobileTerminalAppender = new RollingFileAppender(mobileTerminalLogPath);
 
-    QList<RollingFileAppender *> appenders = {mainAppender, infoboardAppender, smartControllerAppender, cardRobotAppender};
+    QList<RollingFileAppender *> appenders = {mainAppender, infoboardAppender, smartControllerAppender, cardRobotAppender, mobileTerminalAppender};
     for (auto appender : appenders) {
         appender->setFormat(Constant::Log::FORMAT);
         appender->setLogFilesLimit(90);
@@ -57,6 +62,7 @@ void GlobalManager::init()
     cuteLogger->registerCategoryAppender("infoboard", infoboardAppender);
     cuteLogger->registerCategoryAppender("smartctrl", smartControllerAppender);
     cuteLogger->registerCategoryAppender("cardrobot", cardRobotAppender);
+    cuteLogger->registerCategoryAppender("MobilePlusTerminal", mobileTerminalAppender);
 
     LOG_INFO().noquote() << "开始程序初始化...";
 }

@@ -61,15 +61,17 @@ QString DataServiceMysql::getSuccessedTradesSql(int vehicleIdentifyType, QString
         }
     }
 
-    const QString commonWhere = QString("%1 > DATE_SUB(NOW(), INTERVAL %2 SECOND) AND IsValid = 1 AND (%3 = DATE_FORMAT(CURDATE(), '%Y-%m-%d') OR %3 = "
-                                        "DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '%Y-%m-%d'))")
+    const QString commonWhere = QString(
+                                    "%1 > DATE_SUB(NOW(), INTERVAL %2 SECOND) AND IsValid = 1 AND (%3 = DATE_FORMAT(CURDATE(), '%Y-%m-%d') OR %3 = "
+                                    "DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '%Y-%m-%d'))")
                                     .arg(timeField)
                                     .arg(judgeTime)
                                     .arg(shiftField);
 
     QString sql = QString("SELECT TradeID, %1 AS LaneID, %2 AS TradeTime, %3 AS VehPlate, CardID, %4 AS Fee FROM %5 WHERE %6 AND %7 UNION ALL "
                           "SELECT TradeID, %1 AS LaneID, %2 AS TradeTime, %8 AS VehPlate, CardID, %4 AS Fee FROM %9 WHERE %10 AND %7;")
-                      .arg(laneField, timeField, etcPlateField, feeExpr, etcTable, etcWhere, commonWhere, mtcPlateField, mtcTable, mtcWhere);
+                      .arg(laneField, timeField, etcPlateField, feeExpr, etcTable, etcWhere, commonWhere, mtcPlateField, mtcTable)
+                      .arg(mtcWhere);
 
     return sql;
 }

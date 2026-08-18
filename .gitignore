@@ -25,6 +25,7 @@ object_script.*.Debug
 moc_*.cpp
 moc_*.h
 qrc_*.cpp
+*_resource.rc
 ui_*.h
 *.qmlc
 *.jsc

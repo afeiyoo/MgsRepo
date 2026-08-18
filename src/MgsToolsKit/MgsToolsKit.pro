@@ -5,12 +5,6 @@ QT       *= core gui network multimedia
 TARGET = MgsToolsKit
 TEMPLATE = app
 
-win32 {
-    DESTDIR = $$MGS_BIN_PATH/win/$$TARGET
-} else {
-    DESTDIR = $$MGS_BIN_PATH/linux/$$TARGET
-}
-
 # 软件版本号
 isEmpty(VERSION): VERSION += 0.0.1
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
@@ -23,7 +17,6 @@ DEFINES += QT_NO_DEBUG_OUTPUT
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
-include($$THIRD_PARTY_LIBRARY_PATH/CuteLogger/CuteLogger.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/HttpClient/HttpClient.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/NlohmannJson/NlohmannJson.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/QZXing/QZXing.pri)
@@ -41,6 +34,7 @@ SOURCES += \
     pages/t_cardrobot.cpp \
     pages/t_deskprinter.cpp \
     pages/t_infoboard.cpp \
+    pages/t_mobileplusterminal.cpp \
     pages/t_smartcontroller.cpp
 
 HEADERS += \
@@ -56,21 +50,49 @@ HEADERS += \
     pages/t_cardrobot.h \
     pages/t_deskprinter.h \
     pages/t_infoboard.h \
+    pages/t_mobileplusterminal.h \
     pages/t_smartcontroller.h
 
 # 引入第三方库
 unix:!macx|win32: LIBS += \
-    -l$$qtLibraryTargetName(ElaWidgetTools)
+    -l$$qtLibraryTargetName(ElaWidgetTools) \
+    -l$$qtLibraryTargetName(CuteLogger) \
+    -l$$qtLibraryTargetName(MobilePlusTerminal)
 
 INCLUDEPATH += \
-    $$THIRD_PARTY_LIBRARY_PATH/ElaWidgetTools
+    $$MGS_INCLUDE_PATH/ElaWidgetTools \
+    $$MGS_INCLUDE_PATH/CuteLogger \
+    $$MGS_INCLUDE_PATH/MobilePlusTerminal
 
-# Default rules for deployment.
-qnx: target.path = /tmp/$${TARGET}/bin
-else: unix:!android: target.path = /opt/$${TARGET}/bin
-!isEmpty(target.path): INSTALLS += target
+# 交付安装
+win32 {
+    INSTALL_DIR = $$MGS_BIN_PATH/win/$$TARGET
+} else {
+    INSTALL_DIR = $$MGS_BIN_PATH/linux/$$TARGET
+}
 
-copyLibsToDestdir($$qtLibraryTargetName(ElaWidgetTools))
+target.path = $$INSTALL_DIR
+
+win32 {
+    RUNTIME_LIBRARIES = \
+        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(ElaWidgetTools)}.dll \
+        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(CuteLogger)}.dll \
+        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(MobilePlusTerminal)}.dll
+} else {
+    RUNTIME_LIBRARIES = \
+        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(ElaWidgetTools)}.so* \
+        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(CuteLogger)}.so* \
+        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(MobilePlusTerminal)}.so*
+
+    # 动态库和可执行程序安装在同一个目录
+    QMAKE_LFLAGS += -Wl,-rpath=\'\$$ORIGIN\'
+}
+
+runtime_libraries.files = $$RUNTIME_LIBRARIES
+runtime_libraries.path = $$INSTALL_DIR
+runtime_libraries.CONFIG += no_check_exist
+
+INSTALLS += target runtime_libraries
 
 RESOURCES += \
     resources.qrc

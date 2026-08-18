@@ -64,6 +64,9 @@ int GlobalManager::init()
         return -101;
     }
 
+    // 系统初始化
+    FileUtils::makeSureDirExist(FileName::fromString(m_conf->m_fullSavePath));
+
     // 静态文件服务初始化
     QSettings *fileSetting = new QSettings(m_confPath, QSettings::IniFormat, this);
     fileSetting->beginGroup("Files");

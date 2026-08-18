@@ -122,8 +122,12 @@ public:
     // 字节数组转Ascii字符串
     static QString byteArrayToAsciiStr(const QByteArray &data);
 
+    // 将定长char缓冲区转为字节数组，遇到'\0'或达到bufferSize时停止
+    static QByteArray bufferToByteArray(const char *buffer, int bufferSize);
+
     // 字节数组转bcd编码字符串
     static QString byteArrayToBCDStr(const QByteArray &data);
+    static QByteArray bcdStrToByteArray(const QString &data);
 
     // 16进制字符串转字节数组
     static QByteArray hexStrToByteArray(const QString &str);
@@ -170,6 +174,9 @@ public:
     // 解析obj对象，获取对应的更新Sql
     static QString getUpdateSql(const QObject *obj);
 
+    // 解析obj对象，获取判断对象是否存在的Sql
+    static QString getExistSql(const QObject *obj);
+
     // 输出完整的SQL语句（不含占位符）
     static QString fullExecutedQuery(const QSqlQuery &query);
 
@@ -180,7 +187,7 @@ public:
     static QVariantMap jsonToMap(const QByteArray &data, bool *ok, QString *errDesc);
 
     // Json数组转换成QVariantList
-    static QVariantList jsonToList(const QByteArray &data, bool *ok, QString *errDesc);
+    static QVariantList jsonToList(const QByteArray &data, bool *ok, QString *errDes);
 
     // QVariantMap转换成QByteArray并可以指定输出格式
     static QByteArray mapToJson(const QVariantMap &map, QJsonDocument::JsonFormat format = QJsonDocument::Compact);
@@ -188,7 +195,7 @@ public:
     // QVariantList转换成QByteArray并可以指定输出格式
     static QByteArray listToJson(const QVariantList &list, QJsonDocument::JsonFormat format = QJsonDocument::Compact);
 
-    // XML转换成QVariantMap
+    // XML转换成QVariantMap, 重复出现的同名节点会转成 QVariantList
     static QVariantMap xmlToMap(const QByteArray &data, bool *ok, QString *errDesc);
 
     // QObject对象转换成QVariantMap,并可以指定忽略属性

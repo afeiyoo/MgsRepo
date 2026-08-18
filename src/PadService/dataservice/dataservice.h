@@ -77,14 +77,8 @@ public:
     // 依据车牌获取临时免征车信息
     QVariantList getFreeTempVehicles(const QString &plate);
 
-    // 获取手持机序列号
-    QString getEmgcSeqNum(const QString &stationId);
-
-    // 更新手持机序列号
-    bool updateEmgcSeqNum(const QString &stationId);
-
-    // 插入手持机序列号
-    bool insertEmgcSeqNum(const QString &stationId);
+    // 在同一事务中分配并推进手持机稽核唯一序列号
+    int allocateEmgcSeqNum(const QString &stationId, bool *ok);
 
     // 获取票据段信息
     QVariantMap getTicketUseInfo(int laneId, const QString &ticketNum, QUrl url);

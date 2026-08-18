@@ -23,8 +23,8 @@ include($$THIRD_PARTY_LIBRARY_PATH/NlohmannJson/NlohmannJson.pri)
 
 SOURCES += \
     bend/bizhandler.cpp \
+    config/configmanager.cpp \
     dataservice/dataservice.cpp \
-    config/config.cpp \
     core/baseexception.cpp \
     core/dtpsender.cpp \
     core/httphandler.cpp \
@@ -42,8 +42,8 @@ HEADERS += \
     bean/t_splitout.h \
     bean/t_mticketuse.h \
     bend/bizhandler.h \
+    config/configmanager.h \
     dataservice/dataservice.h \
-    config/config.h \
     global/defs.h \
     core/baseexception.h \
     core/dtpsender.h \

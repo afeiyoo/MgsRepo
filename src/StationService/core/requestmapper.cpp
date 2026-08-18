@@ -13,7 +13,7 @@ RequestMapper::~RequestMapper() {}
 
 void RequestMapper::service(stefanfrings::HttpRequest &request, stefanfrings::HttpResponse &response)
 {
-    QByteArray path = request.getPath();
+    const QByteArray path = request.getPath();
 
     LOG_INFO().noquote() << "RequestMapper: path=" << path.data();
     if (path == "/") {

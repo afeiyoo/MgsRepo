@@ -159,7 +159,7 @@ public:
     // 获取目录下相关的后缀的文件
     static FileNameList getFilesWithSuffix(const FileName &dirPath, const QString &suffix);
     // 自动清除指定路径下的超期文件（以后缀进行匹配）
-    static void autoDeleteFiles(const QString &path, const QString &fileExtension, qint64 expiredHour, QString *lastError);
+    static bool autoDeleteFiles(const QString &path, const QString &fileExtension, qint64 expiredHour, QString *lastError);
     // 获取当前可执行程序所在目录
     static QString curApplicationDirPath();
 };

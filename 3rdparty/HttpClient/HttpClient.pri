@@ -5,6 +5,7 @@ DEFINES += HTTP
 
 HEADERS += \
     $$PWD/src/cachedhttp.h \
+    $$PWD/src/httpdownloadreply.h \
     $$PWD/src/http.h \
     $$PWD/src/httpreply.h \
     $$PWD/src/httprequest.h \
@@ -14,6 +15,7 @@ HEADERS += \
 
 SOURCES += \
     $$PWD/src/cachedhttp.cpp \
+    $$PWD/src/httpdownloadreply.cpp \
     $$PWD/src/http.cpp \
     $$PWD/src/httpreply.cpp \
     $$PWD/src/localcache.cpp \

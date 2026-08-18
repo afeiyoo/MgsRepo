@@ -1,15 +1,14 @@
 #pragma once
 
+#include <QDir>
 #include <QMap>
 #include <QObject>
-#include <QSet>
-
-#include "utils/fileutils.h"
+#include <QTimer>
 
 #define GM_INSTANCE GlobalManager::instance()
 
 class DtpSender;
-class Config;
+class ConfigManager;
 class DataService;
 class GlobalManager : public QObject
 {
@@ -22,17 +21,27 @@ public:
 
     int init();
 
+private:
+    void initRemoteURIs();
+
+private slots:
+    void onCleanExpiredPictures();
+    void onCleanExpiredCaches();
+
 public:
     // 配置文件路径
     QString m_confPath;
     // 配置对象
-    Config *m_config = nullptr;
+    ConfigManager *m_configMan = nullptr;
     // 数据库操作对象
     DataService *m_ds = nullptr;
     // 图片保存目录
-    Utils::FileName m_pictureDir;
+    QDir m_pictureDir;
     // DTP传输对象
     DtpSender *m_dtpSender = nullptr;
     // 云坐席台账接口URI
     QMap<int, QString> m_remoteURIs;
+
+private:
+    QTimer *m_cleanupTimer = nullptr;
 };
