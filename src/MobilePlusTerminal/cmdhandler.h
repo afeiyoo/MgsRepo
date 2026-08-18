@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QByteArray>
+#include <QString>
 #include <QtGlobal>
 
 // 策略接口
@@ -33,7 +34,7 @@ public:
 class CmdHandlerV1 : public ICmdHandler
 {
 public:
-    CmdHandlerV1();
+    explicit CmdHandlerV1(uint devSeq);
     ~CmdHandlerV1() override;
 
     QByteArray handleB1Cmd(const QByteArray &cmd) override;
@@ -47,4 +48,10 @@ public:
     QByteArray makeRequestKey(uchar seq, const QByteArray &cmd) override;
 
     uchar getB1Type(const QByteArray &cmd) override;
+
+private:
+    QString deviceLogTag() const;
+
+private:
+    uint m_devSeq = 0;
 };

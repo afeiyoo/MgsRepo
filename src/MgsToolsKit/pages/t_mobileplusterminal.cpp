@@ -218,7 +218,7 @@ void T_MobilePlusTerminal::createTerminal()
     // 设置协议版本号
     m_terminal->setVersion(static_cast<uchar>(m_versionComboBox->currentData().toUInt()));
 
-    connect(m_terminal, &IMobilePlusTerminal::sigConnectionStateChanged, this, [this](bool connected) {
+    connect(m_terminal, &IMobilePlusTerminal::sigConnectionStateChanged, this, [this](uint devSeq, bool connected) {
         m_connecting = false;
         m_connected = connected;
         m_reconnecting = !connected && !m_userDisconnectRequested;
@@ -228,28 +228,30 @@ void T_MobilePlusTerminal::createTerminal()
             m_userDisconnectRequested = false;
             setConnectionFieldsEnabled(false);
             m_connectButton->setText("断开");
-            updateConnectionStatus("初始化中", StatusTone::Pending);
+            updateConnectionStatus(QString("设备%1 初始化中").arg(devSeq), StatusTone::Pending);
         } else if (m_userDisconnectRequested) {
             resetConnectionUi();
         } else {
             setConnectionFieldsEnabled(false);
             m_connectButton->setText("停止重连");
-            updateConnectionStatus("重连中", StatusTone::Pending);
+            updateConnectionStatus(QString("设备%1 重连中").arg(devSeq), StatusTone::Pending);
         }
     });
-    connect(m_terminal, &IMobilePlusTerminal::sigInitStateChanged, this, [this](bool initialized) {
+    connect(m_terminal, &IMobilePlusTerminal::sigInitStateChanged, this, [this](uint devSeq, bool initialized) {
         setCommandButtonsEnabled(initialized);
-        updateConnectionStatus(initialized ? "已就绪" : "初始化失败", initialized ? StatusTone::Success : StatusTone::Error);
+        updateConnectionStatus(QString("设备%1 %2").arg(devSeq).arg(initialized ? "已就绪" : "初始化失败"),
+                               initialized ? StatusTone::Success : StatusTone::Error);
     });
-    connect(m_terminal, &IMobilePlusTerminal::sigCmdFinished, this, [this](uchar type, bool success) {
+    connect(m_terminal, &IMobilePlusTerminal::sigCmdFinished, this, [this](uint devSeq, uchar type, bool success) {
         static const QStringList commandNames = {"设备初始化", "二维码显示", "LED显示", "图片显示", "状态上传配置"};
         const QString name = type < commandNames.size() ? commandNames.at(type) : QString("Type %1").arg(type);
+        const QString title = QString("设备%1 %2").arg(devSeq).arg(success ? "指令成功" : "指令失败");
         if (success)
-            ElaMessageBar::success(ElaMessageBarType::BottomRight, "指令成功", name + "执行成功", 1200, this);
+            ElaMessageBar::success(ElaMessageBarType::BottomRight, title, name + "执行成功", 1200, this);
         else
-            ElaMessageBar::error(ElaMessageBarType::BottomRight, "指令失败", name + "执行失败或响应超时", 1800, this);
+            ElaMessageBar::error(ElaMessageBarType::BottomRight, title, name + "执行失败或响应超时", 1800, this);
     });
-    connect(m_terminal, &IMobilePlusTerminal::sigReconnectFailed, this, [this]() {
+    connect(m_terminal, &IMobilePlusTerminal::sigReconnectFailed, this, [this](uint devSeq) {
         m_connecting = false;
         m_connected = false;
         m_reconnecting = false;
@@ -258,7 +260,8 @@ void T_MobilePlusTerminal::createTerminal()
         setCommandButtonsEnabled(false);
         m_connectButton->setText("连接");
         updateConnectionStatus("未连接", StatusTone::Error);
-        ElaMessageBar::error(ElaMessageBarType::BottomRight, "连接失败", "自动重连次数已用尽", 1800, this);
+        ElaMessageBar::error(ElaMessageBarType::BottomRight, QString("设备%1 连接失败").arg(devSeq), "自动重连次数已用尽", 1800,
+                             this);
     });
 }
 
