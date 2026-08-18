@@ -34,3 +34,11 @@ struct ST_PendingRequest
     int retryCount = 0;
     QByteArray frame;
 };
+
+// B1指令处理结果
+struct ST_B1HandleResult
+{
+    QByteArray response;
+    bool requestHelp = false;
+    int helpType = 0;
+};

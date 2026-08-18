@@ -5,6 +5,7 @@
 #include <QtGlobal>
 
 // 策略接口
+struct ST_B1HandleResult;
 class ICmdHandler
 {
 public:
@@ -12,7 +13,7 @@ public:
     virtual ~ICmdHandler() = default;
 
     // 解析B1指令
-    virtual QByteArray handleB1Cmd(const QByteArray &cmd) = 0;
+    virtual ST_B1HandleResult handleB1Cmd(const QByteArray &cmd) = 0;
 
     // 解析F1指令
     virtual bool handleF1Cmd(const QByteArray &cmd) = 0;
@@ -28,6 +29,9 @@ public:
 
     // 获取B1指令类型
     virtual uchar getB1Type(const QByteArray &cmd) = 0;
+
+    // 获取通用指令类型
+    virtual uchar getCmdType(const QByteArray &cmd) = 0;
 };
 
 // 具体策略：针对版本1的命令处理
@@ -37,7 +41,7 @@ public:
     explicit CmdHandlerV1(uint devSeq);
     ~CmdHandlerV1() override;
 
-    QByteArray handleB1Cmd(const QByteArray &cmd) override;
+    ST_B1HandleResult handleB1Cmd(const QByteArray &cmd) override;
 
     bool handleF1Cmd(const QByteArray &cmd) override;
 
@@ -48,6 +52,8 @@ public:
     QByteArray makeRequestKey(uchar seq, const QByteArray &cmd) override;
 
     uchar getB1Type(const QByteArray &cmd) override;
+
+    uchar getCmdType(const QByteArray &cmd) override;
 
 private:
     QString deviceLogTag() const;

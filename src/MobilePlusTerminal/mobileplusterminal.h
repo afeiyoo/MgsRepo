@@ -28,6 +28,8 @@ public:
 
     void setUploadUrl(const QString &url, int time) override;
 
+    void resetDisplay() override;
+
     void setVersion(uchar ver) override;
 
 private slots:

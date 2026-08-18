@@ -23,10 +23,13 @@ public:
     // 设置协议版本号，必须在 connectServer() 前调用；默认使用版本 0x01
     virtual void setVersion(uchar ver) = 0;
 
+    // 界面重置
+    virtual void resetDisplay() = 0;
+
     // 二维码显示
     virtual void showQRCode(const QString &stationName, const QString &vehClass, const QString &vehPlate, const QString &barCode) = 0;
 
-    // 二维码显示
+    // 费显显示
     virtual void showLED(const QString &text) = 0;
 
     // 图片显示
@@ -36,6 +39,9 @@ public:
     virtual void setUploadUrl(const QString &url, int time) = 0;
 
 signals:
+    // 请求协助
+    void sigRequestHelp(uint devSeq, int helpType);
+
     // TCP连接状态变化
     void sigConnectionStateChanged(uint devSeq, bool connected);
 

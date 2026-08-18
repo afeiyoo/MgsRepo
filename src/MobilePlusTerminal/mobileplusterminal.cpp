@@ -72,8 +72,7 @@ void MobilePlusTerminal::initialize(const QString &stationID, uint laneID, uint 
 
     LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "发送指令 A1 Type:0";
     // 向服务端发送初始化指令
-    if (!sendA1Command(0, jsonData, false))
-        return;
+    sendA1Command(0, jsonData, false);
 }
 
 void MobilePlusTerminal::showQRCode(const QString &stationName, const QString &vehClass, const QString &vehPlate, const QString &barCode)
@@ -87,8 +86,7 @@ void MobilePlusTerminal::showQRCode(const QString &stationName, const QString &v
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
     LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "发送指令 A1 Type:1";
-    if (!sendA1Command(1, jsonData))
-        return;
+    sendA1Command(1, jsonData);
 }
 
 void MobilePlusTerminal::showLED(const QString &text)
@@ -99,8 +97,7 @@ void MobilePlusTerminal::showLED(const QString &text)
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
     LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "发送指令 A1 Type:2";
-    if (!sendA1Command(2, jsonData))
-        return;
+    sendA1Command(2, jsonData);
 }
 
 void MobilePlusTerminal::showPics(const QByteArray &data)
@@ -111,8 +108,7 @@ void MobilePlusTerminal::showPics(const QByteArray &data)
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
     LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "发送指令 A1 Type:3";
-    if (!sendA1Command(3, jsonData))
-        return;
+    sendA1Command(3, jsonData);
 }
 
 void MobilePlusTerminal::setUploadUrl(const QString &url, int time)
@@ -124,8 +120,15 @@ void MobilePlusTerminal::setUploadUrl(const QString &url, int time)
     QByteArray jsonData = DataDealUtils::mapToJson(aMap);
 
     LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "发送指令 A1 Type:4";
-    if (!sendA1Command(4, jsonData))
-        return;
+    sendA1Command(4, jsonData);
+}
+
+void MobilePlusTerminal::resetDisplay()
+{
+    QByteArray jsonData = "";
+
+    LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "发送指令 A1 Type:5";
+    sendA1Command(5, jsonData);
 }
 
 void MobilePlusTerminal::setVersion(uchar ver)
@@ -176,8 +179,7 @@ void MobilePlusTerminal::onReadyRead()
                                 << DataDealUtils::byteArrayToHexStr(recvData);
 
     LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "数据缓冲区现有数据长度(Byte):" << m_buffer.size()
-                                << "数据缓冲区最大数据长度(Byte):" << MAX_BUFF_SIZE
-                                << "接收到的数据长度(Byte):" << recvData.size();
+                                << "数据缓冲区最大数据长度(Byte):" << MAX_BUFF_SIZE << "接收到的数据长度(Byte):" << recvData.size();
     if (recvData.size() > MAX_BUFF_SIZE || m_buffer.size() > MAX_BUFF_SIZE - recvData.size()) {
         LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "接收缓冲区溢出，清空缓冲区";
         m_buffer.clear();
@@ -232,8 +234,7 @@ void MobilePlusTerminal::onReadyRead()
         if (remoteCrc != localCrc) {
             QString localCrcStr = QString::fromLatin1(localCrc.toHex()).toUpper();
             QString remoteCrcStr = QString::fromLatin1(remoteCrc.toHex()).toUpper();
-            LOG_CERROR(L_CATE).noquote() << deviceLogTag()
-                                         << QString("CRC校验失败(localCrc: %1, remoteCrc: %2)").arg(localCrcStr).arg(remoteCrcStr);
+            LOG_CERROR(L_CATE).noquote() << deviceLogTag() << QString("CRC校验失败(localCrc: %1, remoteCrc: %2)").arg(localCrcStr).arg(remoteCrcStr);
             m_buffer.remove(0, 1);
             continue;
         }
@@ -338,19 +339,23 @@ uchar MobilePlusTerminal::getClientSeq()
 
 void MobilePlusTerminal::dealCommand(uchar seq, const QByteArray &cmd)
 {
-    uchar cmdType = static_cast<uchar>(cmd.at(0));
+    uchar cmdType = m_handler->getCmdType(cmd);
     if (cmdType == 0xB1) {
-        uchar type = m_handler->getB1Type(cmd);
-        if (type == 1)
-            resetHeartbeatWatchdog();
+        // 解析B1帧，并返回F1帧
+        ST_B1HandleResult result = m_handler->handleB1Cmd(cmd);
+        sendFrame(makeFrame(static_cast<uchar>((seq & 0x0F) | 0x10), result.response));
 
-        QByteArray resp = m_handler->handleB1Cmd(cmd);
-        sendFrame(makeFrame(static_cast<uchar>((seq & 0x0F) | 0x10), resp));
+        // 其他操作
+        uchar type = m_handler->getB1Type(cmd);
+        if (type == 1) { // 心跳
+            resetHeartbeatWatchdog();
+        } else if (type == 2 && result.requestHelp) { // 求助
+            emit sigRequestHelp(m_devSeq, result.helpType);
+        }
     } else if (cmdType == 0xF1) {
         handleF1Response(seq, cmd);
     } else {
-        LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "未知指令类型:"
-                                     << QString("%1").arg(cmdType, 2, 16, QLatin1Char('0'));
+        LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "未知指令类型:" << QString("%1").arg(cmdType, 2, 16, QLatin1Char('0'));
     }
 }
 
@@ -360,8 +365,7 @@ void MobilePlusTerminal::handleF1Response(uchar seq, const QByteArray &cmd)
     QByteArray requestKey = m_handler->makeRequestKey(requestSeq, cmd);
     auto it = m_pendingRequests.find(requestKey);
     if (it == m_pendingRequests.end()) {
-        LOG_CWARNING(L_CATE).noquote() << deviceLogTag() << "收到无对应请求的F1应答帧, Seq:"
-                                       << QString("0x%1").arg(seq, 2, 16, QLatin1Char('0'));
+        LOG_CWARNING(L_CATE).noquote() << deviceLogTag() << "收到无对应请求的F1应答帧, Seq:" << QString("0x%1").arg(seq, 2, 16, QLatin1Char('0'));
         return;
     }
 
@@ -447,8 +451,7 @@ void MobilePlusTerminal::attemptReconnect()
         return;
 
     ++m_reconnectCount;
-    LOG_CWARNING(L_CATE).noquote() << deviceLogTag() << "开始第" << m_reconnectCount << "次自动重连，最大次数:"
-                                   << MAX_RECONNECT_TIMES;
+    LOG_CWARNING(L_CATE).noquote() << deviceLogTag() << "开始第" << m_reconnectCount << "次自动重连，最大次数:" << MAX_RECONNECT_TIMES;
     m_socket->connectToHost(m_peerAddr, m_peerPort);
 }
 

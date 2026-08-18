@@ -8,30 +8,38 @@ using namespace Utils;
 
 CmdHandlerV1::CmdHandlerV1(uint devSeq)
     : m_devSeq(devSeq)
-{
-}
+{}
 
 CmdHandlerV1::~CmdHandlerV1() {}
 
-QByteArray CmdHandlerV1::handleB1Cmd(const QByteArray &cmd)
+ST_B1HandleResult CmdHandlerV1::handleB1Cmd(const QByteArray &cmd)
 {
     LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "处理指令 B1:" << DataDealUtils::byteArrayToHexStr(cmd);
+
+    ST_B1HandleResult result;
 
     QString dateTime = DataDealUtils::byteArrayToBCDStr(cmd.mid(1, 7));
     uchar type = static_cast<uchar>(cmd.at(8));
 
+    if (type != 1 && type != 2) {
+        LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "未知数据类型" << type;
+        result.response = assembleF1Cmd(dateTime, type, 1, "未知数据类型");
+        return result;
+    }
+
+    int dataLen = DataDealUtils::byteToInt(cmd.mid(9, 4));
+    QByteArray data = cmd.mid(13, dataLen);
+
+    bool jsonOk = false;
+    QString jsonErr;
+    QVariantMap aMap = DataDealUtils::jsonToMap(data, &jsonOk, &jsonErr);
+    if (!jsonOk) {
+        LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "JsonData解析错误:" << jsonErr;
+        result.response = assembleF1Cmd(dateTime, type, 1, "JsonData解析错误");
+        return result;
+    }
+
     if (type == 1) {
-        int dataLen = DataDealUtils::byteToInt(cmd.mid(9, 4));
-        QByteArray data = cmd.mid(13, dataLen);
-
-        bool jsonOk = false;
-        QString jsonErr;
-        QVariantMap aMap = DataDealUtils::jsonToMap(data, &jsonOk, &jsonErr);
-        if (!jsonOk) {
-            LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "JsonData解析错误:" << jsonErr;
-            return assembleF1Cmd(dateTime, type, 1, "JsonData解析错误");
-        }
-
         int deviceStatus = aMap["devicestatus"].toInt();
         QString errDesc = aMap["errdesc"].toString();
         QString deviceID = aMap["deviceid"].toString();
@@ -41,11 +49,17 @@ QByteArray CmdHandlerV1::handleB1Cmd(const QByteArray &cmd)
 
         LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "设备状态信息: 状态" << deviceStatus << "异常描述" << errDesc << "设备编号" << deviceID
                                     << "软件版本" << appVersion << "系统版本" << osVersion << "硬件型号" << hwModel;
-        return assembleF1Cmd(dateTime, type, 0, "");
+        result.response = assembleF1Cmd(dateTime, type, 0, "");
     } else {
-        LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "未知数据类型" << type;
-        return assembleF1Cmd(dateTime, type, 1, "未知数据类型");
+        int helpType = aMap["helptype"].toInt();
+
+        LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "请求协助: 类型" << helpType;
+        result.response = assembleF1Cmd(dateTime, type, 0, "");
+        result.requestHelp = true;
+        result.helpType = helpType;
     }
+
+    return result;
 }
 
 bool CmdHandlerV1::handleF1Cmd(const QByteArray &cmd)
@@ -95,6 +109,14 @@ bool CmdHandlerV1::handleF1Cmd(const QByteArray &cmd)
             LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "服务端返回设置URL指令执行失败:" << desc;
         }
         return status == 0;
+    } else if (type == 5) {
+        // 界面重置指令返回
+        if (status == 0) {
+            LOG_CINFO(L_CATE).noquote() << deviceLogTag() << "服务端返回界面重置成功";
+        } else {
+            LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "服务端返回界面重置失败:" << desc;
+        }
+        return status == 0;
     } else {
         // 未知指令返回
         LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "服务端返回未知指令";
@@ -138,6 +160,12 @@ uchar CmdHandlerV1::getB1Type(const QByteArray &cmd)
 {
     uchar type = static_cast<uchar>(cmd.at(8));
     return type;
+}
+
+uchar CmdHandlerV1::getCmdType(const QByteArray &cmd)
+{
+    uchar cmdType = static_cast<uchar>(cmd.at(0));
+    return cmdType;
 }
 
 QString CmdHandlerV1::deviceLogTag() const
