@@ -39,6 +39,8 @@ ST_B1HandleResult CmdHandlerV1::handleB1Cmd(const QByteArray &cmd)
         return result;
     }
 
+    result.type = type; // 指令类型
+
     if (type == 1) {
         int deviceStatus = aMap["devicestatus"].toInt();
         QString errDesc = aMap["errdesc"].toString();
@@ -154,12 +156,6 @@ QByteArray CmdHandlerV1::makeRequestKey(uchar seq, const QByteArray &cmd)
     key.append(seq);
     key.append(cmd.mid(1, 8)); // DateTime + Type
     return key;
-}
-
-uchar CmdHandlerV1::getB1Type(const QByteArray &cmd)
-{
-    uchar type = static_cast<uchar>(cmd.at(8));
-    return type;
 }
 
 uchar CmdHandlerV1::getCmdType(const QByteArray &cmd)

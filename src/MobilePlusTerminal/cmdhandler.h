@@ -2,7 +2,6 @@
 
 #include <QByteArray>
 #include <QString>
-#include <QtGlobal>
 
 // 策略接口
 struct ST_B1HandleResult;
@@ -27,9 +26,6 @@ public:
     // 生成唯一请求标识键
     virtual QByteArray makeRequestKey(uchar seq, const QByteArray &cmd) = 0;
 
-    // 获取B1指令类型
-    virtual uchar getB1Type(const QByteArray &cmd) = 0;
-
     // 获取通用指令类型
     virtual uchar getCmdType(const QByteArray &cmd) = 0;
 };
@@ -50,8 +46,6 @@ public:
     QByteArray assembleF1Cmd(const QString &dateTime, uchar type, uchar status, const QString &desc) override;
 
     QByteArray makeRequestKey(uchar seq, const QByteArray &cmd) override;
-
-    uchar getB1Type(const QByteArray &cmd) override;
 
     uchar getCmdType(const QByteArray &cmd) override;
 

@@ -345,11 +345,9 @@ void MobilePlusTerminal::dealCommand(uchar seq, const QByteArray &cmd)
         ST_B1HandleResult result = m_handler->handleB1Cmd(cmd);
         sendFrame(makeFrame(static_cast<uchar>((seq & 0x0F) | 0x10), result.response));
 
-        // 其他操作
-        uchar type = m_handler->getB1Type(cmd);
-        if (type == 1) { // 心跳
+        if (result.type == 1) { // 心跳
             resetHeartbeatWatchdog();
-        } else if (type == 2 && result.requestHelp) { // 求助
+        } else if (result.type == 2 && result.requestHelp) { // 求助
             emit sigRequestHelp(m_devSeq, result.helpType);
         }
     } else if (cmdType == 0xF1) {
