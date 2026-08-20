@@ -60,7 +60,7 @@ void GlobalManager::init()
     }
     cuteLogger->registerAppender(mainAppender);
     cuteLogger->registerCategoryAppender("infoboard", infoboardAppender);
-    cuteLogger->registerCategoryAppender("smartctrl", smartControllerAppender);
+    cuteLogger->registerCategoryAppender("SmartLaneController", smartControllerAppender);
     cuteLogger->registerCategoryAppender("cardrobot", cardRobotAppender);
     cuteLogger->registerCategoryAppender("MobilePlusTerminal", mobileTerminalAppender);
 

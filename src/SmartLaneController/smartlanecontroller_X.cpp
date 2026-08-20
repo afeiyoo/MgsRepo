@@ -1,4 +1,4 @@
-#include "smartlanecontroller.h"
+#include "smartlanecontroller_X.h"
 
 #include <QNetworkProxy>
 

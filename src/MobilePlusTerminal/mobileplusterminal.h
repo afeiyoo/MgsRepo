@@ -33,7 +33,7 @@ public:
     void setVersion(uchar ver) override;
 
 private slots:
-    void onStageChanged(QAbstractSocket::SocketState state);
+    void onStateChanged(QAbstractSocket::SocketState state);
     void onReadyRead();
 
 private:

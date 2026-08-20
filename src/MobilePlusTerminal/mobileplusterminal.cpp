@@ -26,7 +26,7 @@ MobilePlusTerminal::MobilePlusTerminal(const QString &stationID, uint laneID, ui
 
     m_handler = new CmdHandlerV1(m_devSeq); // 默认版本号V1
 
-    connect(m_socket, &QTcpSocket::stateChanged, this, &MobilePlusTerminal::onStageChanged);
+    connect(m_socket, &QTcpSocket::stateChanged, this, &MobilePlusTerminal::onStateChanged);
     connect(m_socket, &QTcpSocket::readyRead, this, &MobilePlusTerminal::onReadyRead);
     connect(m_heartbeatTimer, &QTimer::timeout, this, &MobilePlusTerminal::handleHeartbeatTimeout);
     connect(m_reconnectTimer, &QTimer::timeout, this, &MobilePlusTerminal::attemptReconnect);
@@ -143,7 +143,7 @@ void MobilePlusTerminal::setVersion(uchar ver)
     m_ver = ver;
 }
 
-void MobilePlusTerminal::onStageChanged(QAbstractSocket::SocketState state)
+void MobilePlusTerminal::onStateChanged(QAbstractSocket::SocketState state)
 {
     switch (state) {
     case QAbstractSocket::ConnectedState: {
