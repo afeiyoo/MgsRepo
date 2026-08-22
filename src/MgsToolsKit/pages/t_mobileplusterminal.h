@@ -24,6 +24,7 @@ private slots:
     void onSelectPicture();
     void onShowPicture();
     void onSetUploadUrl();
+    void onResetDisplay();
 
 private:
     enum class StatusTone { Error, Pending, Success };
@@ -43,9 +44,10 @@ private:
     ElaLineEdit *m_stationIdEdit = nullptr;
     ElaSpinBox *m_laneIdSpinBox = nullptr;
     ElaSpinBox *m_deviceSeqSpinBox = nullptr;
-    ElaComboBox *m_versionComboBox = nullptr;
     ElaPushButton *m_connectButton = nullptr;
+    ElaPushButton *m_resetDisplayButton = nullptr;
     ElaText *m_connectionStatusText = nullptr;
+    ElaText *m_helpTypeText = nullptr;
 
     ElaLineEdit *m_stationNameEdit = nullptr;
     ElaLineEdit *m_vehicleClassEdit = nullptr;

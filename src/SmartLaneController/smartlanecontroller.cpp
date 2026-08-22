@@ -3,274 +3,160 @@
 #include <QNetworkProxy>
 
 #include "Logger.h"
-#include "RollingFileAppender.h"
+#include "cmdhandler.h"
+#include "defines.h"
 #include "utils/datadealutils.h"
-#include "utils/fileutils.h"
 
 using namespace Utils;
 
-static const QByteArray STX = QByteArray::fromHex("FFFF"); // 帧头
-static const QByteArray VER = QByteArray::fromHex("00");   // 版本号
-static const int STX_LEN = 2;                              // 帧头 2 字节
-static const int VER_LEN = 1;                              // 版本号 1 字节，固定为 0x00
-static const int SEQ_LEN = 1;                              // 序列号 1 字节（服务端格式：0x0X, X=1~9）
-static const int LEN_FIELD_LEN = 4;                        // 数据长度字段 4 字节（大端）
-static const int CRC_LEN = 2;                              // CRC 校验码 2 字节
-static const int HEARTBEAT_TIMEOUT_MS = 6 * 1000;
-
-// 允许的最大数据长度（4MB），超过则判为非法
-static const int MAX_BUFF_SIZE = 4 * 1024 * 1024;
-
 SmartLaneController::SmartLaneController(QObject *parent)
-    : QObject{parent}
+    : ISmartLaneController{parent}
 {
-    // 日志初始化
-#ifndef SMARTLANECONTROLLER_NO_CREATE_LOG
-    FileName logPath = FileName::fromString(Utils::FileUtils::curApplicationDirPath() + "/log/SmartLaneCtrl.log");
-    FileUtils::makeSureDirExist(logPath.parentDir());
-    RollingFileAppender *rollingFileAppender = new RollingFileAppender(FileUtils::canonicalPath(logPath).toString());
-    rollingFileAppender->setFormat("%{time} [%{type}] [%{threadid}] %{message}\n\n");
-    rollingFileAppender->setLogFilesLimit(180);
-    rollingFileAppender->setFlushOnWrite(true);
-    rollingFileAppender->setDatePattern(RollingFileAppender::DatePattern::DailyRollover);
-    cuteLogger->registerCategoryAppender("smartctrl", rollingFileAppender);
-#endif
-
-    m_tcpSocket = new QTcpSocket(this);
-    m_tcpSocket->setProxy(QNetworkProxy::NoProxy);
-
-    connect(m_tcpSocket, &QTcpSocket::stateChanged, this, &SmartLaneController::onStateChanged);
-    connect(m_tcpSocket, &QTcpSocket::readyRead, this, &SmartLaneController::onReadyRead);
-    connect(m_tcpSocket, &QTcpSocket::errorOccurred, this, &SmartLaneController::onErrorOccurred);
-
-    m_reconnectTimer = new QTimer(this);
-    m_reconnectTimer->setInterval(1000 * 10);
-    connect(m_reconnectTimer, &QTimer::timeout, this, &SmartLaneController::onTryConnect);
+    m_socket = new QTcpSocket(this);
+    m_socket->setProxy(QNetworkProxy::NoProxy);
 
     m_heartbeatTimer = new QTimer(this);
     m_heartbeatTimer->setSingleShot(true);
-    m_heartbeatTimer->setTimerType(Qt::PreciseTimer);
-    m_heartbeatTimer->setInterval(HEARTBEAT_TIMEOUT_MS);
-    connect(m_heartbeatTimer, &QTimer::timeout, this, &SmartLaneController::onHeartbeatTimeout);
+
+    m_reconnectTimer = new QTimer(this);
+    m_reconnectTimer->setSingleShot(true);
+
+    m_cmdResponseTimer = new QTimer(this);
+    m_cmdResponseTimer->setSingleShot(true);
+
+    m_handler = new CmdHandlerV0();
+
+    connect(m_socket, &QTcpSocket::stateChanged, this, &SmartLaneController::onStateChanged);
+    connect(m_socket, &QTcpSocket::readyRead, this, &SmartLaneController::onReadyRead);
+    connect(m_socket, &QTcpSocket::errorOccurred, this, &SmartLaneController::onErrorOccurred);
+    connect(m_heartbeatTimer, &QTimer::timeout, this, &SmartLaneController::handleHeartbeatTimeout);
+    connect(m_reconnectTimer, &QTimer::timeout, this, &SmartLaneController::attemptReconnect);
+    connect(m_cmdResponseTimer, &QTimer::timeout, this, &SmartLaneController::handleCommandResponseTimeout);
 }
 
 SmartLaneController::~SmartLaneController()
 {
-    disconnectServer();
+    delete m_handler;
 }
 
-bool SmartLaneController::connectServer(const QString &ip, quint16 port)
+void SmartLaneController::connectServer(const QString &ip, quint16 port)
 {
-    m_isForceDisconnect = false; // 复位
-    // 连接服务端
+    m_isForceDisconnect = false;
+    m_reconnectCount = 0;
+    m_reconnectFailureNotified = false;
+    m_reconnectTimer->stop();
+
     m_peerAddr = ip;
     m_peerPort = port;
 
-    LOG_CINFO("smartctrl").noquote() << QString("开始连接智能网关(IP: %1, Port: %2)").arg(ip).arg(port);
-    m_tcpSocket->connectToHost(ip, port);
-
-    return true;
+    LOG_CINFO(L_CATE).noquote() << QString("开始连接智能网关(IP: %1, Port: %2)").arg(ip).arg(port);
+    m_socket->connectToHost(ip, port);
 }
 
 void SmartLaneController::disconnectServer()
 {
     m_isForceDisconnect = true;
-    m_reconnectAfterHeartbeatTimeout = false;
-    m_reconnectTimer->stop();
     m_heartbeatTimer->stop();
-    m_tcpSocket->disconnectFromHost();
+    m_reconnectTimer->stop();
+    m_cmdResponseTimer->stop();
+    m_socket->disconnectFromHost();
 }
 
-bool SmartLaneController::isConnected() const
+void SmartLaneController::setVersion(uchar ver)
 {
-    return m_connected;
+    if (ver == 0x00) {
+        delete m_handler;
+        m_handler = new CmdHandlerV0();
+    } else {
+        LOG_CERROR(L_CATE).noquote() << "不支持的协议版本:" << ver;
+        return;
+    }
+    m_ver = ver;
 }
 
-void SmartLaneController::enableRetryConnect(bool isOn, int times /*= 3*/)
+void SmartLaneController::sendA1Cmd(const QMap<int, int> &relayMap, const QMap<int, int> &levelMap)
 {
-    m_isEnableRetryConnect = isOn;
-    if (times > 3)
-        m_reconnectMaxTimes = times;
+    QByteArray cmd = m_handler->assembleA1Cmd(relayMap, levelMap);
+    enqueueCommand(0xA1, cmd);
+}
+
+void SmartLaneController::sendA2Cmd(const QByteArray &url, uchar time)
+{
+    QByteArray cmd = m_handler->assembleA2Cmd(url, time);
+    enqueueCommand(0xA2, cmd);
+}
+
+void SmartLaneController::sendA3Cmd(uchar type, const QByteArray &data)
+{
+    QByteArray cmd = m_handler->assembleA3Cmd(type, data);
+    enqueueCommand(0xA3, cmd);
 }
 
 void SmartLaneController::onStateChanged(QAbstractSocket::SocketState state)
 {
     switch (state) {
-    case QAbstractSocket::ConnectedState:
-        LOG_CINFO("smartctrl").noquote() << QString("连接智能网关成功(IP: %1, port: %2)").arg(m_peerAddr).arg(m_peerPort);
-        m_isForceDisconnect = false;
+    case QAbstractSocket::ConnectedState: {
+        LOG_CINFO(L_CATE).noquote() << "与智能网关建立连接";
         m_connected = true;
-        // TCP 连接成功不代表网关已恢复；心跳超时后的重连计数只能在收到 D6 后清零。
-        if (!m_reconnectAfterHeartbeatTimeout)
-            m_reconnectCount = 0;
-        m_reconnectTimer->stop();
-        m_heartbeatTimer->start();
-        emit sigNetworkStatusChanged(true);
-        emit sigHeartbeatStatusChanged(false); // TCP 已连接，等待首帧 D6 心跳
-        break;
-    case QAbstractSocket::UnconnectedState:
-        LOG_CINFO("smartctrl").noquote() << "智能网关断开连接";
+        m_heartbeatStateKnown = false;
+
+        emit sigConnectionStateChanged(true);
+        m_heartbeatTimer->start(HEARTBEAT_TIMEOUT);
+    } break;
+    case QAbstractSocket::UnconnectedState: {
+        LOG_CERROR(L_CATE).noquote() << "与智能网关断开连接";
         m_connected = false;
+        m_waitingCmdResponse = false;
+
         m_heartbeatTimer->stop();
-        m_buffer.clear();
-        if ((m_isEnableRetryConnect || m_reconnectAfterHeartbeatTimeout) && !m_isForceDisconnect && m_reconnectCount < m_reconnectMaxTimes) {
-            m_reconnectTimer->start();
-        }
-        emit sigNetworkStatusChanged(false);
-        emit sigHeartbeatStatusChanged(false);
-        break;
+        m_cmdResponseTimer->stop();
+        m_buffer.clear();    // 清空数据缓冲区
+        m_sendQueue.clear(); // 清空指令队列
+
+        emit sigConnectionStateChanged(false);
+        setHeartbeatState(false);
+        // 非主动断开连接，则尝试重连设备
+        if (!m_isForceDisconnect)
+            scheduleReconnect(RECONNECT_INTERVAL);
+    } break;
     default:
         break;
     }
 }
 
-void SmartLaneController::onTryConnect()
-{
-    if (m_isForceDisconnect) {
-        m_reconnectTimer->stop();
-        return;
-    }
-
-    if (m_tcpSocket->state() == QAbstractSocket::ConnectedState) { // 连接成功，则停止重连
-        m_reconnectTimer->stop();
-        return;
-    }
-
-    if (m_reconnectCount >= m_reconnectMaxTimes) {
-        LOG_CWARNING("smartctrl").noquote() << QString("重连次数已达上限(%1次)，停止自动重连").arg(m_reconnectMaxTimes);
-        m_reconnectTimer->stop(); // 停止定时器，不再尝试
-        m_reconnectAfterHeartbeatTimeout = false;
-        return;
-    }
-
-    LOG_CINFO("smartctrl").noquote() << QString("第%1次尝试重连智能网关").arg(++m_reconnectCount);
-    m_tcpSocket->abort();
-    connectServer(m_peerAddr, m_peerPort);
-}
-
-void SmartLaneController::onErrorOccurred(QAbstractSocket::SocketError error)
-{
-    Q_UNUSED(error)
-
-    LOG_CWARNING("smartctrl").noquote() << QString("Socket错误: %1").arg(m_tcpSocket->errorString());
-}
-
-void SmartLaneController::onHeartbeatTimeout()
-{
-    if (m_isForceDisconnect || m_tcpSocket->state() != QAbstractSocket::ConnectedState)
-        return;
-
-    LOG_CWARNING("smartctrl").noquote() << QString("连续%1秒未收到D6心跳帧，判定与智能网关的网络连接异常，断开并重新连接")
-                                               .arg(HEARTBEAT_TIMEOUT_MS / 1000);
-
-    emit sigHeartbeatStatusChanged(false);
-    m_reconnectAfterHeartbeatTimeout = true;
-    m_tcpSocket->abort();
-
-    // 心跳超时后的首次重连立即执行；如果失败，后续重试仍使用原有重连间隔。
-    QTimer::singleShot(0, this, &SmartLaneController::onTryConnect);
-}
-
-void SmartLaneController::sendCommand(const QString &type, QByteArray data)
-{
-    if (!m_connected) {
-        LOG_CERROR("smartctrl").noquote() << QString("向智能网关发送%1帧失败: 未与服务端建立连接").arg(type);
-        return;
-    }
-
-    // 组装发送帧
-    if (type == "A3") {
-        data.prepend(DataDealUtils::intToByte(data.size()));
-        data.prepend(char(0x01));
-        data.prepend(char(0xA3));
-    }
-
-    QByteArray buffer;
-    buffer.append(STX);
-    buffer.append(VER);
-    uchar seq = getClientSeq();
-    buffer.append(seq);
-    buffer.append(DataDealUtils::intToByte(data.size()));
-    buffer.append(data);
-    QByteArray crc = DataDealUtils::getCRCCode(buffer.mid(STX_LEN));
-    buffer.append(crc);
-
-    LOG_CINFO("smartctrl").noquote() << QString("向智能网关发送%1帧[%2]: %3")
-                                            .arg(type)
-                                            .arg(seq, 2, 16, QLatin1Char('0'))
-                                            .arg(DataDealUtils::byteArrayToHexStr(buffer));
-    qint64 ret = m_tcpSocket->write(buffer);
-    if (ret == -1) {
-        LOG_CWARNING("smartctrl").noquote() << "数据写入失败";
-    }
-    m_tcpSocket->flush();
-    LOG_CINFO("smartctrl").noquote() << "数据已进入发送队列";
-
-    m_lastCommand[type] = buffer; // 记录最终状态信息帧
-
-    // 设置超时监听队列，超时未返回，则重发3次
-    QString key = makeKey(type, seq);
-    if (!m_pendingCommands.contains(key)) {
-        ST_PendingCommand *cmd = new ST_PendingCommand(type, seq, 0, new QTimer(this));
-        m_pendingCommands[key] = cmd;
-
-        cmd->timer->setSingleShot(true);
-        connect(cmd->timer, &QTimer::timeout, this, [=]() {
-            if (cmd->retryCount < 3) {
-                cmd->retryCount += 1;
-                LOG_CINFO("smartctrl").noquote() << QString("向智能网关发送%1帧[%2]超时，进行第%3次重传(重传最新帧)")
-                                                        .arg(type)
-                                                        .arg(cmd->seq, 2, 16, QLatin1Char('0'))
-                                                        .arg(cmd->retryCount);
-                if (!m_connected) {
-                    LOG_CERROR("smartctrl").noquote() << "向智能网关重传数据失败: 未与服务端建立连接";
-                } else {
-                    LOG_CINFO("smartctrl").noquote()
-                        << QString("重传%1帧的最新信息: %2").arg(type, DataDealUtils::byteArrayToHexStr(m_lastCommand.value(cmd->type)));
-                    m_tcpSocket->write(m_lastCommand.value(cmd->type));
-                }
-                cmd->timer->start(750);
-            } else {
-                LOG_CWARNING("smartctrl").noquote() << QString("%1帧重发3次失败，放弃发送").arg(type);
-                m_pendingCommands.remove(key);
-                cmd->timer->stop();
-                delete cmd;
-            }
-        });
-
-        cmd->timer->start(750); // 第一次启动超时检测
-    }
-}
-
 void SmartLaneController::onReadyRead()
 {
-    QByteArray recvData = m_tcpSocket->readAll();
-    LOG_CINFO("smartctrl").noquote() << "接收到智能网关数据:" << DataDealUtils::byteArrayToHexStr(recvData);
+    QByteArray recvData = m_socket->readAll();
+    LOG_CINFO(L_CATE).noquote() << QString("【RX】[%1:%2]").arg(m_peerAddr).arg(m_peerPort) << DataDealUtils::byteArrayToHexStr(recvData);
 
-    if (m_buffer.size() + recvData.size() >= MAX_BUFF_SIZE) {
-        LOG_CINFO("smartctrl").noquote() << QString("数据缓冲区现有大小(%1B) + 接收的数据大小(%2B) 超过数据缓冲区大小限制(%3B), 忽略处理")
-                                                .arg(m_buffer.size())
-                                                .arg(recvData.size())
-                                                .arg(MAX_BUFF_SIZE);
+    LOG_CINFO(L_CATE).noquote() << "数据缓冲区最大数据长度(KByte):" << MAX_BUFF_SIZE / 1024 << "，数据缓冲区现有数据长度(Byte):" << m_buffer.size()
+                                << "，接收到的数据长度(Byte):" << recvData.size();
+    if (recvData.size() > MAX_BUFF_SIZE || m_buffer.size() > MAX_BUFF_SIZE - recvData.size()) {
+        LOG_CINFO(L_CATE).noquote() << "接收缓冲区溢出，清空缓冲区";
+        m_buffer.clear();
         return;
     }
 
     m_buffer.append(recvData);
-    while (true) {
+    while (!m_buffer.isEmpty()) {
         // 在 m_buffer 中查找第一对连续的 0xFF,0xFF。找到，则0~idx-1前的数据为垃圾数据。没有找到帧头，则缓冲区数据无效，直接丢弃
         int idx = m_buffer.indexOf(STX);
         if (idx >= 0) {
             m_buffer.remove(0, idx);
         } else {
-            m_buffer.clear(); // 无帧头，则为垃圾数据
+            LOG_CINFO(L_CATE).noquote() << "接收缓冲区中无有效数据，清空缓冲区";
+            m_buffer.clear();
             return;
         }
 
-        // 验证版本号是否为 0x00
+        if (m_buffer.size() < FIXED_HEADER_LEN)
+            return;
+
+        // 获取版本号
         uchar ver = static_cast<uchar>(m_buffer.at(2));
-        if (ver != 0x00) {
-            LOG_CERROR("smartctrl").noquote() << "版本号错误";
-            m_buffer.remove(0, STX_LEN);
+        if (ver != m_ver) {
+            LOG_CERROR(L_CATE).noquote() << "版本号错误: 当前版本号" << m_ver << "接收版本号" << ver;
+            m_buffer.remove(0, 1);
             continue;
         }
 
@@ -278,154 +164,304 @@ void SmartLaneController::onReadyRead()
         uchar seq = static_cast<uchar>(m_buffer.at(3));
         bool ok = ((seq & 0xF0) == 0x00) && ((seq & 0x0F) >= 1 && (seq & 0x0F) <= 9);
         if (!ok) {
-            LOG_CERROR("smartctrl").noquote() << QString("序列号错误");
-            m_buffer.remove(0, STX_LEN);
+            LOG_CERROR(L_CATE).noquote() << "序列号错误:" << seq;
+            m_buffer.remove(0, 1);
             continue;
         }
 
         // 解析数据长度
-        quint32 dataLen = DataDealUtils::byteToUInt(m_buffer.mid(STX_LEN + VER_LEN + SEQ_LEN, LEN_FIELD_LEN));
+        quint32 dataLen = DataDealUtils::byteToUInt(m_buffer.mid(STX_LEN + VER_LEN + SEQ_LEN, 4));
 
-        // 计算数据总大小（单位：B）
         quint32 totalSize = STX_LEN + VER_LEN + SEQ_LEN + LEN_FIELD_LEN + dataLen + CRC_LEN;
-        // 数据长度不足，等待更多后续数据到来
+        // 数据长度不足，等待后续更多数据到来
         if ((quint32) m_buffer.size() < totalSize)
             return;
 
-        QByteArray fullFrame = m_buffer.left(totalSize);
+        QByteArray frame = m_buffer.left(totalSize);
         // 进行CRC校验
-        QByteArray remoteCrc = fullFrame.right(CRC_LEN);
-        QByteArray localCrc = DataDealUtils::getCRCCode(fullFrame.mid(STX_LEN, totalSize - STX_LEN - CRC_LEN));
+        QByteArray remoteCrc = frame.right(CRC_LEN);
+        QByteArray localCrc = DataDealUtils::getCRCCode(frame.mid(STX_LEN, totalSize - STX_LEN - CRC_LEN));
 
         if (remoteCrc != localCrc) {
             QString localCrcStr = QString::fromLatin1(localCrc.toHex()).toUpper();
             QString remoteCrcStr = QString::fromLatin1(remoteCrc.toHex()).toUpper();
-            LOG_CERROR("smartctrl").noquote() << QString("CRC校验失败(localCrc: %1, remoteCrc: %2)").arg(localCrcStr).arg(remoteCrcStr);
-            m_buffer.remove(0, STX_LEN);
+            LOG_CERROR(L_CATE).noquote() << QString("CRC校验失败(localCrc: %1, remoteCrc: %2)").arg(localCrcStr).arg(remoteCrcStr);
+            m_buffer.remove(0, 1);
             continue;
         }
 
-        QByteArray command = fullFrame.mid(STX_LEN + VER_LEN + SEQ_LEN + LEN_FIELD_LEN, dataLen);
+        QByteArray command = frame.mid(STX_LEN + VER_LEN + SEQ_LEN + LEN_FIELD_LEN, dataLen);
         if (command.isEmpty()) {
-            LOG_CERROR("smartctrl").noquote() << "收到空指令帧";
+            LOG_CERROR(L_CATE).noquote() << "收到空指令帧";
             m_buffer.remove(0, totalSize);
             continue;
         }
-        // 处理单条指令
+
+        // 处理指令并响应
         dealCommand(seq, command);
+
         m_buffer.remove(0, totalSize);
         continue;
     }
 }
 
-void SmartLaneController::dealCommand(uchar seq, const QByteArray &command)
+void SmartLaneController::onErrorOccurred(QAbstractSocket::SocketError)
 {
-    uchar cmdType = static_cast<uchar>(command.at(0));
-    LOG_CINFO("smartctrl").noquote() << QString("开始处理指令(%1): %2")
-                                            .arg(QString("0x%1").arg(cmdType, 2, 16, QLatin1Char('0')).toUpper())
-                                            .arg(DataDealUtils::byteArrayToHexStr(command));
-
-    switch (cmdType) {
-    case 0xD2:
-    case 0xD3:
-    case 0xD6: {
-        // IO状态信息,透传接收信息,心跳及设备状态
-        if (cmdType == 0xD6) {
-            m_heartbeatTimer->start();
-            const bool heartbeatNormal = command.size() > 1 && static_cast<uchar>(command.at(1)) == 0x00;
-            emit sigHeartbeatStatusChanged(heartbeatNormal);
-
-            if (m_reconnectAfterHeartbeatTimeout) {
-                m_reconnectAfterHeartbeatTimeout = false;
-                m_reconnectCount = 0;
-                LOG_CINFO("smartctrl").noquote() << "已收到D6心跳帧，智能网关通信恢复正常";
-            }
-        }
-        sendResponse(cmdType, 0x01, seq << 4);
-        emit sigRecvFromSmartLaneController(cmdType, command);
-    } break;
-    case 0xA1: {
-        handleACmd("A1", seq << 4, command);
-    } break;
-    case 0xA2: {
-        handleACmd("A2", seq << 4, command);
-    } break;
-    case 0xA3: {
-        handleACmd("A3", seq << 4, command);
-    } break;
-    default: {
-        LOG_CINFO("smartctrl").noquote() << "未知的命令类型:" << QString("0x%1").arg(cmdType, 2, 16, QChar('0')).toUpper();
-    } break;
-    }
+    LOG_CWARNING(L_CATE).noquote() << QString("网络错误: %1").arg(m_socket->errorString());
 }
 
-void SmartLaneController::sendResponse(uchar cmdType, uchar status, uchar seq)
+void SmartLaneController::enqueueCommand(uchar cmdType, const QByteArray &cmd)
 {
+    QString cmdTypeStr = QString("%1").arg(cmdType, 2, 16, QLatin1Char('0')).toUpper();
     if (!m_connected) {
-        LOG_CERROR("smartctrl").noquote() << "返回应答失败: 连接未建立";
+        LOG_CERROR(L_CATE).noquote() << QString("指令[0x%1]入队失败: 与服务端网络连接失效").arg(cmdTypeStr);
         return;
     }
 
-    QByteArray command;
-    command.append(cmdType);
-    command.append(status);
+    ST_SendTask task;
+    task.cmdType = cmdType;
+    task.cmd = cmd;
+    m_sendQueue.enqueue(task);
 
-    // 组装发送帧
-    QByteArray buffer;
-    buffer.append(STX);
-    buffer.append(VER);
-    buffer.append(seq);
-    buffer.append(DataDealUtils::intToByte(command.size()));
-    buffer.append(command);
-    QByteArray crc = DataDealUtils::getCRCCode(buffer.mid(STX_LEN));
-    buffer.append(crc);
+    LOG_CINFO(L_CATE).noquote() << QString("指令[0x%1]进入发送队列，当前队列长度: %2").arg(cmdTypeStr).arg(m_sendQueue.size());
+    trySendNextCommand();
+}
 
-    LOG_CINFO("smartctrl").noquote() << QString("返回应答: %1").arg(DataDealUtils::byteArrayToHexStr(buffer));
-    qint64 ret = m_tcpSocket->write(buffer);
-    if (ret == -1) {
-        LOG_CWARNING("smartctrl").noquote() << "数据写入失败";
+void SmartLaneController::trySendNextCommand()
+{
+    if (!m_connected || m_waitingCmdResponse || m_sendQueue.isEmpty())
+        return;
+
+    ST_SendTask &task = m_sendQueue.head();
+    task.seq = getClientSeq();
+    task.frame = makeFrame(task.seq, task.cmd);
+    task.retryCount = 0;
+
+    if (!sendFrame(task.frame)) {
+        LOG_CERROR(L_CATE).noquote() << "队首指令发送失败，移出发送队列";
+        m_sendQueue.dequeue();
+        trySendNextCommand();
+        return;
     }
-    m_tcpSocket->flush();
-    LOG_CINFO("smartctrl").noquote() << "数据已进入发送队列";
+
+    m_waitingCmdResponse = true;
+    m_cmdResponseTimer->start(REQUEST_TIMEOUT);
+}
+
+bool SmartLaneController::handleCommandResponse(uchar seq, uchar cmdType)
+{
+    QString cmdTypeStr = QString("%1").arg(cmdType, 2, 16, QLatin1Char('0')).toUpper();
+    if (!m_waitingCmdResponse || m_sendQueue.isEmpty()) {
+        LOG_CWARNING(L_CATE).noquote() << QString("收到无对应请求的应答: [0x%1][0x%2]").arg(cmdTypeStr).arg(seq, 2, 16, QLatin1Char('0'));
+        return false;
+    }
+
+    const ST_SendTask &task = m_sendQueue.head();
+    uchar responseSeq = static_cast<uchar>(seq << 4);
+    QString taskCmdTypeStr = QString("%1").arg(task.cmdType, 2, 16, QLatin1Char('0'));
+
+    if (task.cmdType != cmdType || task.seq != responseSeq) {
+        LOG_CWARNING(L_CATE).noquote() << QString("应答与队首指令不匹配: 期望[0x%1][0x%2]; 实际[0x%3][0x%4]")
+                                              .arg(taskCmdTypeStr)
+                                              .arg(static_cast<uchar>(task.seq >> 4), 2, 16, QLatin1Char('0'))
+                                              .arg(cmdTypeStr)
+                                              .arg(seq, 2, 16, QLatin1Char('0'));
+        return false;
+    }
+
+    LOG_CINFO(L_CATE).noquote() << QString("收到队首指令应答: [0x%1][0x%2]").arg(cmdTypeStr).arg(seq, 2, 16, QLatin1Char('0'));
+
+    m_cmdResponseTimer->stop();
+    m_sendQueue.dequeue();
+    m_waitingCmdResponse = false;
+    return true;
+}
+
+void SmartLaneController::handleCommandResponseTimeout()
+{
+    if (!m_waitingCmdResponse || m_sendQueue.isEmpty())
+        return;
+
+    ST_SendTask &task = m_sendQueue.head();
+    QString cmdTypeStr = QString("%1").arg(task.cmdType, 2, 16, QLatin1Char('0')).toUpper();
+    if (task.retryCount >= MAX_RETRY_TIMES) {
+        LOG_CERROR(L_CATE).noquote() << QString("指令[0x%1][0x%2]重传%3次仍未收到应答，放弃当前指令")
+                                            .arg(cmdTypeStr)
+                                            .arg(task.seq, 2, 16, QLatin1Char('0'))
+                                            .arg(MAX_RETRY_TIMES);
+
+        m_sendQueue.dequeue();
+        m_waitingCmdResponse = false;
+        trySendNextCommand();
+        return;
+    }
+
+    ++task.retryCount;
+    LOG_CWARNING(L_CATE).noquote() << QString("指令[0x%1][0x%2]等待应答超时，进行第%3次重传")
+                                          .arg(cmdTypeStr)
+                                          .arg(task.seq, 2, 16, QLatin1Char('0'))
+                                          .arg(task.retryCount);
+
+    sendFrame(task.frame);
+    m_cmdResponseTimer->start(REQUEST_TIMEOUT);
 }
 
 uchar SmartLaneController::getClientSeq()
 {
-    static uchar x = 1; // X 范围 1~9
+    uchar ret = static_cast<uchar>(m_nextSeq << 4);
 
-    uchar ret = (x << 4); // X0H，其实就是 x * 0x10
-
-    x++;
-    if (x > 9) {
-        x = 1; // 回到 1
-    }
+    ++m_nextSeq;
+    if (m_nextSeq > 9)
+        m_nextSeq = 1;
 
     return ret;
 }
 
-QString SmartLaneController::makeKey(const QString &type, uchar seq)
+void SmartLaneController::dealCommand(uchar seq, const QByteArray &cmd)
 {
-    return QString("%1_%2").arg(type).arg(seq, 2, 16, QLatin1Char('0'));
+    uchar cmdType = m_handler->getCmdType(cmd);
+    if (cmdType == 0xD2) {
+        QByteArray resp = m_handler->handleD2Cmd(seq, cmd);
+        QByteArray frame = makeFrame(static_cast<uchar>(seq << 4), resp);
+        sendFrame(frame);
+
+        emit sigRecvD2Cmd(cmd);
+    } else if (cmdType == 0xD3) {
+        QByteArray resp = m_handler->handleD3Cmd(seq, cmd);
+        QByteArray frame = makeFrame(static_cast<uchar>(seq << 4), resp);
+        sendFrame(frame);
+
+        emit sigRecvD3Cmd(cmd);
+    } else if (cmdType == 0xD6) {
+        QByteArray resp = m_handler->handleD6Cmd(seq, cmd);
+        QByteArray frame = makeFrame(static_cast<uchar>(seq << 4), resp);
+        sendFrame(frame);
+
+        resetHeartbeatWatchdog();
+        emit sigRecvD6Cmd(cmd);
+    } else if (cmdType == 0xA1) {
+        if (handleCommandResponse(seq, cmdType)) {
+            m_handler->handleA1Cmd(seq, cmd);
+            trySendNextCommand();
+        }
+    } else if (cmdType == 0xA2) {
+        if (handleCommandResponse(seq, cmdType)) {
+            m_handler->handleA2Cmd(seq, cmd);
+            trySendNextCommand();
+        }
+    } else if (cmdType == 0xA3) {
+        if (handleCommandResponse(seq, cmdType)) {
+            m_handler->handleA3Cmd(seq, cmd);
+            trySendNextCommand();
+        }
+    } else {
+        LOG_CERROR(L_CATE).noquote() << "未知指令类型:" << QString("%1").arg(cmdType, 2, 16, QLatin1Char('0'));
+    }
 }
 
-void SmartLaneController::handleACmd(const QString &type, uchar seq, const QByteArray &command)
+QByteArray SmartLaneController::makeFrame(uchar seq, const QByteArray &cmd)
 {
-    QString key = makeKey(type, seq);
+    QByteArray frame;
+    frame.append(STX);
+    frame.append(m_ver);
+    frame.append(seq);
+    frame.append(DataDealUtils::intToByte(cmd.size()));
+    frame.append(cmd);
+    QByteArray crc = DataDealUtils::getCRCCode(frame.mid(STX_LEN));
+    frame.append(crc);
 
-    if (!m_pendingCommands.contains(key)) {
-        LOG_CINFO("smartctrl").noquote() << QString("对应的%1指令[%2]已处理或已超时").arg(type).arg(seq, 2, 16, QLatin1Char('0'));
+    return frame;
+}
+
+bool SmartLaneController::sendFrame(const QByteArray &data)
+{
+    LOG_CINFO(L_CATE).noquote() << QString("【TX】[%1:%2]").arg(m_peerAddr).arg(m_peerPort) << DataDealUtils::byteArrayToHexStr(data);
+
+    if (!m_connected) {
+        LOG_CERROR(L_CATE).noquote() << "发送失败: 与服务端网络连接失效!";
+        return false;
+    }
+
+    qint64 ret = m_socket->write(data);
+    if (ret == -1) {
+        LOG_CWARNING(L_CATE).noquote() << "发送失败: 数据写入失败";
+        return false;
+    }
+
+    m_socket->flush();
+    LOG_CINFO(L_CATE).noquote() << "发送成功: 数据已进入网络发送队列";
+    return true;
+}
+
+void SmartLaneController::resetHeartbeatWatchdog()
+{
+    if (!m_connected)
+        return;
+
+    m_reconnectCount = 0;
+    m_reconnectFailureNotified = false;
+    m_heartbeatTimer->start(HEARTBEAT_TIMEOUT);
+    setHeartbeatState(true);
+}
+
+void SmartLaneController::setHeartbeatState(bool normal)
+{
+    if (m_heartbeatStateKnown && m_heartbeatNormal == normal)
+        return;
+
+    m_heartbeatStateKnown = true;
+    m_heartbeatNormal = normal;
+    emit sigHeartbeatStateChanged(normal);
+}
+
+void SmartLaneController::handleHeartbeatTimeout()
+{
+    if (!m_connected || m_isForceDisconnect)
+        return;
+
+    LOG_CERROR(L_CATE).noquote() << "连续" << HEARTBEAT_TIMEOUT / 1000 << "秒未收到有效D6心跳，连接异常";
+    setHeartbeatState(false);
+    m_socket->abort();
+}
+
+void SmartLaneController::scheduleReconnect(int delayMs)
+{
+    if (m_isForceDisconnect || m_reconnectTimer->isActive())
+        return;
+
+    if (m_reconnectCount >= MAX_RECONNECT_TIMES) {
+        LOG_CERROR(L_CATE).noquote() << "自动重连已达到最大次数:" << MAX_RECONNECT_TIMES;
+        if (!m_reconnectFailureNotified) {
+            m_reconnectFailureNotified = true;
+            emit sigReconnectFailed();
+        }
         return;
     }
 
-    int status = static_cast<uchar>(command.at(1));
-    if (status == 0x01) {
-        LOG_CINFO("smartctrl").noquote() << QString("智能网关返回%1指令[%2]处理失败").arg(type).arg(seq, 2, 16, QLatin1Char('0'));
-    } else {
-        LOG_CINFO("smartctrl").noquote() << QString("智能网关返回%1指令[%2]处理成功").arg(type).arg(seq, 2, 16, QLatin1Char('0'));
-    }
+    LOG_CWARNING(L_CATE).noquote() << "将在" << delayMs / 1000 << "秒后尝试自动重连";
+    m_reconnectTimer->start(delayMs);
+}
 
-    auto *cmd = m_pendingCommands[key];
-    cmd->timer->stop();
-    delete cmd;
-    m_pendingCommands.remove(key);
+void SmartLaneController::attemptReconnect()
+{
+    if (m_isForceDisconnect || m_connected || m_socket->state() != QAbstractSocket::UnconnectedState)
+        return;
+
+    if (m_reconnectCount >= MAX_RECONNECT_TIMES)
+        return;
+
+    ++m_reconnectCount;
+    LOG_CWARNING(L_CATE).noquote() << "开始第" << m_reconnectCount << "次自动重连，最大次数:" << MAX_RECONNECT_TIMES;
+    m_socket->connectToHost(m_peerAddr, m_peerPort);
+}
+
+// --------------------------------------------------------
+ISmartLaneController *createSmartLaneController()
+{
+    return new SmartLaneController();
+}
+
+void destroySmartLaneController(ISmartLaneController *controller)
+{
+    delete controller;
 }

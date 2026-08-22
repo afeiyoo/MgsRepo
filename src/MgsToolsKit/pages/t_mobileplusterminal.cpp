@@ -23,7 +23,7 @@
 using namespace Utils;
 
 namespace {
-constexpr qint64 MAX_PICTURE_SIZE = 2 * 1024 * 1024;
+constexpr qint64 MAX_PICTURE_SIZE = 1 * 1024 * 1024;
 
 ElaText *createLabel(const QString &text, QWidget *parent = nullptr)
 {
@@ -47,6 +47,7 @@ T_MobilePlusTerminal::T_MobilePlusTerminal(QWidget *parent)
     connect(m_pictureSelectButton, &ElaPushButton::clicked, this, &T_MobilePlusTerminal::onSelectPicture);
     connect(m_pictureButton, &ElaPushButton::clicked, this, &T_MobilePlusTerminal::onShowPicture);
     connect(m_uploadUrlButton, &ElaPushButton::clicked, this, &T_MobilePlusTerminal::onSetUploadUrl);
+    connect(m_resetDisplayButton, &ElaPushButton::clicked, this, &T_MobilePlusTerminal::onResetDisplay);
     connect(m_logClearButton, &ElaPushButton::clicked, m_logEdit, &ElaPlainTextEdit::clear);
 
     connect(cuteLogger, &Logger::sigLogWrite, this, [this](Logger::LogLevel, const QString &log, const QString &category) {
@@ -65,14 +66,13 @@ T_MobilePlusTerminal::~T_MobilePlusTerminal()
 
 void T_MobilePlusTerminal::initContent()
 {
-    auto *connectionBox = new QGroupBox("连接配置", this);
+    auto *connectionBox = new QGroupBox("设备初始化", this);
     auto *connectionLayout = new QVBoxLayout(connectionBox);
-    connectionLayout->setContentsMargins(12, 12, 12, 10);
+    connectionLayout->setContentsMargins(12, 8, 12, 8);
     connectionLayout->setSpacing(8);
 
     m_connectInfoEdit = new ElaLineEdit(this);
-    m_connectInfoEdit->setPlaceholderText("IP地址:端口，例如 192.168.1.10:9000");
-    m_connectInfoEdit->setText("127.0.0.1:9588");
+    m_connectInfoEdit->setPlaceholderText("IP地址:端口，例如 127.0.0.1:9588");
     m_stationIdEdit = new ElaLineEdit(this);
     m_stationIdEdit->setPlaceholderText("站编号");
     m_laneIdSpinBox = new ElaSpinBox(this);
@@ -81,21 +81,24 @@ void T_MobilePlusTerminal::initContent()
     m_deviceSeqSpinBox = new ElaSpinBox(this);
     m_deviceSeqSpinBox->setRange(0, 99);
     m_deviceSeqSpinBox->setValue(1);
-    m_versionComboBox = new ElaComboBox(this);
-    m_versionComboBox->addItem("0x01", 1);
     m_connectButton = new ElaPushButton("连接", this);
+    m_resetDisplayButton = new ElaPushButton("重置界面", this);
     m_connectionStatusText = createLabel("未连接", this);
     m_connectionStatusText->setStyleSheet("color: #ff0000");
+    m_helpTypeText = createLabel("-", this);
 
     auto *endpointLayout = new QHBoxLayout();
     endpointLayout->setContentsMargins(0, 0, 0, 0);
     endpointLayout->setSpacing(8);
-    endpointLayout->addWidget(createLabel("服务地址", this));
     endpointLayout->addWidget(m_connectInfoEdit, 1);
     endpointLayout->addWidget(m_connectButton);
+    endpointLayout->addWidget(m_resetDisplayButton);
     endpointLayout->addSpacing(16);
     endpointLayout->addWidget(createLabel("设备状态", this));
     endpointLayout->addWidget(m_connectionStatusText);
+    endpointLayout->addSpacing(16);
+    endpointLayout->addWidget(createLabel("求助类型", this));
+    endpointLayout->addWidget(m_helpTypeText);
 
     auto *deviceLayout = new QHBoxLayout();
     deviceLayout->setContentsMargins(0, 0, 0, 0);
@@ -108,9 +111,6 @@ void T_MobilePlusTerminal::initContent()
     deviceLayout->addSpacing(12);
     deviceLayout->addWidget(createLabel("设备序号", this));
     deviceLayout->addWidget(m_deviceSeqSpinBox);
-    deviceLayout->addSpacing(12);
-    deviceLayout->addWidget(createLabel("协议版本", this));
-    deviceLayout->addWidget(m_versionComboBox);
 
     connectionLayout->addLayout(endpointLayout);
     connectionLayout->addLayout(deviceLayout);
@@ -154,9 +154,9 @@ void T_MobilePlusTerminal::initContent()
     m_uploadUrlEdit = new ElaLineEdit(this);
     m_uploadUrlEdit->setPlaceholderText("例如 http://127.0.0.1/status");
     m_uploadIntervalSpinBox = new ElaSpinBox(this);
-    m_uploadIntervalSpinBox->setRange(1, 3600);
+    m_uploadIntervalSpinBox->setRange(1, 999);
     m_uploadIntervalSpinBox->setValue(10);
-    m_uploadIntervalSpinBox->setSuffix("s");
+    m_uploadIntervalSpinBox->setSuffix(" s");
     m_uploadUrlButton = new ElaPushButton("设置上传", this);
 
     commandLayout->addWidget(createLabel("LED文字", this), 0, 0);
@@ -205,20 +205,15 @@ void T_MobilePlusTerminal::createTerminal()
 {
     if (m_terminal) {
         destroyMobilePlusTerminal(m_terminal);
-        m_terminal = nullptr;
     }
 
     m_terminal = createMobilePlusTerminal(m_stationIdEdit->text().trimmed(), static_cast<uint>(m_laneIdSpinBox->value()),
                                           static_cast<uint>(m_deviceSeqSpinBox->value()));
-    if (!m_terminal) {
-        showInputError("设备参数无效，无法创建设备对象");
-        return;
-    }
+    m_terminal->setVersion(0x01);
 
-    // 设置协议版本号
-    m_terminal->setVersion(static_cast<uchar>(m_versionComboBox->currentData().toUInt()));
-
-    connect(m_terminal, &IMobilePlusTerminal::sigConnectionStateChanged, this, [this](bool connected) {
+    connect(m_terminal, &IMobilePlusTerminal::sigRequestHelp, this,
+            [this](uint, int helpType) { m_helpTypeText->setText(QString::number(helpType)); });
+    connect(m_terminal, &IMobilePlusTerminal::sigConnectionStateChanged, this, [this](uint, bool connected) {
         m_connecting = false;
         m_connected = connected;
         m_reconnecting = !connected && !m_userDisconnectRequested;
@@ -237,19 +232,20 @@ void T_MobilePlusTerminal::createTerminal()
             updateConnectionStatus("重连中", StatusTone::Pending);
         }
     });
-    connect(m_terminal, &IMobilePlusTerminal::sigInitStateChanged, this, [this](bool initialized) {
+    connect(m_terminal, &IMobilePlusTerminal::sigInitStateChanged, this, [this](uint, bool initialized) {
         setCommandButtonsEnabled(initialized);
         updateConnectionStatus(initialized ? "已就绪" : "初始化失败", initialized ? StatusTone::Success : StatusTone::Error);
     });
-    connect(m_terminal, &IMobilePlusTerminal::sigCmdFinished, this, [this](uchar type, bool success) {
-        static const QStringList commandNames = {"设备初始化", "二维码显示", "LED显示", "图片显示", "状态上传配置"};
+    connect(m_terminal, &IMobilePlusTerminal::sigCmdFinished, this, [this](uint, uchar type, bool success) {
+        static const QStringList commandNames = {"设备初始化", "二维码显示", "LED显示", "图片显示", "状态上传配置", "界面重置"};
         const QString name = type < commandNames.size() ? commandNames.at(type) : QString("Type %1").arg(type);
+        const QString title = success ? "指令成功" : "指令失败";
         if (success)
-            ElaMessageBar::success(ElaMessageBarType::BottomRight, "指令成功", name + "执行成功", 1200, this);
+            ElaMessageBar::success(ElaMessageBarType::BottomRight, title, name + "执行成功", 1200, this);
         else
-            ElaMessageBar::error(ElaMessageBarType::BottomRight, "指令失败", name + "执行失败或响应超时", 1800, this);
+            ElaMessageBar::error(ElaMessageBarType::BottomRight, title, name + "执行失败或响应超时", 1800, this);
     });
-    connect(m_terminal, &IMobilePlusTerminal::sigReconnectFailed, this, [this]() {
+    connect(m_terminal, &IMobilePlusTerminal::sigReconnectFailed, this, [this](uint) {
         m_connecting = false;
         m_connected = false;
         m_reconnecting = false;
@@ -332,7 +328,7 @@ void T_MobilePlusTerminal::onShowPicture()
         return;
     }
     if (file.size() > MAX_PICTURE_SIZE) {
-        showInputError("图片不能超过2MB");
+        showInputError("图片不能超过1MB");
         return;
     }
     if (!file.open(QIODevice::ReadOnly)) {
@@ -353,13 +349,17 @@ void T_MobilePlusTerminal::onSetUploadUrl()
     m_terminal->setUploadUrl(url.toString(), m_uploadIntervalSpinBox->value());
 }
 
+void T_MobilePlusTerminal::onResetDisplay()
+{
+    m_terminal->resetDisplay();
+}
+
 void T_MobilePlusTerminal::setConnectionFieldsEnabled(bool enabled)
 {
     m_connectInfoEdit->setEnabled(enabled);
     m_stationIdEdit->setEnabled(enabled);
     m_laneIdSpinBox->setEnabled(enabled);
     m_deviceSeqSpinBox->setEnabled(enabled);
-    m_versionComboBox->setEnabled(enabled);
 }
 
 void T_MobilePlusTerminal::setCommandButtonsEnabled(bool enabled)
@@ -368,6 +368,7 @@ void T_MobilePlusTerminal::setCommandButtonsEnabled(bool enabled)
     m_ledButton->setEnabled(enabled);
     m_pictureButton->setEnabled(enabled);
     m_uploadUrlButton->setEnabled(enabled);
+    m_resetDisplayButton->setEnabled(enabled);
 }
 
 void T_MobilePlusTerminal::updateConnectionStatus(const QString &text, StatusTone tone)
@@ -395,6 +396,7 @@ void T_MobilePlusTerminal::resetConnectionUi()
     setCommandButtonsEnabled(false);
     m_connectButton->setText("连接");
     updateConnectionStatus("未连接", StatusTone::Error);
+    m_helpTypeText->setText("-");
 }
 
 bool T_MobilePlusTerminal::parseEndpoint(QString &ip, quint16 &port)

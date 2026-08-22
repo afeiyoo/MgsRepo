@@ -20,7 +20,6 @@ include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/HttpClient/HttpClient.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/NlohmannJson/NlohmannJson.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/QZXing/QZXing.pri)
-include($$PWD/../SmartLaneController/SmartLaneController.pri)
 
 SOURCES += \
     bend/cardrobot/cardrobothandler.cpp \
@@ -57,12 +56,14 @@ HEADERS += \
 unix:!macx|win32: LIBS += \
     -l$$qtLibraryTargetName(ElaWidgetTools) \
     -l$$qtLibraryTargetName(CuteLogger) \
-    -l$$qtLibraryTargetName(MobilePlusTerminal)
+    -l$$qtLibraryTargetName(MobilePlusTerminal) \
+    -l$$qtLibraryTargetName(SmartLaneController)
 
 INCLUDEPATH += \
     $$MGS_INCLUDE_PATH/ElaWidgetTools \
     $$MGS_INCLUDE_PATH/CuteLogger \
-    $$MGS_INCLUDE_PATH/MobilePlusTerminal
+    $$MGS_INCLUDE_PATH/MobilePlusTerminal \
+    $$MGS_INCLUDE_PATH/SmartLaneController
 
 # 交付安装
 win32 {
@@ -77,12 +78,14 @@ win32 {
     RUNTIME_LIBRARIES = \
         $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(ElaWidgetTools)}.dll \
         $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(CuteLogger)}.dll \
-        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(MobilePlusTerminal)}.dll
+        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(MobilePlusTerminal)}.dll \
+        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(SmartLaneController)}.dll
 } else {
     RUNTIME_LIBRARIES = \
         $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(ElaWidgetTools)}.so* \
         $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(CuteLogger)}.so* \
-        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(MobilePlusTerminal)}.so*
+        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(MobilePlusTerminal)}.so* \
+        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(SmartLaneController)}.so*
 
     # 动态库和可执行程序安装在同一个目录
     QMAKE_LFLAGS += -Wl,-rpath=\'\$$ORIGIN\'

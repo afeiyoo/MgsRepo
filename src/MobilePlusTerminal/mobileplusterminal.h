@@ -13,7 +13,7 @@ class MobilePlusTerminal : public IMobilePlusTerminal
 {
     Q_OBJECT
 public:
-    explicit MobilePlusTerminal(const QString &stationID, uint laneID, uint seq, QObject *parent = nullptr);
+    explicit MobilePlusTerminal(const QString &stationID, uint laneID, uint devSeq, QObject *parent = nullptr);
     ~MobilePlusTerminal() override;
 
     void connectServer(const QString &ip, quint16 port) override;
@@ -28,10 +28,12 @@ public:
 
     void setUploadUrl(const QString &url, int time) override;
 
+    void resetDisplay() override;
+
     void setVersion(uchar ver) override;
 
 private slots:
-    void onStageChanged(QAbstractSocket::SocketState state);
+    void onStateChanged(QAbstractSocket::SocketState state);
     void onReadyRead();
 
 private:
@@ -48,6 +50,7 @@ private:
     void handleHeartbeatTimeout();
     void scheduleReconnect(int delayMs);
     void attemptReconnect();
+    QString deviceLogTag() const;
 
 private:
     QString m_stationID;

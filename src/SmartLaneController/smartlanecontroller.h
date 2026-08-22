@@ -1,82 +1,92 @@
 #pragma once
 
-#include <QObject>
+#include <QQueue>
 #include <QTcpSocket>
 #include <QTimer>
 
-#include "smartlanecontroller_global.h"
+#include "ismartlanecontroller.h"
 
-class SMARTLANECONTROLLER_EXPORT SmartLaneController : public QObject
+struct ST_SendTask;
+class ICmdHandler;
+class SmartLaneController : public ISmartLaneController
 {
     Q_OBJECT
 public:
-    struct ST_PendingCommand
-    {
-        QString type;
-        uchar seq;
-        int retryCount;
-        QTimer *timer = nullptr;
-
-        ST_PendingCommand(const QString &t, uchar s, int r, QTimer *tm)
-            : type(t)
-            , seq(s)
-            , retryCount(r)
-            , timer(tm)
-        {}
-    };
-
     explicit SmartLaneController(QObject *parent = nullptr);
-    virtual ~SmartLaneController() override;
+    ~SmartLaneController() override;
 
-    // 建立连接（与智能网关）
-    bool connectServer(const QString &ip, quint16 port);
-    // 断开连接（与智能网关）
-    void disconnectServer();
-    // 向智能网关发送指令 type：指令类型  data：指令内容
-    void sendCommand(const QString &type, QByteArray data);
+    void connectServer(const QString &ip, quint16 port) override;
 
-    // 获取网络连接状态
-    bool isConnected() const;
-    // 设置自动重连
-    void enableRetryConnect(bool isOn, int times = 3);
+    void disconnectServer() override;
 
-public slots:
+    void setVersion(uchar ver) override;
+
+    void sendA1Cmd(const QMap<int, int> &relayMap, const QMap<int, int> &levelMap) override;
+
+    void sendA2Cmd(const QByteArray &url, uchar time) override;
+
+    void sendA3Cmd(uchar type, const QByteArray &data) override;
+
+private slots:
     void onStateChanged(QAbstractSocket::SocketState state);
-    void onTryConnect();
-    void onErrorOccurred(QAbstractSocket::SocketError error);
-    void onHeartbeatTimeout();
-
     void onReadyRead();
-
-signals:
-    void sigRecvFromSmartLaneController(uchar type, QByteArray data); // 智能网关消息
-    void sigNetworkStatusChanged(bool status);                        // 网络连接状态
-    void sigHeartbeatStatusChanged(bool normal);                      // 心跳状态
+    void onErrorOccurred(QAbstractSocket::SocketError error);
 
 private:
-    void dealCommand(uchar seq, const QByteArray &command);
-    void sendResponse(uchar cmdType, uchar status, uchar seq);
+    // 指令进入同步发送队列
+    void enqueueCommand(uchar cmdType, const QByteArray &cmd);
+    // 当前无等待应答的指令时，发送队首指令
+    void trySendNextCommand();
+    // 匹配A1/A2/A3应答，匹配成功后结束当前同步请求
+    bool handleCommandResponse(uchar seq, uchar cmdType);
+    // 当前队首指令应答超时处理
+    void handleCommandResponseTimeout();
+    // 获取PC端序列号
     uchar getClientSeq();
-    QString makeKey(const QString &type, uchar seq);
-    void handleACmd(const QString &type, uchar seq, const QByteArray &command);
+    // 处理指令
+    void dealCommand(uchar seq, const QByteArray &cmd);
+    // 组装完整帧
+    QByteArray makeFrame(uchar seq, const QByteArray &cmd);
+    // 发送帧
+    bool sendFrame(const QByteArray &data);
+    // 收到心跳后复位心跳看门狗
+    void resetHeartbeatWatchdog();
+    // 更新并通知心跳状态，避免重复发送相同状态
+    void setHeartbeatState(bool normal);
+    // 心跳超时处理
+    void handleHeartbeatTimeout();
+    // 重连设备
+    void scheduleReconnect(int delayMs);
+    // 尝试重连设备
+    void attemptReconnect();
 
 private:
-    bool m_isForceDisconnect = false; // 是否客户端主动断连
-    bool m_connected = false;         // 网络连接状态
+    // 是否客户端主动断开连接
+    bool m_isForceDisconnect = false;
+    // 协议版本号
+    uchar m_ver = 0x00; // 默认版本号0x00
 
-    int m_reconnectCount = 0;                      // 重连次数
-    QTimer *m_reconnectTimer = nullptr;            // 重连定时器
-    int m_reconnectMaxTimes = 3;                   // 最大重连次数
-    bool m_isEnableRetryConnect = false;           // 是否启用掉线重连机制
-    bool m_reconnectAfterHeartbeatTimeout = false; // 心跳超时后，即使未开启普通掉线重连，也按重连次数策略尝试连接
-    QTimer *m_heartbeatTimer = nullptr;            // D6心跳超时看门狗
-
-    QTcpSocket *m_tcpSocket = nullptr;
+    // 网络信息
+    QTcpSocket *m_socket = nullptr;
+    QTimer *m_heartbeatTimer = nullptr;
+    QTimer *m_reconnectTimer = nullptr;
+    QTimer *m_cmdResponseTimer = nullptr;
     QString m_peerAddr;
-    quint16 m_peerPort;
-    QByteArray m_buffer; // 用于缓存从 socket 中读到但还未解析完的数据（处理粘包问题）
+    quint16 m_peerPort = 0;
+    bool m_connected = false; // 连接是否建立
+    bool m_heartbeatStateKnown = false;
+    bool m_heartbeatNormal = false;
+    int m_reconnectCount = 0;
+    bool m_reconnectFailureNotified = false;
 
-    QMap<QString, ST_PendingCommand *> m_pendingCommands; // 重发等待队列
+    // 数据缓冲区
+    QByteArray m_buffer;
 
-    QMap<QString, QByteArray> m_lastCommand;
+    // 客户端序列号
+    int m_nextSeq = 1;
+    // A1/A2/A3同步发送队列，队首为当前等待应答的指令
+    QQueue<ST_SendTask> m_sendQueue;
+    bool m_waitingCmdResponse = false;
+    // 指令解析器
+    ICmdHandler *m_handler = nullptr;
 };

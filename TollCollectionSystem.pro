@@ -3,7 +3,7 @@ TEMPLATE = subdirs
 CONFIG += ordered
 
 SUBDIRS += \
-    CuteLogger \
+    # CuteLogger \
     # HttpServer \
     # Jcon \
     # QJson \
@@ -11,7 +11,7 @@ SUBDIRS += \
     # LaneMaster \
     MobilePlusTerminal \
     MgsToolsKit \
-    # SmartLaneController \
+    SmartLaneController \
     # LaneDataService \
     # PadService \
     # ETC \
