@@ -187,7 +187,7 @@ void MobilePlusTerminal::onReadyRead()
     }
 
     m_buffer.append(recvData);
-    while (true) {
+    while (!m_buffer.isEmpty()) {
         // 在 m_buffer 中查找第一对连续的 0xFF,0xFF。找到，则0~idx-1前的数据为垃圾数据。没有找到帧头，则缓冲区数据无效，直接丢弃
         int idx = m_buffer.indexOf(STX);
         if (idx >= 0) {

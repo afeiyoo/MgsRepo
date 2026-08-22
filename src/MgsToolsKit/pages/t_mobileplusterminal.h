@@ -44,7 +44,6 @@ private:
     ElaLineEdit *m_stationIdEdit = nullptr;
     ElaSpinBox *m_laneIdSpinBox = nullptr;
     ElaSpinBox *m_deviceSeqSpinBox = nullptr;
-    ElaComboBox *m_versionComboBox = nullptr;
     ElaPushButton *m_connectButton = nullptr;
     ElaPushButton *m_resetDisplayButton = nullptr;
     ElaText *m_connectionStatusText = nullptr;

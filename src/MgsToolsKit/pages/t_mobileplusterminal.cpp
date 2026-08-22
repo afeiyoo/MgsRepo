@@ -68,12 +68,11 @@ void T_MobilePlusTerminal::initContent()
 {
     auto *connectionBox = new QGroupBox("设备初始化", this);
     auto *connectionLayout = new QVBoxLayout(connectionBox);
-    connectionLayout->setContentsMargins(12, 12, 12, 10);
+    connectionLayout->setContentsMargins(12, 8, 12, 8);
     connectionLayout->setSpacing(8);
 
     m_connectInfoEdit = new ElaLineEdit(this);
-    m_connectInfoEdit->setPlaceholderText("IP地址:端口，例如 192.168.1.10:9000");
-    m_connectInfoEdit->setText("127.0.0.1:9588");
+    m_connectInfoEdit->setPlaceholderText("IP地址:端口，例如 127.0.0.1:9588");
     m_stationIdEdit = new ElaLineEdit(this);
     m_stationIdEdit->setPlaceholderText("站编号");
     m_laneIdSpinBox = new ElaSpinBox(this);
@@ -82,8 +81,6 @@ void T_MobilePlusTerminal::initContent()
     m_deviceSeqSpinBox = new ElaSpinBox(this);
     m_deviceSeqSpinBox->setRange(0, 99);
     m_deviceSeqSpinBox->setValue(1);
-    m_versionComboBox = new ElaComboBox(this);
-    m_versionComboBox->addItem("0x01", 1);
     m_connectButton = new ElaPushButton("连接", this);
     m_resetDisplayButton = new ElaPushButton("重置界面", this);
     m_connectionStatusText = createLabel("未连接", this);
@@ -93,7 +90,6 @@ void T_MobilePlusTerminal::initContent()
     auto *endpointLayout = new QHBoxLayout();
     endpointLayout->setContentsMargins(0, 0, 0, 0);
     endpointLayout->setSpacing(8);
-    endpointLayout->addWidget(createLabel("服务地址", this));
     endpointLayout->addWidget(m_connectInfoEdit, 1);
     endpointLayout->addWidget(m_connectButton);
     endpointLayout->addWidget(m_resetDisplayButton);
@@ -115,9 +111,6 @@ void T_MobilePlusTerminal::initContent()
     deviceLayout->addSpacing(12);
     deviceLayout->addWidget(createLabel("设备序号", this));
     deviceLayout->addWidget(m_deviceSeqSpinBox);
-    deviceLayout->addSpacing(12);
-    deviceLayout->addWidget(createLabel("协议版本", this));
-    deviceLayout->addWidget(m_versionComboBox);
 
     connectionLayout->addLayout(endpointLayout);
     connectionLayout->addLayout(deviceLayout);
@@ -161,9 +154,9 @@ void T_MobilePlusTerminal::initContent()
     m_uploadUrlEdit = new ElaLineEdit(this);
     m_uploadUrlEdit->setPlaceholderText("例如 http://127.0.0.1/status");
     m_uploadIntervalSpinBox = new ElaSpinBox(this);
-    m_uploadIntervalSpinBox->setRange(1, 3600);
+    m_uploadIntervalSpinBox->setRange(1, 999);
     m_uploadIntervalSpinBox->setValue(10);
-    m_uploadIntervalSpinBox->setSuffix("s");
+    m_uploadIntervalSpinBox->setSuffix(" s");
     m_uploadUrlButton = new ElaPushButton("设置上传", this);
 
     commandLayout->addWidget(createLabel("LED文字", this), 0, 0);
@@ -212,18 +205,11 @@ void T_MobilePlusTerminal::createTerminal()
 {
     if (m_terminal) {
         destroyMobilePlusTerminal(m_terminal);
-        m_terminal = nullptr;
     }
 
     m_terminal = createMobilePlusTerminal(m_stationIdEdit->text().trimmed(), static_cast<uint>(m_laneIdSpinBox->value()),
                                           static_cast<uint>(m_deviceSeqSpinBox->value()));
-    if (!m_terminal) {
-        showInputError("设备参数无效，无法创建设备对象");
-        return;
-    }
-
-    // 设置协议版本号
-    m_terminal->setVersion(static_cast<uchar>(m_versionComboBox->currentData().toUInt()));
+    m_terminal->setVersion(0x01);
 
     connect(m_terminal, &IMobilePlusTerminal::sigRequestHelp, this,
             [this](uint, int helpType) { m_helpTypeText->setText(QString::number(helpType)); });
@@ -374,7 +360,6 @@ void T_MobilePlusTerminal::setConnectionFieldsEnabled(bool enabled)
     m_stationIdEdit->setEnabled(enabled);
     m_laneIdSpinBox->setEnabled(enabled);
     m_deviceSeqSpinBox->setEnabled(enabled);
-    m_versionComboBox->setEnabled(enabled);
 }
 
 void T_MobilePlusTerminal::setCommandButtonsEnabled(bool enabled)
