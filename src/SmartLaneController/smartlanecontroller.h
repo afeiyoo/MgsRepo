@@ -51,6 +51,8 @@ private:
     bool sendFrame(const QByteArray &data);
     // 收到心跳后复位心跳看门狗
     void resetHeartbeatWatchdog();
+    // 更新并通知心跳状态，避免重复发送相同状态
+    void setHeartbeatState(bool normal);
     // 心跳超时处理
     void handleHeartbeatTimeout();
     // 重连设备
@@ -72,6 +74,8 @@ private:
     QString m_peerAddr;
     quint16 m_peerPort = 0;
     bool m_connected = false; // 连接是否建立
+    bool m_heartbeatStateKnown = false;
+    bool m_heartbeatNormal = false;
     int m_reconnectCount = 0;
     bool m_reconnectFailureNotified = false;
 

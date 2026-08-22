@@ -37,6 +37,7 @@ signals:
     void sigRecvD3Cmd(QByteArray cmd);
     void sigRecvD6Cmd(QByteArray cmd);
     void sigConnectionStateChanged(bool connected);
+    void sigHeartbeatStateChanged(bool normal);
     void sigReconnectFailed();
 };
 

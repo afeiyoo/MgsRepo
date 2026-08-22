@@ -1,11 +1,10 @@
 #include "t_smartcontroller.h"
 
 #include <QButtonGroup>
-#include <QDateTime>
-#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHostAddress>
+#include <QSignalBlocker>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -32,9 +31,13 @@ ElaText *createLabel(const QString &text, QWidget *parent = nullptr)
     return label;
 }
 
-QString hex16(quint16 value)
+ElaText *createSectionTitle(const QString &text, QWidget *parent = nullptr)
 {
-    return QString("0x%1").arg(value, 4, 16, QLatin1Char('0')).toUpper();
+    auto *title = createLabel(text, parent);
+    QFont font = title->font();
+    font.setBold(true);
+    title->setFont(font);
+    return title;
 }
 } // namespace
 
@@ -42,60 +45,28 @@ T_SmartController::T_SmartController(QWidget *parent)
     : T_BasePage{parent}
 {
     setWindowTitle("智能网关测试工具");
-    createCustomWidget("测试IO车道控制器的A1/A2指令发送，以及D2/D6状态接收");
+    createCustomWidget("测试智能网关（基于TCP）的指令收发");
     initContent();
 
     connect(m_connectButton, &ElaPushButton::clicked, this, &T_SmartController::onConnectServer);
-    connect(m_sendA1Button, &ElaPushButton::clicked, this, &T_SmartController::onSendA1);
     connect(m_sendA2Button, &ElaPushButton::clicked, this, &T_SmartController::onSendA2);
-    connect(m_allOffButton, &ElaPushButton::clicked, this, [this]() {
-        for (auto *button : m_relayButtons)
-            button->setIsToggled(false);
-    });
     connect(m_logClearButton, &ElaPushButton::clicked, m_logEdit, &ElaPlainTextEdit::clear);
+
+    connect(m_inputModeButton, &ElaRadioButton::toggled, this, &T_SmartController::onModeToggled);
+    connect(m_outputModeButton, &ElaRadioButton::toggled, this, &T_SmartController::onModeToggled);
+    connect(m_offsetButton, &ElaToggleButton::toggled, this, &T_SmartController::onOffsetToggled);
+    for (int i = 0; i < m_controlButtons.size(); ++i)
+        connect(m_controlButtons.at(i), &ElaToggleButton::toggled, this, [this, i](bool checked) { onControlToggled(i, checked); });
+    for (int i = 0; i < m_levelButtons.size(); ++i)
+        connect(m_levelButtons.at(i), &ElaToggleButton::toggled, this, [this, i](bool checked) { onLevelToggled(i, checked); });
 
     connect(cuteLogger, &Logger::sigLogWrite, this, [this](Logger::LogLevel, const QString &log, const QString &category) {
         if (category == "SmartLaneController")
             m_logEdit->appendPlainText(DataDealUtils::curDateTimeStr() + " | " + log + "\n");
     });
 
-    m_smartController = createSmartLaneController();
-    if (!m_smartController) {
-        updateConnectionStatus("组件创建失败", StatusTone::Error);
-        m_connectButton->setEnabled(false);
-        setCommandControlsEnabled(false);
-        return;
-    }
-
-    m_smartController->setVersion(0x00);
-    connect(m_smartController, &ISmartLaneController::sigRecvD2Cmd, this, &T_SmartController::onRecvD2);
-    connect(m_smartController, &ISmartLaneController::sigRecvD6Cmd, this, &T_SmartController::onRecvD6);
-    connect(m_smartController, &ISmartLaneController::sigConnectionStateChanged, this, [this](bool connected) {
-        m_connecting = false;
-        m_connected = connected;
-        m_reconnecting = !connected && !m_userDisconnectRequested;
-        setCommandControlsEnabled(connected);
-
-        if (connected) {
-            m_userDisconnectRequested = false;
-            setConnectionFieldsEnabled(false);
-            m_connectButton->setText("断开");
-            updateConnectionStatus("已连接", StatusTone::Success);
-        } else if (m_userDisconnectRequested) {
-            resetConnectionUi();
-        } else {
-            setConnectionFieldsEnabled(false);
-            m_connectButton->setText("停止重连");
-            updateConnectionStatus("重连中", StatusTone::Pending);
-        }
-    });
-    connect(m_smartController, &ISmartLaneController::sigReconnectFailed, this, [this]() {
-        m_userDisconnectRequested = false;
-        resetConnectionUi();
-        ElaMessageBar::error(ElaMessageBarType::BottomRight, "连接失败", "自动重连次数已用尽", 1800, this);
-    });
-
-    setCommandControlsEnabled(false);
+    setConnectionState(ConnectionState::Disconnected);
+    initSmartController();
 }
 
 T_SmartController::~T_SmartController()
@@ -104,144 +75,138 @@ T_SmartController::~T_SmartController()
         destroySmartLaneController(m_smartController);
 }
 
+void T_SmartController::initSmartController()
+{
+    m_smartController = createSmartLaneController();
+    m_smartController->setVersion(0x00);
+
+    connect(m_smartController, &ISmartLaneController::sigRecvD2Cmd, this, &T_SmartController::onRecvD2Cmd);
+    connect(m_smartController, &ISmartLaneController::sigConnectionStateChanged, this, &T_SmartController::onConnectionStateChanged);
+    connect(m_smartController, &ISmartLaneController::sigHeartbeatStateChanged, this, &T_SmartController::onHeartbeatStateChanged);
+    connect(m_smartController, &ISmartLaneController::sigReconnectFailed, this, &T_SmartController::onReconnectFailed);
+}
+
 void T_SmartController::initContent()
 {
+    // 设备连接
     auto *connectionBox = new QGroupBox("设备连接", this);
     auto *connectionLayout = new QHBoxLayout(connectionBox);
-    connectionLayout->setContentsMargins(12, 12, 12, 10);
+    connectionLayout->setContentsMargins(12, 8, 12, 8);
     connectionLayout->setSpacing(8);
 
     m_connectInfoEdit = new ElaLineEdit(this);
-    m_connectInfoEdit->setPlaceholderText("IP地址:端口，例如 192.168.0.1:9588");
-    m_connectInfoEdit->setText("192.168.0.1:9588");
+    m_connectInfoEdit->setPlaceholderText("IP地址:端口，例如 127.0.0.1:9588");
     m_connectButton = new ElaPushButton("连接", this);
     m_connectionStatusText = createLabel("未连接", this);
     m_connectionStatusText->setStyleSheet("color: #ff0000");
+    m_heartBeatStatusText = createLabel("心跳异常", this);
+    m_heartBeatStatusText->setStyleSheet("color: #ff0000");
 
-    connectionLayout->addWidget(createLabel("服务地址", this));
     connectionLayout->addWidget(m_connectInfoEdit, 1);
     connectionLayout->addWidget(m_connectButton);
     connectionLayout->addSpacing(16);
     connectionLayout->addWidget(createLabel("连接状态", this));
     connectionLayout->addWidget(m_connectionStatusText);
+    connectionLayout->addWidget(createLabel("心跳状态", this));
+    connectionLayout->addWidget(m_heartBeatStatusText);
 
-    auto *a1Box = new QGroupBox("A1 - 继电器控制", this);
-    auto *a1Layout = new QVBoxLayout(a1Box);
-    a1Layout->setContentsMargins(12, 12, 12, 10);
-    a1Layout->setSpacing(8);
-
-    auto *relayGrid = new QGridLayout();
-    relayGrid->setContentsMargins(0, 0, 0, 0);
-    relayGrid->setHorizontalSpacing(8);
-    relayGrid->setVerticalSpacing(6);
-    for (int i = 0; i < 16; ++i) {
-        auto *button = new ElaToggleButton(QString("%1").arg(i + 1, 2, 10, QLatin1Char('0')), this);
-        button->setFixedWidth(58);
-        m_relayButtons.append(button);
-        relayGrid->addWidget(button, i / 8, i % 8);
-    }
-
-    m_lowLevelButton = new ElaRadioButton("低电平触发", this);
-    m_highLevelButton = new ElaRadioButton("高电平触发", this);
-    m_highLevelButton->setChecked(true);
-    auto *levelGroup = new QButtonGroup(this);
-    levelGroup->addButton(m_lowLevelButton);
-    levelGroup->addButton(m_highLevelButton);
-    m_allOffButton = new ElaPushButton("全部关闭", this);
-    m_sendA1Button = new ElaPushButton("发送 A1", this);
-
-    auto *a1OperationLayout = new QHBoxLayout();
-    a1OperationLayout->setContentsMargins(0, 0, 0, 0);
-    a1OperationLayout->setSpacing(8);
-    a1OperationLayout->addWidget(createLabel("触发电平", this));
-    a1OperationLayout->addWidget(m_lowLevelButton);
-    a1OperationLayout->addWidget(m_highLevelButton);
-    a1OperationLayout->addStretch();
-    a1OperationLayout->addWidget(m_allOffButton);
-    a1OperationLayout->addWidget(m_sendA1Button);
-
-    a1Layout->addWidget(createLabel("选择需要开启的IO通道（01-16）", this));
-    a1Layout->addLayout(relayGrid);
-    a1Layout->addLayout(a1OperationLayout);
-
-    auto *a2Box = new QGroupBox("A2 - 状态上传配置", this);
+    // 状态上传配置
+    auto *a2Box = new QGroupBox("状态上传配置", this);
     auto *a2Layout = new QHBoxLayout(a2Box);
-    a2Layout->setContentsMargins(12, 12, 12, 10);
+    a2Layout->setContentsMargins(12, 8, 12, 8);
     a2Layout->setSpacing(8);
     m_uploadUrlEdit = new ElaLineEdit(this);
     m_uploadUrlEdit->setPlaceholderText("例如 http://192.168.0.10:8080/device/status");
     m_uploadIntervalSpinBox = new ElaSpinBox(this);
-    m_uploadIntervalSpinBox->setRange(1, 255);
+    m_uploadIntervalSpinBox->setRange(1, 60);
     m_uploadIntervalSpinBox->setValue(1);
-    m_uploadIntervalSpinBox->setSuffix(" 分钟");
-    m_sendA2Button = new ElaPushButton("发送 A2", this);
-
+    m_uploadIntervalSpinBox->setSuffix(" min");
+    m_sendA2Button = new ElaPushButton("发送", this);
     a2Layout->addWidget(createLabel("上传URL", this));
     a2Layout->addWidget(m_uploadUrlEdit, 1);
     a2Layout->addWidget(createLabel("上传间隔", this));
     a2Layout->addWidget(m_uploadIntervalSpinBox);
     a2Layout->addWidget(m_sendA2Button);
 
-    auto *receiveBox = new QGroupBox("设备上报", this);
-    auto *receiveLayout = new QVBoxLayout(receiveBox);
-    receiveLayout->setContentsMargins(12, 12, 12, 10);
-    receiveLayout->setSpacing(8);
+    // 输入输出控制
+    auto *ioLayout = new QVBoxLayout();
+    ioLayout->setContentsMargins(0, 8, 0, 8);
+    ioLayout->setSpacing(8);
 
-    m_d2StatusText = createLabel("-", this);
-    auto *d2TitleLayout = new QHBoxLayout();
-    d2TitleLayout->setContentsMargins(0, 0, 0, 0);
-    d2TitleLayout->addWidget(createLabel("D2 IO状态", this));
-    d2TitleLayout->addWidget(m_d2StatusText);
-    d2TitleLayout->addStretch();
+    // - 标题及模式选择
+    m_inputModeButton = new ElaRadioButton("输入", this);
+    m_outputModeButton = new ElaRadioButton("输出", this);
+    m_outputModeButton->setChecked(true);
+    auto *modeGroup = new QButtonGroup(this);
+    modeGroup->addButton(m_inputModeButton);
+    modeGroup->addButton(m_outputModeButton);
 
-    auto *d2Grid = new QGridLayout();
-    d2Grid->setContentsMargins(0, 0, 0, 0);
-    d2Grid->setHorizontalSpacing(8);
-    d2Grid->setVerticalSpacing(6);
-    for (int i = 0; i < 16; ++i) {
-        auto *button = new ElaToggleButton(QString("%1").arg(i + 1, 2, 10, QLatin1Char('0')), this);
-        button->setFixedWidth(58);
-        button->setAttribute(Qt::WA_TransparentForMouseEvents, true);
-        button->setFocusPolicy(Qt::NoFocus);
-        m_d2StatusButtons.append(button);
-        d2Grid->addWidget(button, i / 8, i % 8);
+    auto *ioTitleLayout = new QHBoxLayout();
+    ioTitleLayout->setContentsMargins(0, 0, 0, 0);
+    ioTitleLayout->setSpacing(8);
+    ioTitleLayout->addWidget(createSectionTitle("输入/输出控制", this));
+    ioTitleLayout->addStretch();
+    ioTitleLayout->addWidget(createLabel("模式", this));
+    ioTitleLayout->addWidget(m_inputModeButton);
+    ioTitleLayout->addWidget(m_outputModeButton);
+    ioLayout->addLayout(ioTitleLayout);
+
+    // - 偏移位
+    auto *offsetLayout = new QHBoxLayout();
+    offsetLayout->setContentsMargins(0, 0, 0, 0);
+    offsetLayout->setSpacing(8);
+
+    m_offsetButton = new ElaToggleButton("0", this);
+    m_offsetButton->setFixedWidth(60);
+    offsetLayout->addWidget(createLabel("偏移位(第1位)", this));
+    offsetLayout->addWidget(m_offsetButton);
+    offsetLayout->addStretch();
+    ioLayout->addLayout(offsetLayout);
+
+    // - 控制位
+    auto *controlLayout = new QHBoxLayout();
+    controlLayout->setContentsMargins(0, 0, 0, 0);
+    controlLayout->setSpacing(8);
+
+    for (int i = 0; i < 8; ++i) {
+        auto *button = new ElaToggleButton(QString::number(i + 1), this);
+        button->setFixedWidth(60);
+        m_controlButtons.append(button);
+        controlLayout->addWidget(button);
     }
+    controlLayout->addStretch();
 
-    m_deviceStatusText = createLabel("未收到", this);
-    m_d6IoStatusText = createLabel("-", this);
-    m_heartbeatTimeText = createLabel("-", this);
-    auto *d6Layout = new QHBoxLayout();
-    d6Layout->setContentsMargins(0, 0, 0, 0);
-    d6Layout->setSpacing(8);
-    d6Layout->addWidget(createLabel("D6 设备状态", this));
-    d6Layout->addWidget(m_deviceStatusText);
-    d6Layout->addSpacing(20);
-    d6Layout->addWidget(createLabel("IO状态", this));
-    d6Layout->addWidget(m_d6IoStatusText);
-    d6Layout->addSpacing(20);
-    d6Layout->addWidget(createLabel("最近心跳", this));
-    d6Layout->addWidget(m_heartbeatTimeText);
-    d6Layout->addStretch();
+    controlLayout->insertWidget(0, createLabel("控制位(第2位)", this));
+    ioLayout->addLayout(controlLayout);
 
-    receiveLayout->addLayout(d2TitleLayout);
-    receiveLayout->addLayout(d2Grid);
-    receiveLayout->addLayout(d6Layout);
+    // - 电平位
+    auto *levelLayout = new QHBoxLayout();
+    levelLayout->setContentsMargins(0, 0, 0, 0);
+    levelLayout->setSpacing(8);
 
-    auto *logTitle = createLabel("交互日志", this);
-    QFont logTitleFont = logTitle->font();
-    logTitleFont.setBold(true);
-    logTitle->setFont(logTitleFont);
+    for (int i = 0; i < 2; ++i) {
+        auto *button = new ElaToggleButton(QString::number(i), this);
+        button->setFixedWidth(60);
+        m_levelButtons.append(button);
+        levelLayout->addWidget(button);
+    }
+    levelLayout->addStretch();
+
+    levelLayout->insertWidget(0, createLabel("电平位(第3位)", this));
+    ioLayout->addLayout(levelLayout);
+
+    // 日志区
+    auto *logTitle = createSectionTitle("交互日志", this);
     m_logClearButton = new ElaPushButton("清除", this);
     auto *logTitleLayout = new QHBoxLayout();
     logTitleLayout->setContentsMargins(0, 0, 0, 0);
     logTitleLayout->addWidget(logTitle);
     logTitleLayout->addWidget(m_logClearButton);
     logTitleLayout->addStretch();
-
     m_logEdit = new ElaPlainTextEdit(this);
     m_logEdit->setReadOnly(true);
-    m_logEdit->setPlaceholderText("A1/A2发送及D2/D6接收日志将在这里显示");
-    m_logEdit->setMinimumHeight(160);
+    m_logEdit->setPlaceholderText("设备交互日志将在这里显示");
+    m_logEdit->setMinimumHeight(150);
 
     auto *centralWidget = new QWidget(this);
     centralWidget->setWindowTitle("智能网关测试工具");
@@ -249,9 +214,8 @@ void T_SmartController::initContent()
     centralLayout->setContentsMargins(0, 5, 5, 0);
     centralLayout->setSpacing(5);
     centralLayout->addWidget(connectionBox);
-    centralLayout->addWidget(a1Box);
     centralLayout->addWidget(a2Box);
-    centralLayout->addWidget(receiveBox);
+    centralLayout->addLayout(ioLayout);
     centralLayout->addLayout(logTitleLayout);
     centralLayout->addWidget(m_logEdit, 1);
     addCentralWidget(centralWidget, true, true, 0);
@@ -262,10 +226,11 @@ void T_SmartController::onConnectServer()
     if (!m_smartController)
         return;
 
-    if (m_connecting || m_connected || m_reconnecting) {
+    // 断开连接
+    if (m_connectionState != ConnectionState::Disconnected) {
         m_userDisconnectRequested = true;
         m_smartController->disconnectServer();
-        resetConnectionUi();
+        setConnectionState(ConnectionState::Disconnected);
         return;
     }
 
@@ -275,33 +240,140 @@ void T_SmartController::onConnectServer()
         return;
 
     m_userDisconnectRequested = false;
-    m_connecting = true;
-    m_connected = false;
-    m_reconnecting = false;
-    setConnectionFieldsEnabled(false);
-    setCommandControlsEnabled(false);
-    m_connectButton->setText("取消连接");
-    updateConnectionStatus("连接中", StatusTone::Pending);
+    setConnectionState(ConnectionState::Connecting);
     m_smartController->connectServer(ip, port);
 }
 
-void T_SmartController::onSendA1()
+void T_SmartController::onConnectionStateChanged(bool connected)
 {
-    if (!m_connected) {
-        showInputError("请先连接IO车道控制器");
+    if (connected) {
+        m_userDisconnectRequested = false;
+        setConnectionState(ConnectionState::Connected);
         return;
     }
 
+    if (m_userDisconnectRequested) {
+        setConnectionState(ConnectionState::Disconnected);
+        return;
+    }
+
+    setConnectionState(ConnectionState::Reconnecting);
+}
+
+void T_SmartController::onHeartbeatStateChanged(bool normal)
+{
+    updateHeartbeatStatus(normal ? "心跳正常" : "心跳异常", normal ? StatusTone::Success : StatusTone::Error);
+}
+
+void T_SmartController::onReconnectFailed()
+{
+    m_userDisconnectRequested = false;
+    setConnectionState(ConnectionState::Disconnected);
+    ElaMessageBar::error(ElaMessageBarType::BottomRight, "连接失败", "与智能网关断开连接", 1500, this);
+}
+
+void T_SmartController::onModeToggled(bool checked)
+{
+    if (!checked)
+        return;
+    refreshControlButtons();
+}
+
+void T_SmartController::onOffsetToggled(bool checked)
+{
+    if (!isOutputMode())
+        return;
+
+    m_outputOffset = checked ? 1 : 0;
+
+    sendA1Command();
+}
+
+void T_SmartController::onControlToggled(int index, bool checked)
+{
+    if (!isOutputMode())
+        return;
+
+    const quint16 mask = static_cast<quint16>(1u << index);
+    if (checked) {
+        m_outputStatus = static_cast<quint16>(m_outputStatus | mask);
+    } else {
+        m_outputStatus = static_cast<quint16>(m_outputStatus & ~mask);
+    }
+    sendA1Command();
+}
+
+void T_SmartController::onLevelToggled(int level, bool checked)
+{
+    if (!isOutputMode())
+        return;
+
+    if (checked) {
+        const int otherLevel = level == 0 ? 1 : 0;
+        const QSignalBlocker blocker(m_levelButtons.at(otherLevel));
+        m_levelButtons.at(otherLevel)->setIsToggled(false); // 熄灭另一个电平按钮
+        m_outputLevel = level;
+    } else if (m_outputLevel == level) {
+        m_outputLevel = -1;
+    }
+    sendA1Command();
+}
+
+void T_SmartController::refreshControlButtons()
+{
+    const bool outputMode = isOutputMode();
+    const bool connected = isConnected();
+    const quint16 status = outputMode ? m_outputStatus : m_inputStatus;
+    const bool showInputConfiguration = !outputMode && m_hasInputStatus && m_inputStatus != 0;
+
+    // 控制位
+    for (int i = 0; i < m_controlButtons.size(); ++i) {
+        auto *button = m_controlButtons.at(i);
+        const QSignalBlocker blocker(button);
+        button->setText(QString::number(outputMode ? i + 1 : i));
+
+        button->setIsToggled((status & static_cast<quint16>(1u << i)) != 0);
+        setToggleReadOnly(button, !outputMode ? true : !connected);
+    }
+
+    // 电平位
+    for (int i = 0; i < m_levelButtons.size(); ++i) {
+        auto *button = m_levelButtons.at(i);
+        const QSignalBlocker blocker(button);
+        const bool selected = outputMode ? m_outputLevel == i : showInputConfiguration && i == 1;
+
+        button->setIsToggled(selected);
+        setToggleReadOnly(button, !outputMode ? true : !connected);
+    }
+
+    // 偏移位
+    const QSignalBlocker blocker(m_offsetButton);
+    m_offsetButton->setIsToggled(outputMode ? m_outputOffset == 1 : showInputConfiguration);
+    setToggleReadOnly(m_offsetButton, !outputMode ? true : !connected);
+}
+
+bool T_SmartController::isConnected() const
+{
+    return m_connectionState == ConnectionState::Connected;
+}
+
+bool T_SmartController::isOutputMode() const
+{
+    return m_outputModeButton->isChecked();
+}
+
+void T_SmartController::sendA1Command()
+{
+    // 已连接，输出模式下，电平位，偏移位有点亮，按下
+    if (!isConnected() || !isOutputMode() || m_outputOffset == 0 || m_outputLevel == -1)
+        return;
     m_smartController->sendA1Cmd(relayMap(), levelMap());
-    ElaMessageBar::success(ElaMessageBarType::BottomRight, "A1已入队", "继电器控制指令已加入同步发送队列", 1200, this);
 }
 
 void T_SmartController::onSendA2()
 {
-    if (!m_connected) {
-        showInputError("请先连接IO车道控制器");
+    if (!isConnected())
         return;
-    }
 
     const QString urlText = m_uploadUrlEdit->text().trimmed();
     const QUrl url = QUrl::fromUserInput(urlText);
@@ -311,60 +383,99 @@ void T_SmartController::onSendA2()
     }
 
     m_smartController->sendA2Cmd(urlText.toUtf8(), static_cast<uchar>(m_uploadIntervalSpinBox->value()));
-    ElaMessageBar::success(ElaMessageBarType::BottomRight, "A2已入队", "状态上传配置已加入同步发送队列", 1200, this);
 }
 
-void T_SmartController::onRecvD2(QByteArray cmd)
+void T_SmartController::onRecvD2Cmd(QByteArray cmd)
 {
-    if (cmd.size() < 3) {
-        m_logEdit->appendPlainText(DataDealUtils::curDateTimeStr() + " | D2数据长度不足\n");
-        return;
-    }
-
     const quint16 high = static_cast<uchar>(cmd.at(1));
     const quint16 low = static_cast<uchar>(cmd.at(2));
-    updateD2Status(static_cast<quint16>((high << 8) | low));
+    const quint16 status = static_cast<quint16>((high << 8) | low);
+    m_hasInputStatus = true;
+    m_inputStatus = static_cast<quint16>(status & 0x00FF); // 目前输入只用到8路，故使用0x00FF
+
+    // 处于输入模式下，则刷新控制按钮
+    if (!isOutputMode())
+        refreshControlButtons();
 }
 
-void T_SmartController::onRecvD6(QByteArray cmd)
+void T_SmartController::setConnectionState(ConnectionState state)
 {
-    if (cmd.size() < 4) {
-        m_logEdit->appendPlainText(DataDealUtils::curDateTimeStr() + " | D6数据长度不足\n");
-        return;
+    m_connectionState = state;
+    if (state == ConnectionState::Disconnected || state == ConnectionState::Reconnecting)
+        resetIoControls();
+
+    // 界面上控制按钮刷新
+    setCommandControlsEnabled(state == ConnectionState::Connected);
+
+    // 未连接状态下可以修改连接信息
+    m_connectInfoEdit->setEnabled(state == ConnectionState::Disconnected);
+
+    switch (state) {
+    case ConnectionState::Disconnected:
+        m_connectButton->setText("连接");
+        updateConnectionStatus("未连接", StatusTone::Error);
+        updateHeartbeatStatus("心跳异常", StatusTone::Error);
+        break;
+    case ConnectionState::Connecting:
+        m_connectButton->setText("取消连接");
+        updateConnectionStatus("未连接", StatusTone::Error);
+        updateHeartbeatStatus("心跳异常", StatusTone::Error);
+        break;
+    case ConnectionState::Connected:
+        m_connectButton->setText("断开");
+        updateConnectionStatus("已连接", StatusTone::Success);
+        updateHeartbeatStatus("等待心跳", StatusTone::Pending);
+        break;
+    case ConnectionState::Reconnecting:
+        m_connectButton->setText("停止重连");
+        updateConnectionStatus("未连接", StatusTone::Error);
+        updateHeartbeatStatus("心跳异常", StatusTone::Error);
+        break;
     }
-
-    const uchar deviceStatus = static_cast<uchar>(cmd.at(1));
-    const quint16 high = static_cast<uchar>(cmd.at(2));
-    const quint16 low = static_cast<uchar>(cmd.at(3));
-    const quint16 ioStatus = static_cast<quint16>((high << 8) | low);
-
-    if (deviceStatus == 0x00) {
-        m_deviceStatusText->setText("正常");
-        m_deviceStatusText->setStyleSheet("color: #28bf74");
-    } else {
-        m_deviceStatusText->setText(QString("异常(0x%1)").arg(deviceStatus, 2, 16, QLatin1Char('0')).toUpper());
-        m_deviceStatusText->setStyleSheet("color: #ff0000");
-    }
-    m_d6IoStatusText->setText(hex16(ioStatus));
-    m_heartbeatTimeText->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
-}
-
-void T_SmartController::setConnectionFieldsEnabled(bool enabled)
-{
-    m_connectInfoEdit->setEnabled(enabled);
 }
 
 void T_SmartController::setCommandControlsEnabled(bool enabled)
 {
-    for (auto *button : m_relayButtons)
-        button->setEnabled(enabled);
-    m_lowLevelButton->setEnabled(enabled);
-    m_highLevelButton->setEnabled(enabled);
-    m_allOffButton->setEnabled(enabled);
-    m_sendA1Button->setEnabled(enabled);
+    m_inputModeButton->setEnabled(enabled);
+    m_outputModeButton->setEnabled(enabled);
     m_uploadUrlEdit->setEnabled(enabled);
     m_uploadIntervalSpinBox->setEnabled(enabled);
     m_sendA2Button->setEnabled(enabled);
+
+    refreshControlButtons();
+}
+
+void T_SmartController::setToggleReadOnly(ElaToggleButton *button, bool readOnly)
+{
+    button->setAttribute(Qt::WA_TransparentForMouseEvents, readOnly);
+    button->setFocusPolicy(readOnly ? Qt::NoFocus : Qt::StrongFocus);
+}
+
+void T_SmartController::resetIoControls()
+{
+    m_hasInputStatus = false;
+    m_inputStatus = 0;
+    m_outputStatus = 0;
+    m_outputOffset = 0;
+    m_outputLevel = -1;
+
+    // 电平位按钮
+    for (int i = 0; i < m_levelButtons.size(); ++i) {
+        auto *button = m_levelButtons.at(i);
+        const QSignalBlocker blocker(button);
+        button->setIsToggled(false);
+    }
+
+    // 控制位按钮
+    for (int i = 0; i < m_controlButtons.size(); ++i) {
+        auto *button = m_controlButtons.at(i);
+        const QSignalBlocker blocker(button);
+        button->setIsToggled(false);
+    }
+
+    // 偏移位按钮
+    const QSignalBlocker offsetBlocker(m_offsetButton);
+    m_offsetButton->setIsToggled(false);
 }
 
 void T_SmartController::updateConnectionStatus(const QString &text, StatusTone tone)
@@ -383,15 +494,20 @@ void T_SmartController::updateConnectionStatus(const QString &text, StatusTone t
     }
 }
 
-void T_SmartController::resetConnectionUi()
+void T_SmartController::updateHeartbeatStatus(const QString &text, StatusTone tone)
 {
-    m_connecting = false;
-    m_connected = false;
-    m_reconnecting = false;
-    setConnectionFieldsEnabled(true);
-    setCommandControlsEnabled(false);
-    m_connectButton->setText("连接");
-    updateConnectionStatus("未连接", StatusTone::Error);
+    m_heartBeatStatusText->setText(text);
+    switch (tone) {
+    case StatusTone::Success:
+        m_heartBeatStatusText->setStyleSheet("color: #28bf74");
+        break;
+    case StatusTone::Pending:
+        m_heartBeatStatusText->setStyleSheet("color: #d98c00");
+        break;
+    case StatusTone::Error:
+        m_heartBeatStatusText->setStyleSheet("color: #ff0000");
+        break;
+    }
 }
 
 bool T_SmartController::parseEndpoint(QString &ip, quint16 &port)
@@ -424,26 +540,19 @@ void T_SmartController::showInputError(const QString &message)
     ElaMessageBar::warning(ElaMessageBarType::BottomRight, "参数有误", message, 1500, this);
 }
 
-void T_SmartController::updateD2Status(quint16 status)
-{
-    m_d2StatusText->setText(hex16(status));
-    for (int i = 0; i < m_d2StatusButtons.size(); ++i)
-        m_d2StatusButtons.at(i)->setIsToggled((status & (quint16(1) << i)) != 0);
-}
-
 QMap<int, int> T_SmartController::relayMap() const
 {
+    // 16路，但是生产环境只会使用前8路
     QMap<int, int> values;
-    for (int i = 0; i < m_relayButtons.size(); ++i)
-        values.insert(i + 1, m_relayButtons.at(i)->getIsToggled() ? 1 : 0);
+    for (int i = 0; i < 16; ++i)
+        values.insert(i + 1, (m_outputStatus & static_cast<quint16>(1u << i)) != 0 ? 1 : 0);
     return values;
 }
 
 QMap<int, int> T_SmartController::levelMap() const
 {
     QMap<int, int> values;
-    const int level = m_highLevelButton->isChecked() ? 1 : 0;
-    for (int i = 1; i <= 16; ++i)
-        values.insert(i, level);
+    for (int i = 0; i < 16; ++i)
+        values.insert(i + 1, m_outputLevel);
     return values;
 }

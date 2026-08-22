@@ -98,6 +98,7 @@ void SmartLaneController::onStateChanged(QAbstractSocket::SocketState state)
     case QAbstractSocket::ConnectedState: {
         LOG_CINFO(L_CATE).noquote() << "与智能网关建立连接";
         m_connected = true;
+        m_heartbeatStateKnown = false;
 
         emit sigConnectionStateChanged(true);
         m_heartbeatTimer->start(HEARTBEAT_TIMEOUT);
@@ -113,6 +114,7 @@ void SmartLaneController::onStateChanged(QAbstractSocket::SocketState state)
         m_sendQueue.clear(); // 清空指令队列
 
         emit sigConnectionStateChanged(false);
+        setHeartbeatState(false);
         // 非主动断开连接，则尝试重连设备
         if (!m_isForceDisconnect)
             scheduleReconnect(RECONNECT_INTERVAL);
@@ -127,8 +129,8 @@ void SmartLaneController::onReadyRead()
     QByteArray recvData = m_socket->readAll();
     LOG_CINFO(L_CATE).noquote() << QString("【RX】[%1:%2]").arg(m_peerAddr).arg(m_peerPort) << DataDealUtils::byteArrayToHexStr(recvData);
 
-    LOG_CINFO(L_CATE).noquote() << "数据缓冲区现有数据长度(Byte):" << m_buffer.size() << "数据缓冲区最大数据长度(Byte):" << MAX_BUFF_SIZE
-                                << "接收到的数据长度(Byte):" << recvData.size();
+    LOG_CINFO(L_CATE).noquote() << "数据缓冲区最大数据长度(KByte):" << MAX_BUFF_SIZE / 1024 << "，数据缓冲区现有数据长度(Byte):" << m_buffer.size()
+                                << "，接收到的数据长度(Byte):" << recvData.size();
     if (recvData.size() > MAX_BUFF_SIZE || m_buffer.size() > MAX_BUFF_SIZE - recvData.size()) {
         LOG_CINFO(L_CATE).noquote() << "接收缓冲区溢出，清空缓冲区";
         m_buffer.clear();
@@ -136,7 +138,7 @@ void SmartLaneController::onReadyRead()
     }
 
     m_buffer.append(recvData);
-    while (true) {
+    while (!m_buffer.isEmpty()) {
         // 在 m_buffer 中查找第一对连续的 0xFF,0xFF。找到，则0~idx-1前的数据为垃圾数据。没有找到帧头，则缓冲区数据无效，直接丢弃
         int idx = m_buffer.indexOf(STX);
         if (idx >= 0) {
@@ -234,9 +236,6 @@ void SmartLaneController::trySendNextCommand()
     task.seq = getClientSeq();
     task.frame = makeFrame(task.seq, task.cmd);
     task.retryCount = 0;
-
-    QString cmdTypeStr = QString("%1").arg(task.cmdType, 2, 16, QLatin1Char('0')).toUpper();
-    LOG_CINFO(L_CATE).noquote() << QString("发送指令[0x%1][0x%2]").arg(cmdTypeStr).arg(task.seq, 2, 16, QLatin1Char('0'));
 
     if (!sendFrame(task.frame)) {
         LOG_CERROR(L_CATE).noquote() << "队首指令发送失败，移出发送队列";
@@ -402,6 +401,17 @@ void SmartLaneController::resetHeartbeatWatchdog()
     m_reconnectCount = 0;
     m_reconnectFailureNotified = false;
     m_heartbeatTimer->start(HEARTBEAT_TIMEOUT);
+    setHeartbeatState(true);
+}
+
+void SmartLaneController::setHeartbeatState(bool normal)
+{
+    if (m_heartbeatStateKnown && m_heartbeatNormal == normal)
+        return;
+
+    m_heartbeatStateKnown = true;
+    m_heartbeatNormal = normal;
+    emit sigHeartbeatStateChanged(normal);
 }
 
 void SmartLaneController::handleHeartbeatTimeout()
@@ -410,6 +420,7 @@ void SmartLaneController::handleHeartbeatTimeout()
         return;
 
     LOG_CERROR(L_CATE).noquote() << "连续" << HEARTBEAT_TIMEOUT / 1000 << "秒未收到有效D6心跳，连接异常";
+    setHeartbeatState(false);
     m_socket->abort();
 }
 

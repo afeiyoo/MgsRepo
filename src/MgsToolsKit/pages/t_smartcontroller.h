@@ -23,22 +23,47 @@ public:
 
 private slots:
     void onConnectServer();
-    void onSendA1();
     void onSendA2();
-    void onRecvD2(QByteArray cmd);
-    void onRecvD6(QByteArray cmd);
+    void onRecvD2Cmd(QByteArray cmd);
+    // 模式切换
+    void onModeToggled(bool checked);
+    // 偏移位触发
+    void onOffsetToggled(bool checked);
+    // 控制位触发
+    void onControlToggled(int index, bool checked);
+    // 电平位触发
+    void onLevelToggled(int level, bool checked);
+    // 连接状态改变
+    void onConnectionStateChanged(bool connected);
+    // 心跳状态改变
+    void onHeartbeatStateChanged(bool normal);
+    // 重连失败
+    void onReconnectFailed();
 
 private:
     enum class StatusTone { Error, Pending, Success };
+    enum class ConnectionState { Disconnected, Connecting, Connected, Reconnecting };
 
+    // 页面初始化
     void initContent();
-    void setConnectionFieldsEnabled(bool enabled);
+    // 网关对象初始化
+    void initSmartController();
+    void setConnectionState(ConnectionState state);
     void setCommandControlsEnabled(bool enabled);
+    // 设置IO按钮不可点击
+    void setToggleReadOnly(ElaToggleButton *button, bool readOnly);
+    // 界面IO按钮重置
+    void resetIoControls();
     void updateConnectionStatus(const QString &text, StatusTone tone);
-    void resetConnectionUi();
+    void updateHeartbeatStatus(const QString &text, StatusTone tone);
+    // 解析服务地址
     bool parseEndpoint(QString &ip, quint16 &port);
+    // 输入错误提示
     void showInputError(const QString &message);
-    void updateD2Status(quint16 status);
+    void refreshControlButtons();
+    bool isConnected() const;
+    bool isOutputMode() const;
+    void sendA1Command();
     QMap<int, int> relayMap() const;
     QMap<int, int> levelMap() const;
 
@@ -46,29 +71,28 @@ private:
     ElaLineEdit *m_connectInfoEdit = nullptr;
     ElaPushButton *m_connectButton = nullptr;
     ElaText *m_connectionStatusText = nullptr;
+    ElaText *m_heartBeatStatusText = nullptr;
 
-    QList<ElaToggleButton *> m_relayButtons;
-    ElaRadioButton *m_lowLevelButton = nullptr;
-    ElaRadioButton *m_highLevelButton = nullptr;
-    ElaPushButton *m_allOffButton = nullptr;
-    ElaPushButton *m_sendA1Button = nullptr;
+    ElaRadioButton *m_inputModeButton = nullptr;
+    ElaRadioButton *m_outputModeButton = nullptr;
+    ElaToggleButton *m_offsetButton = nullptr; // 偏移位按钮
+    QList<ElaToggleButton *> m_controlButtons; // 控制位按钮
+    QList<ElaToggleButton *> m_levelButtons;   // 电平位按钮
 
+    // URL上传配置
     ElaLineEdit *m_uploadUrlEdit = nullptr;
     ElaSpinBox *m_uploadIntervalSpinBox = nullptr;
     ElaPushButton *m_sendA2Button = nullptr;
-
-    QList<ElaToggleButton *> m_d2StatusButtons;
-    ElaText *m_d2StatusText = nullptr;
-    ElaText *m_deviceStatusText = nullptr;
-    ElaText *m_d6IoStatusText = nullptr;
-    ElaText *m_heartbeatTimeText = nullptr;
 
     ElaPlainTextEdit *m_logEdit = nullptr;
     ElaPushButton *m_logClearButton = nullptr;
 
     ISmartLaneController *m_smartController = nullptr;
-    bool m_connecting = false;
-    bool m_connected = false;
-    bool m_reconnecting = false;
-    bool m_userDisconnectRequested = false;
+    ConnectionState m_connectionState = ConnectionState::Disconnected;
+    bool m_userDisconnectRequested = false; // 区分用户主动断开与连接异常
+    bool m_hasInputStatus = false;
+    quint16 m_inputStatus = 0;  // 输入状态
+    quint16 m_outputStatus = 0; // 输出状态
+    int m_outputOffset = 0;
+    int m_outputLevel = -1;
 };
