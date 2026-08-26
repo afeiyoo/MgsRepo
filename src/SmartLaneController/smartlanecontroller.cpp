@@ -258,7 +258,7 @@ bool SmartLaneController::handleCommandResponse(uchar seq, uchar cmdType)
 
     const ST_SendTask &task = m_sendQueue.head();
     uchar responseSeq = static_cast<uchar>(seq << 4);
-    QString taskCmdTypeStr = QString("%1").arg(task.cmdType, 2, 16, QLatin1Char('0'));
+    QString taskCmdTypeStr = QString("%1").arg(task.cmdType, 2, 16, QLatin1Char('0')).toUpper();
 
     if (task.cmdType != cmdType || task.seq != responseSeq) {
         LOG_CWARNING(L_CATE).noquote() << QString("应答与队首指令不匹配: 期望[0x%1][0x%2]; 实际[0x%3][0x%4]")
