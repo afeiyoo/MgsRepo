@@ -10,7 +10,6 @@ HEADERS += \
     $$PWD/fileutils.h \
     $$PWD/hostosinfo.h \
     $$PWD/httplib.h \
-    $$PWD/networkutils.h \
     $$PWD/optional.h \
     $$PWD/osspecificaspects.h \
     $$PWD/predicates.h \
@@ -26,15 +25,24 @@ SOURCES += \
     $$PWD/datadealutils.cpp \
     $$PWD/fileutils.cpp \
     $$PWD/hostosinfo.cpp \
-    $$PWD/networkutils.cpp \
     $$PWD/qtcassert.cpp \
     $$PWD/savefile.cpp \
     $$PWD/sm4.cpp \
     $$PWD/iniutils.cpp
 
+contains(QT, network) {
+    HEADERS += $$PWD/networkutils.h
+    SOURCES += $$PWD/networkutils.cpp
+}
+
 contains(QT, gui) {
-    SOURCES += $$PWD/uiutils.cpp
-    HEADERS += $$PWD/uiutils.h
+    SOURCES += \
+        $$PWD/uiutils.cpp \
+        $$PWD/widgets/stepperwidget.cpp \
+
+    HEADERS += \
+        $$PWD/uiutils.h \
+        $$PWD/widgets/stepperwidget.h \
 }
 
 INCLUDEPATH += \
