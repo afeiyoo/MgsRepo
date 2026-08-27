@@ -10,6 +10,7 @@
 
 #include "global/constant.h"
 #include "pages/t_cardrobot.h"
+#include "pages/t_deploytool.h"
 #include "pages/t_deskprinter.h"
 #include "pages/t_infoboard.h"
 #include "pages/t_mobileplusterminal.h"
@@ -131,4 +132,7 @@ void MainWindow::initContent()
 
     m_mobilePlusTerminalPage = new T_MobilePlusTerminal(this);
     addPageNode("手机+自助终端测试", m_mobilePlusTerminalPage, ElaIconType::MobileScreenButton);
+
+    m_deployToolPage = new T_DeployTool(this);
+    addPageNode("信创车道系统部署", m_deployToolPage, ElaIconType::FerrisWheel);
 }

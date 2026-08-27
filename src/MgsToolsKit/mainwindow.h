@@ -11,6 +11,7 @@ class T_InfoBoard;
 class T_SmartController;
 class T_CardRobot;
 class T_MobilePlusTerminal;
+class T_DeployTool;
 
 class MainWindow : public ElaWindow
 {
@@ -33,4 +34,5 @@ private:
     T_SmartController *m_smartControllerPage = nullptr;
     T_CardRobot *m_cardRobotPage = nullptr;
     T_MobilePlusTerminal *m_mobilePlusTerminalPage = nullptr;
+    T_DeployTool *m_deployToolPage = nullptr;
 };

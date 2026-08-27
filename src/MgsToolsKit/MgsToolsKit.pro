@@ -31,6 +31,7 @@ SOURCES += \
     mainwindow.cpp \
     pages/t_basepage.cpp \
     pages/t_cardrobot.cpp \
+    pages/t_deploytool.cpp \
     pages/t_deskprinter.cpp \
     pages/t_infoboard.cpp \
     pages/t_mobileplusterminal.cpp \
@@ -47,6 +48,7 @@ HEADERS += \
     global/globalmanager.h \
     pages/t_basepage.h \
     pages/t_cardrobot.h \
+    pages/t_deploytool.h \
     pages/t_deskprinter.h \
     pages/t_infoboard.h \
     pages/t_mobileplusterminal.h \
