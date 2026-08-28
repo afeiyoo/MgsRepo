@@ -28,9 +28,12 @@ include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    cmdhandler.cpp \
     vehrecognizer.cpp
 
 HEADERS += \
+    cmdhandler.h \
+    defines.h \
     ivehrecognizer.h \
     vehrecognizer.h \
     vehrecognizer_global.h
