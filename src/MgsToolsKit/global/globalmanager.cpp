@@ -50,8 +50,12 @@ void GlobalManager::init()
     // 轮转日志 手机+自助交易终端日志
     QString mobileTerminalLogPath = QDir(logDir.toString()).filePath("mobilePlusTerminal.log");
     RollingFileAppender *mobileTerminalAppender = new RollingFileAppender(mobileTerminalLogPath);
+    // 轮转日志 车型识别器日志
+    QString vehRecognizerLogPath = QDir(logDir.toString()).filePath("vehRecognizer.log");
+    RollingFileAppender *vehRecognizerAppender = new RollingFileAppender(vehRecognizerLogPath);
 
-    QList<RollingFileAppender *> appenders = {mainAppender, infoboardAppender, smartControllerAppender, cardRobotAppender, mobileTerminalAppender};
+    QList<RollingFileAppender *> appenders = {mainAppender,      infoboardAppender,      smartControllerAppender,
+                                              cardRobotAppender, mobileTerminalAppender, vehRecognizerAppender};
     for (auto appender : appenders) {
         appender->setFormat(Constant::Log::FORMAT);
         appender->setLogFilesLimit(90);
@@ -63,6 +67,7 @@ void GlobalManager::init()
     cuteLogger->registerCategoryAppender("SmartLaneController", smartControllerAppender);
     cuteLogger->registerCategoryAppender("cardrobot", cardRobotAppender);
     cuteLogger->registerCategoryAppender("MobilePlusTerminal", mobileTerminalAppender);
+    cuteLogger->registerCategoryAppender("VehRecognizer", vehRecognizerAppender);
 
     LOG_INFO().noquote() << "开始程序初始化...";
 }
