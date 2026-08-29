@@ -9,8 +9,8 @@ SUBDIRS += \
     # QJson \
     # QSimpleUpdater \
     # LaneMaster \
-    MobilePlusTerminal \
-    # MgsToolsKit \
+    # MobilePlusTerminal \
+    MgsToolsKit \
     # SmartLaneController \
     # LaneDataService \
     # PadService \

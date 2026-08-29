@@ -64,6 +64,4 @@ public:
     uchar getCmdType(const QByteArray &cmd) override;
 
     bool handleResponse(const QByteArray &cmd) override;
-
-private:
 };

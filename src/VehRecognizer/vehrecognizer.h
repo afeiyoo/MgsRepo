@@ -32,7 +32,6 @@ public:
 private slots:
     void onStateChanged(QAbstractSocket::SocketState state);
     void onReadyRead();
-    void cleanupExpiredVehicles();
 
 private:
     void initialize();
@@ -41,7 +40,7 @@ private:
     void attemptReconnect();
 
     QByteArray makeFrame(uchar seq, const QByteArray &cmd);
-    bool sendCommand(const QByteArray &cmd, bool requiresInitialized = true);
+    bool sendCommand(const QByteArray &cmd);
     bool sendFrame(const QByteArray &frame);
     QByteArray makeRequestKey(uchar seq, uchar type) const;
     void handleRequestTimeout(const QByteArray &requestKey);
@@ -55,22 +54,9 @@ private:
     void resetHeartbeatWatchdog();
     void handleHeartbeatTimeout();
 
-    QByteArray makeVehicleKey(const QString &vehPlate, const QDateTime &vehTime) const;
     QString saveVehicleMedia(const ST_EBHandleResult &result) const;
-    void removeVehicleMediaFiles(const ST_VehicleImageInfo &imageInfo) const;
-    void updateVehicleInfo(const ST_EAHandleResult &result);
-    void updateVehicleInfo(const ST_EBHandleResult &result, const QString &absolutePath);
-    void emitVehicleInfoIfComplete(const QByteArray &key);
-
-    struct ST_VehicleCacheEntry
-    {
-        ST_VehicleInfo info;
-        bool hasEA = false;
-        bool hasHeadImage = false;
-        bool hasTailImage = false;
-        bool hasBodyImage = false;
-        bool hasShortVideo = false;
-    };
+    void emitVehicleTypeInfo(const ST_EAHandleResult &result);
+    void emitVehicleImageInfo(const ST_EBHandleResult &result, const QString &absolutePath);
 
 private:
     QString m_stationName;
@@ -88,7 +74,6 @@ private:
     QTcpSocket *m_socket = nullptr;
     QTimer *m_heartbeatTimer = nullptr;
     QTimer *m_reconnectTimer = nullptr;
-    QTimer *m_vehicleCleanupTimer = nullptr;
     QString m_peerAddr;
     quint16 m_peerPort = 0;
     int m_reconnectCount = 0;
@@ -102,7 +87,4 @@ private:
     QHash<QByteArray, ST_PendingRequest> m_pendingRequests;
     // 指令解析器
     ICmdHandler *m_handler = nullptr;
-
-    // 键为“车牌 + 过车时间”的车辆聚合队列
-    QHash<QByteArray, ST_VehicleCacheEntry> m_vehicleQueue;
 };

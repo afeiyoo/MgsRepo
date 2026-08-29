@@ -73,7 +73,7 @@ ST_EAHandleResult CmdHandlerV1::handleEACmd(const QByteArray &cmd)
 
 ST_EBHandleResult CmdHandlerV1::handleEBCmd(const QByteArray &cmd)
 {
-    LOG_CINFO(L_CATE).noquote() << "处理指令 EB(前1024个字节):" << DataDealUtils::byteArrayToHexStr(cmd.left(1024));
+    LOG_CINFO(L_CATE).noquote() << "处理指令 EB(前 2048 字节):" << DataDealUtils::byteArrayToHexStr(cmd.left(2048));
 
     ST_EBHandleResult result;
 
@@ -172,7 +172,7 @@ QByteArray CmdHandlerV1::assembleABCmd(const QString &url, uchar minutes)
     QByteArray cmd;
     cmd.append(uchar(0xAB));
     cmd.append(minutes);
-    cmd.append(url.toUtf8());
+    cmd.append(url.toLatin1());
 
     return cmd;
 }
@@ -196,6 +196,8 @@ QByteArray CmdHandlerV1::assembleADCmd(uchar count, const QString &text, int int
     QByteArray cmd;
     cmd.append(uchar(0xAD));
     cmd.append(count);
+    if (interval == 0)
+        interval = 3000; // 如果为0时，默认为3000ms
     cmd.append(DataDealUtils::intToByte(interval));
 
     QByteArray data = DataDealUtils::encodeString(text, 1);

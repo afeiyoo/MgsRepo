@@ -14,6 +14,7 @@
 #include "pages/t_infoboard.h"
 #include "pages/t_mobileplusterminal.h"
 #include "pages/t_smartcontroller.h"
+#include "pages/t_vehrecognizer.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : ElaWindow{parent}
@@ -131,4 +132,7 @@ void MainWindow::initContent()
 
     m_mobilePlusTerminalPage = new T_MobilePlusTerminal(this);
     addPageNode("手机+自助终端测试", m_mobilePlusTerminalPage, ElaIconType::MobileScreenButton);
+
+    m_vehRecognizerPage = new T_VehRecognizer(this);
+    addPageNode("车型识别器测试", m_vehRecognizerPage, ElaIconType::Dinosaur);
 }

@@ -24,16 +24,13 @@ static const int RETRY_INTERVAL = 1000;  // 重传时间间隔，单位ms
 static const int REQUEST_TIMEOUT = 1000; // 请求应答超时时间，单位ms
 
 // 重连参数
-static const int HEARTBEAT_TIMEOUT = 30000; // 心跳超时时间，单位ms
-static const int MAX_RECONNECT_TIMES = 3;   // 最大自动重连次数
-static const int RECONNECT_INTERVAL = 1000; // 自动重连等待间隔，单位ms
+static const int HEARTBEAT_TIMEOUT = 30 * 1000; // 心跳超时时间，单位ms
+static const int MAX_RECONNECT_TIMES = 3;       // 最大自动重连次数
+static const int RECONNECT_INTERVAL = 1000;     // 自动重连等待间隔，单位ms
 
 // 图像信息参数
 static const uint MAX_IMG_SIZE = 1024 * 1024;
 static const uint MAX_VED_SIZE = 2 * 1024 * 1024;
-
-// 车辆信息聚合参数
-static const int VEHICLE_CACHE_TIMEOUT_SECS = 30 * 60;
 
 // 重传数据信息
 struct ST_PendingRequest

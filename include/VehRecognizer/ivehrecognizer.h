@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QDateTime>
-#include <QMetaType>
 #include <QObject>
 #include <QString>
 
@@ -9,6 +8,9 @@
 
 struct ST_VehicleTypeInfo
 {
+    QString vehPlate;    // 车牌
+    int plateColor = 0;  // 车牌颜色
+    QDateTime vehTime;   // 过车时间
     int vehClass = 0;    // 车型
     QString axleType;    // 轴型
     int axleCount = 0;   // 轴数
@@ -18,25 +20,17 @@ struct ST_VehicleTypeInfo
     quint32 extFlag = 0; // 扩展标识
     int direction = 0;   // 行驶方向
 };
+Q_DECLARE_METATYPE(ST_VehicleTypeInfo)
 
 struct ST_VehicleImageInfo
 {
-    QString headImagePath;  // 车头图片绝对路径
-    QString tailImagePath;  // 车尾图片绝对路径
-    QString bodyImagePath;  // 车身图片绝对路径
-    QString shortVideoPath; // 短视频MP4绝对路径
+    QString vehPlate;   // 车牌
+    int plateColor = 0; // 车牌颜色
+    QDateTime vehTime;  // 过车时间
+    int imageType = 0;  // 1车头图片、2车尾图片、3车身图片、4短视频
+    QString imagePath;  // 图片或视频的绝对路径
 };
-
-// 完整车辆信息。EA车型信息和四类EB媒体信息全部到齐后通过信号发送。
-struct ST_VehicleInfo
-{
-    QString vehPlate;              // 车牌
-    int plateColor = 0;            // 车牌颜色
-    QDateTime vehTime;             // 过车时间
-    ST_VehicleTypeInfo typeInfo;   // 车型信息
-    ST_VehicleImageInfo imageInfo; // 图片及视频信息
-};
-Q_DECLARE_METATYPE(ST_VehicleInfo)
+Q_DECLARE_METATYPE(ST_VehicleImageInfo)
 
 class VEHRECOGNIZER_EXPORT IVehRecognizer : public QObject
 {
@@ -66,8 +60,11 @@ public:
     virtual void playVoice(uchar count, const QString &text, int intervalMs = 3000) = 0;
 
 signals:
-    // 一辆车的EA车型信息及四类EB媒体信息全部到齐
-    void sigVehicleInfoReady(const ST_VehicleInfo &vehicleInfo);
+    // 收到车型信息
+    void sigVehicleTypeInfoReady(const ST_VehicleTypeInfo &vehicleInfo);
+
+    // 收到车辆媒体信息
+    void sigVehicleImageInfoReady(const ST_VehicleImageInfo &imageInfo);
 
     // TCP连接状态变化
     void sigConnectionStateChanged(bool connected);

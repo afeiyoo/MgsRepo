@@ -1,7 +1,6 @@
 #include "vehrecognizer.h"
 
 #include <QDir>
-#include <QFile>
 
 #include "Logger.h"
 #include "cmdhandler.h"
@@ -15,7 +14,8 @@ using namespace Utils;
 VehRecognizer::VehRecognizer(const QString &stationID, const QString &stationName, uint laneID, QObject *parent)
     : IVehRecognizer(parent)
 {
-    qRegisterMetaType<ST_VehicleInfo>("ST_VehicleInfo"); // 自定义信号参数类型注册
+    qRegisterMetaType<ST_VehicleTypeInfo>("ST_VehicleTypeInfo");
+    qRegisterMetaType<ST_VehicleImageInfo>("ST_VehicleImageInfo");
 
     m_stationName = stationName;
     m_stationID = stationID;
@@ -29,18 +29,12 @@ VehRecognizer::VehRecognizer(const QString &stationID, const QString &stationNam
     m_reconnectTimer = new QTimer(this);
     m_reconnectTimer->setSingleShot(true);
 
-    m_vehicleCleanupTimer = new QTimer(this);
-    m_vehicleCleanupTimer->setInterval(60 * 1000); // 每分钟检查一次过期车辆信息
-
     m_handler = new CmdHandlerV1(); // 默认版本号V1
 
     connect(m_socket, &QTcpSocket::stateChanged, this, &VehRecognizer::onStateChanged);
     connect(m_socket, &QTcpSocket::readyRead, this, &VehRecognizer::onReadyRead);
     connect(m_heartbeatTimer, &QTimer::timeout, this, &VehRecognizer::handleHeartbeatTimeout);
     connect(m_reconnectTimer, &QTimer::timeout, this, &VehRecognizer::attemptReconnect);
-    connect(m_vehicleCleanupTimer, &QTimer::timeout, this, &VehRecognizer::cleanupExpiredVehicles);
-
-    m_vehicleCleanupTimer->start();
 }
 
 VehRecognizer::~VehRecognizer()
@@ -140,7 +134,8 @@ void VehRecognizer::onStateChanged(QAbstractSocket::SocketState state)
 void VehRecognizer::onReadyRead()
 {
     QByteArray recvData = m_socket->readAll();
-    LOG_CINFO(L_CATE).noquote() << QString("【RX】[%1:%2]").arg(m_peerAddr).arg(m_peerPort) << DataDealUtils::byteArrayToHexStr(recvData);
+    LOG_CINFO(L_CATE).noquote() << QString("【RX】[%1:%2] 数据长度 %3 Byte(仅打印前 2048 Byte):").arg(m_peerAddr).arg(m_peerPort).arg(recvData.size())
+                                << DataDealUtils::byteArrayToHexStr(recvData.left(2048));
 
     LOG_CINFO(L_CATE).noquote() << "数据缓冲区现有数据长度(Byte):" << m_buffer.size() << "数据缓冲区最大数据长度(Byte):" << MAX_BUFF_SIZE
                                 << "接收到的数据长度(Byte):" << recvData.size();
@@ -223,7 +218,7 @@ void VehRecognizer::initialize()
     LOG_CINFO(L_CATE).noquote() << "发送指令 AA";
 
     QByteArray cmd = m_handler->assembleAACmd(m_stationID, m_stationName, static_cast<int>(m_laneID));
-    sendCommand(cmd, false);
+    sendCommand(cmd);
 }
 
 void VehRecognizer::scheduleReconnect(int delayMs)
@@ -271,25 +266,15 @@ QByteArray VehRecognizer::makeFrame(uchar seq, const QByteArray &cmd)
     return frame;
 }
 
-bool VehRecognizer::sendCommand(const QByteArray &cmd, bool requiresInitialized)
+bool VehRecognizer::sendCommand(const QByteArray &cmd)
 {
-    if (!m_connected) {
-        LOG_CERROR(L_CATE).noquote() << "发送失败: 与车型识别器的网络连接失效!";
-        return false;
-    }
-
-    if (requiresInitialized && !m_initialized) {
-        LOG_CERROR(L_CATE).noquote() << "发送失败: 车型识别器尚未完成初始化";
-        return false;
-    }
-
     const uchar type = m_handler->getCmdType(cmd);
     const uchar seq = getClientSeq();
     const QByteArray frame = makeFrame(seq, cmd);
     const QByteArray requestKey = makeRequestKey(seq, type);
 
-    QString cmdTypeStr = QString("%1").arg(type, 2, 16, QLatin1Char('0')).toUpper();
     if (m_pendingRequests.contains(requestKey)) {
+        QString cmdTypeStr = QString("%1").arg(type, 2, 16, QLatin1Char('0')).toUpper();
         LOG_CERROR(L_CATE).noquote() << "发送失败: 同一指令类型存在相同序列号的未响应请求, Seq:" << QString("0x%1").arg(seq, 2, 16, QLatin1Char('0'))
                                      << "CmdType:" << QString("0x%1").arg(cmdTypeStr);
         return false;
@@ -344,28 +329,29 @@ void VehRecognizer::handleRequestTimeout(const QByteArray &requestKey)
     if (it == m_pendingRequests.end())
         return; // 已收到对应应答，或连接断开后请求已清理
 
+    const uchar cmdType = it->type;
+    QString cmdTypeStr = QString("%1").arg(cmdType, 2, 16, QLatin1Char('0')).toUpper();
+
     if (it->retryCount >= MAX_RETRY_TIMES) {
-        const uchar requestType = it->type;
         const uchar requestSeq = it->seq;
         m_pendingRequests.erase(it);
 
-        QString requestTypeStr = QString("%1").arg(requestType, 2, 16, QLatin1Char('0')).toUpper();
         LOG_CERROR(L_CATE).noquote() << "指令重传" << MAX_RETRY_TIMES
                                      << "次后仍未收到应答, Seq:" << QString("0x%1").arg(requestSeq, 2, 16, QLatin1Char('0'))
-                                     << "CmdType:" << QString("0x%1").arg(requestTypeStr);
+                                     << "CmdType:" << QString("0x%1").arg(cmdTypeStr);
 
-        if (requestType == 0xAA) {
+        if (cmdType == 0xAA) {
             m_initialized = false;
             emit sigInitStateChanged(false);
         }
-        emit sigCmdFinished(requestType, false);
+        emit sigCmdFinished(cmdType, false);
         return;
     }
 
     ++it->retryCount;
     LOG_CWARNING(L_CATE).noquote() << "等待设备应答超时，执行第" << it->retryCount
                                    << "次重传, Seq:" << QString("0x%1").arg(it->seq, 2, 16, QLatin1Char('0'))
-                                   << "CmdType:" << QString("0x%1").arg(it->type, 2, 16, QLatin1Char('0'));
+                                   << "CmdType:" << QString("0x%1").arg(cmdTypeStr);
     sendFrame(it->frame);
 
     QTimer::singleShot(RETRY_INTERVAL, this, [this, requestKey]() { handleRequestTimeout(requestKey); });
@@ -394,7 +380,7 @@ void VehRecognizer::dealCommand(uchar seq, const QByteArray &cmd)
         sendFrame(makeFrame(static_cast<uchar>((seq & 0x0F) | 0x10), response));
         // 处理成功
         if (result.status)
-            updateVehicleInfo(result);
+            emitVehicleTypeInfo(result);
     } else if (cmdType == 0xEB) {
         ST_EBHandleResult result = m_handler->handleEBCmd(cmd);
 
@@ -405,7 +391,7 @@ void VehRecognizer::dealCommand(uchar seq, const QByteArray &cmd)
         // 处理成功
         if (result.status) {
             QString mediaPath = saveVehicleMedia(result);
-            updateVehicleInfo(result, mediaPath);
+            emitVehicleImageInfo(result, mediaPath);
         }
     } else if (cmdType == 0xEC) {
         const QByteArray response = m_handler->handleECCmd(cmd);
@@ -458,14 +444,6 @@ void VehRecognizer::handleHeartbeatTimeout()
     LOG_CERROR(L_CATE).noquote() << "连续" << HEARTBEAT_TIMEOUT / 1000 << "秒未收到有效心跳，连接异常";
     m_initialized = false;
     m_socket->abort();
-}
-
-QByteArray VehRecognizer::makeVehicleKey(const QString &vehPlate, const QDateTime &vehTime) const
-{
-    QByteArray key = vehPlate.toUtf8();
-    key.append('\0');
-    key.append(vehTime.toString("yyyyMMddhhmmss").toLatin1());
-    return key;
 }
 
 QString VehRecognizer::saveVehicleMedia(const ST_EBHandleResult &result) const
@@ -523,101 +501,36 @@ QString VehRecognizer::saveVehicleMedia(const ST_EBHandleResult &result) const
     return absolutePath;
 }
 
-void VehRecognizer::removeVehicleMediaFiles(const ST_VehicleImageInfo &imageInfo) const
+void VehRecognizer::emitVehicleTypeInfo(const ST_EAHandleResult &result)
 {
-    const QString paths[] = {imageInfo.headImagePath, imageInfo.tailImagePath, imageInfo.bodyImagePath, imageInfo.shortVideoPath};
-    for (const QString &path : paths) {
-        if (!path.isEmpty() && QFile::exists(path) && !QFile::remove(path))
-            LOG_CWARNING(L_CATE).noquote() << "删除过期车型识别器媒体文件失败:" << path;
-    }
+    ST_VehicleTypeInfo info;
+    info.vehPlate = result.vehPlate;
+    info.plateColor = result.plateColor;
+    info.vehTime = result.vehTime;
+    info.vehClass = result.vehClass;
+    info.axleType = result.axleType;
+    info.axleCount = result.axleCount;
+    info.totalLength = result.totalLength;
+    info.totalWidth = result.totalWidth;
+    info.totalHeight = result.totalHeight;
+    info.extFlag = result.extFlag;
+    info.direction = result.direction;
+
+    LOG_CINFO(L_CATE).noquote() << "收到车型信息: VehPlate:" << info.vehPlate << "VehTime:" << info.vehTime.toString("yyyy-MM-dd HH:mm:ss");
+    emit sigVehicleTypeInfoReady(info);
 }
 
-void VehRecognizer::updateVehicleInfo(const ST_EAHandleResult &result)
+void VehRecognizer::emitVehicleImageInfo(const ST_EBHandleResult &result, const QString &absolutePath)
 {
-    const QByteArray key = makeVehicleKey(result.vehPlate, result.vehTime);
-    ST_VehicleCacheEntry &entry = m_vehicleQueue[key];
-    entry.info.vehPlate = result.vehPlate;
-    entry.info.plateColor = result.plateColor;
-    entry.info.vehTime = result.vehTime;
-    entry.info.typeInfo.vehClass = result.vehClass;
-    entry.info.typeInfo.axleType = result.axleType;
-    entry.info.typeInfo.axleCount = result.axleCount;
-    entry.info.typeInfo.totalLength = result.totalLength;
-    entry.info.typeInfo.totalWidth = result.totalWidth;
-    entry.info.typeInfo.totalHeight = result.totalHeight;
-    entry.info.typeInfo.extFlag = result.extFlag;
-    entry.info.typeInfo.direction = result.direction;
-    entry.hasEA = true;
+    ST_VehicleImageInfo info;
+    info.vehPlate = result.vehPlate;
+    info.plateColor = result.plateColor;
+    info.vehTime = result.vehTime;
+    info.imageType = result.imgType;
+    info.imagePath = absolutePath;
 
-    emitVehicleInfoIfComplete(key);
-}
-
-void VehRecognizer::updateVehicleInfo(const ST_EBHandleResult &result, const QString &absolutePath)
-{
-    const QByteArray key = makeVehicleKey(result.vehPlate, result.vehTime);
-    ST_VehicleCacheEntry &entry = m_vehicleQueue[key];
-    entry.info.vehPlate = result.vehPlate;
-    entry.info.plateColor = result.plateColor;
-    entry.info.vehTime = result.vehTime;
-
-    switch (result.imgType) {
-    case 1:
-        entry.info.imageInfo.headImagePath = absolutePath;
-        entry.hasHeadImage = true;
-        break;
-    case 2:
-        entry.info.imageInfo.tailImagePath = absolutePath;
-        entry.hasTailImage = true;
-        break;
-    case 3:
-        entry.info.imageInfo.bodyImagePath = absolutePath;
-        entry.hasBodyImage = true;
-        break;
-    case 4:
-        entry.info.imageInfo.shortVideoPath = absolutePath;
-        entry.hasShortVideo = true;
-        break;
-    default:
-        return;
-    }
-
-    emitVehicleInfoIfComplete(key);
-}
-
-void VehRecognizer::emitVehicleInfoIfComplete(const QByteArray &key)
-{
-    auto it = m_vehicleQueue.find(key);
-    if (it == m_vehicleQueue.end())
-        return;
-
-    const ST_VehicleCacheEntry &entry = it.value();
-    if (!entry.hasEA || !entry.hasHeadImage || !entry.hasTailImage || !entry.hasBodyImage || !entry.hasShortVideo)
-        return;
-
-    const ST_VehicleInfo vehicleInfo = entry.info;
-    m_vehicleQueue.erase(it);
-
-    LOG_CINFO(L_CATE).noquote() << "车辆信息已完整:" << "VehPlate:" << vehicleInfo.vehPlate
-                                << "VehTime:" << vehicleInfo.vehTime.toString("yyyy-MM-dd HH:mm:ss");
-    emit sigVehicleInfoReady(vehicleInfo);
-}
-
-void VehRecognizer::cleanupExpiredVehicles()
-{
-    const QDateTime currentTime = QDateTime::currentDateTime();
-
-    auto vehicleIt = m_vehicleQueue.begin();
-    while (vehicleIt != m_vehicleQueue.end()) {
-        const ST_VehicleCacheEntry &entry = vehicleIt.value();
-        if (entry.info.vehTime.secsTo(currentTime) > VEHICLE_CACHE_TIMEOUT_SECS) {
-            LOG_CWARNING(L_CATE).noquote() << "清理过期的未完成车辆信息:"
-                                           << "VehPlate:" << entry.info.vehPlate << "VehTime:" << entry.info.vehTime.toString("yyyy-MM-dd HH:mm:ss");
-            removeVehicleMediaFiles(entry.info.imageInfo);
-            vehicleIt = m_vehicleQueue.erase(vehicleIt);
-        } else {
-            ++vehicleIt;
-        }
-    }
+    LOG_CINFO(L_CATE).noquote() << "收到车辆媒体信息: VehPlate:" << info.vehPlate << "ImageType:" << info.imageType << "Path:" << info.imagePath;
+    emit sigVehicleImageInfoReady(info);
 }
 
 // -------------------------------------------------------

@@ -1,6 +1,6 @@
 include($$PWD/../../Public.pri)
 
-QT       *= core gui network multimedia
+QT       *= core gui network multimedia multimediawidgets
 
 TARGET = MgsToolsKit
 TEMPLATE = app
@@ -34,7 +34,8 @@ SOURCES += \
     pages/t_deskprinter.cpp \
     pages/t_infoboard.cpp \
     pages/t_mobileplusterminal.cpp \
-    pages/t_smartcontroller.cpp
+    pages/t_smartcontroller.cpp \
+    pages/t_vehrecognizer.cpp
 
 HEADERS += \
     bend/cardrobot/cardrobothandler.h \
@@ -50,20 +51,23 @@ HEADERS += \
     pages/t_deskprinter.h \
     pages/t_infoboard.h \
     pages/t_mobileplusterminal.h \
-    pages/t_smartcontroller.h
+    pages/t_smartcontroller.h \
+    pages/t_vehrecognizer.h
 
 # 引入第三方库
 unix:!macx|win32: LIBS += \
     -l$$qtLibraryTargetName(ElaWidgetTools) \
     -l$$qtLibraryTargetName(CuteLogger) \
     -l$$qtLibraryTargetName(MobilePlusTerminal) \
-    -l$$qtLibraryTargetName(SmartLaneController)
+    -l$$qtLibraryTargetName(SmartLaneController) \
+    -l$$qtLibraryTargetName(VehRecognizer)
 
 INCLUDEPATH += \
     $$MGS_INCLUDE_PATH/ElaWidgetTools \
     $$MGS_INCLUDE_PATH/CuteLogger \
     $$MGS_INCLUDE_PATH/MobilePlusTerminal \
-    $$MGS_INCLUDE_PATH/SmartLaneController
+    $$MGS_INCLUDE_PATH/SmartLaneController \
+    $$MGS_INCLUDE_PATH/VehRecognizer
 
 # 交付安装
 win32 {
@@ -79,13 +83,15 @@ win32 {
         $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(ElaWidgetTools)}.dll \
         $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(CuteLogger)}.dll \
         $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(MobilePlusTerminal)}.dll \
-        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(SmartLaneController)}.dll
+        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(SmartLaneController)}.dll \
+        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(VehRecognizer)}.dll
 } else {
     RUNTIME_LIBRARIES = \
         $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(ElaWidgetTools)}.so* \
         $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(CuteLogger)}.so* \
         $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(MobilePlusTerminal)}.so* \
-        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(SmartLaneController)}.so*
+        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(SmartLaneController)}.so* \
+        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(VehRecognizer)}.so*
 
     # 动态库和可执行程序安装在同一个目录
     QMAKE_LFLAGS += -Wl,-rpath=\'\$$ORIGIN\'
