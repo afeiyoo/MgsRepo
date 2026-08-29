@@ -10,7 +10,7 @@ SUBDIRS += \
     # QSimpleUpdater \
     # LaneMaster \
     # MobilePlusTerminal \
-    MgsToolsKit \
+    # MgsToolsKit \
     # SmartLaneController \
     # LaneDataService \
     # PadService \
@@ -19,7 +19,7 @@ SUBDIRS += \
     # ServiceHub \
     # CardService \
     # DeployTool \
-    VehRecognizer \
+    # VehRecognizer \
 
 LaneMaster.file = src/LaneMaster/LaneMaster.pro
 MgsToolsKit.file = src/MgsToolsKit/MgsToolsKit.pro

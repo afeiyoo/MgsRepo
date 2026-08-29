@@ -48,10 +48,15 @@ struct ST_DeployInfo
     QString capIP; // 抓拍IP
     int capPort = 9588;
     int capTriggerMode = 0;
-    int capType = 8; // 默认TCP
+    int capType = 8; // 默认TCP连接
 
     // 发卡机配置
-    int robotBaudRate = 0;
+    int robotBaudRate = 115200; // 串口波特率
+    QString robotPort;          // NOTE：可配置串口号，故使用QString
+    QString robotIP;
+    int option = 0; // 默认0，不开启x-or校验
+
+    // 发卡机读卡器配置
 
     // 车道网络信息
     QString netMask;
