@@ -19,6 +19,7 @@ SUBDIRS += \
     # ServiceHub \
     # CardService \
     # DeployTool \
+    VehRecognizer \
 
 LaneMaster.file = src/LaneMaster/LaneMaster.pro
 MgsToolsKit.file = src/MgsToolsKit/MgsToolsKit.pro
@@ -36,3 +37,4 @@ ServiceHub.file = src/ServiceHub/ServiceHub.pro
 CardService.file = src/CardService/CardService.pro
 MobilePlusTerminal.file = src/MobilePlusTerminal/MobilePlusTerminal.pro
 DeployTool.file = src/DeployTool/DeployTool.pro
+VehRecognizer.file = src/VehRecognizer/VehRecognizer.pro

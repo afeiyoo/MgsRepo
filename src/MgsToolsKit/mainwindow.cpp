@@ -15,6 +15,7 @@
 #include "pages/t_infoboard.h"
 #include "pages/t_mobileplusterminal.h"
 #include "pages/t_smartcontroller.h"
+#include "pages/t_vehrecognizer.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : ElaWindow{parent}
@@ -135,4 +136,7 @@ void MainWindow::initContent()
 
     m_deployToolPage = new T_DeployTool(this);
     addPageNode("信创车道系统部署", m_deployToolPage, ElaIconType::FerrisWheel);
+
+    m_vehRecognizerPage = new T_VehRecognizer(this);
+    addPageNode("车型识别器测试", m_vehRecognizerPage, ElaIconType::Dinosaur);
 }

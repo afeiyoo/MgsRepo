@@ -12,6 +12,7 @@ class T_SmartController;
 class T_CardRobot;
 class T_MobilePlusTerminal;
 class T_DeployTool;
+class T_VehRecognizer;
 
 class MainWindow : public ElaWindow
 {
@@ -35,4 +36,5 @@ private:
     T_CardRobot *m_cardRobotPage = nullptr;
     T_MobilePlusTerminal *m_mobilePlusTerminalPage = nullptr;
     T_DeployTool *m_deployToolPage = nullptr;
+    T_VehRecognizer *m_vehRecognizerPage = nullptr;
 };
