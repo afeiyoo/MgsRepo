@@ -1,10 +1,12 @@
 #include "t_smartcontroller.h"
 
 #include <QButtonGroup>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHostAddress>
 #include <QSignalBlocker>
+#include <QSizePolicy>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -151,49 +153,43 @@ void T_SmartController::initContent()
     ioTitleLayout->addWidget(m_outputModeButton);
     ioLayout->addLayout(ioTitleLayout);
 
-    // - 偏移位
-    auto *offsetLayout = new QHBoxLayout();
-    offsetLayout->setContentsMargins(0, 0, 0, 0);
-    offsetLayout->setSpacing(8);
+    // 三组按钮共用列宽，内容区变窄时保持相同宽度。
+    auto *ioControlLayout = new QGridLayout();
+    ioControlLayout->setContentsMargins(0, 0, 0, 0);
+    ioControlLayout->setSpacing(8);
+    const auto configureIoButton = [](ElaToggleButton *button) {
+        button->setMinimumWidth(32);
+        button->setMaximumWidth(60);
+        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    };
 
+    // - 偏移位
     m_offsetButton = new ElaToggleButton("0", this);
-    m_offsetButton->setFixedWidth(60);
-    offsetLayout->addWidget(createLabel("偏移位(第1位)", this));
-    offsetLayout->addWidget(m_offsetButton);
-    offsetLayout->addStretch();
-    ioLayout->addLayout(offsetLayout);
+    configureIoButton(m_offsetButton);
+    ioControlLayout->addWidget(createLabel("继电器-偏移(第1位)", this), 0, 0);
+    ioControlLayout->addWidget(m_offsetButton, 0, 1);
 
     // - 控制位
-    auto *controlLayout = new QHBoxLayout();
-    controlLayout->setContentsMargins(0, 0, 0, 0);
-    controlLayout->setSpacing(8);
-
+    ioControlLayout->addWidget(createLabel("继电器-控制(第2位)", this), 1, 0);
     for (int i = 0; i < 8; ++i) {
         auto *button = new ElaToggleButton(QString::number(i + 1), this);
-        button->setFixedWidth(60);
+        configureIoButton(button);
         m_controlButtons.append(button);
-        controlLayout->addWidget(button);
+        ioControlLayout->addWidget(button, 1, i + 1);
     }
-    controlLayout->addStretch();
-
-    controlLayout->insertWidget(0, createLabel("控制位(第2位)", this));
-    ioLayout->addLayout(controlLayout);
 
     // - 电平位
-    auto *levelLayout = new QHBoxLayout();
-    levelLayout->setContentsMargins(0, 0, 0, 0);
-    levelLayout->setSpacing(8);
-
+    ioControlLayout->addWidget(createLabel("继电器-电平(第3位)", this), 2, 0);
     for (int i = 0; i < 2; ++i) {
         auto *button = new ElaToggleButton(QString::number(i), this);
-        button->setFixedWidth(60);
+        configureIoButton(button);
         m_levelButtons.append(button);
-        levelLayout->addWidget(button);
+        ioControlLayout->addWidget(button, 2, i + 1);
     }
-    levelLayout->addStretch();
-
-    levelLayout->insertWidget(0, createLabel("电平位(第3位)", this));
-    ioLayout->addLayout(levelLayout);
+    for (int column = 1; column <= 8; ++column)
+        ioControlLayout->setColumnStretch(column, 1);
+    ioControlLayout->setAlignment(Qt::AlignLeft);
+    ioLayout->addLayout(ioControlLayout);
 
     // 日志区
     auto *logTitle = createSectionTitle("交互日志", this);
