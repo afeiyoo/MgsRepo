@@ -33,7 +33,7 @@ DeployTool::DeployTool(QObject *parent)
     m_networkTimeoutTimer = new QTimer(this);
     m_networkTimeoutTimer->setSingleShot(true);
 
-    connect(m_networkProcess, &QProcess::started, this, [this]() { emit networkUpdateStarted(); });
+    connect(m_networkProcess, &QProcess::started, this, [this]() { emit sigNetworkUpdateStarted(); });
 
     connect(m_networkProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
             [this](int exitCode, QProcess::ExitStatus exitStatus) {
@@ -341,8 +341,8 @@ bool DeployTool::loadDeployInfo(const QString &path, QString &errDesc)
 
 ST_DeployInfo DeployTool::getCurDeployInfo(const QString &stationID, int laneID)
 {
-    QString key = QString("%1_%2").arg(stationID, laneID);
-    return m_deployInfos[key];
+    const QString key = QString("%1_%2").arg(stationID).arg(laneID);
+    return m_deployInfos.value(key);
 }
 
 bool DeployTool::saveDeviceCtrlFile(const ST_DeployInfo &info, const QString &path, QString &errDesc)
@@ -879,7 +879,7 @@ void DeployTool::finishNetworkUpdate(bool success, const QString &message)
         LOG_CERROR(L_CATE).noquote() << message;
     }
 
-    emit networkUpdateFinished(success, message);
+    emit sigNetworkUpdateFinished(success, message);
 }
 
 int DeployTool::getLaneType(const QString &str) const

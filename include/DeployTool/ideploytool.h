@@ -267,8 +267,20 @@ public:
     // 生成Start123.json配置文件
     virtual bool saveStartFile(const ST_DeployInfo &info, const QString &ver, const QString &path, QString &errDesc) = 0;
 
-    // 修改指定网卡的网络配置信息
+    // 同步数据库配置
+    virtual bool syncDBConfig(const ST_DeployInfo &info, QString &errDesc) = 0;
+
+    // 同步590费率文件
+    virtual bool syncFeeRate(const QString &filePath, const QString &stationID, QString &errDesc) = 0;
+
+    // 修改指定网卡的网络配置。返回true仅表示任务已受理，最终结果通过networkUpdateFinished()通知。
     virtual bool updateNetwork(const ST_DeployInfo &info, const QString &interfaceName, QString &errDesc) = 0;
+
+    virtual bool isNetworkUpdating() const = 0;
+
+signals:
+    void sigNetworkUpdateStarted();
+    void sigNetworkUpdateFinished(bool success, const QString &message);
 };
 
 extern "C" DEPLOYTOOL_EXPORT IDeployTool *createDeployTool();

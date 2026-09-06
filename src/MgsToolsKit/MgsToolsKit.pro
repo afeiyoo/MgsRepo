@@ -1,6 +1,6 @@
 include($$PWD/../../Public.pri)
 
-QT       *= core gui network multimedia multimediawidgets
+QT       *= core gui network multimedia multimediawidgets concurrent
 
 TARGET = MgsToolsKit
 TEMPLATE = app
@@ -62,14 +62,16 @@ unix:!macx|win32: LIBS += \
     -l$$qtLibraryTargetName(CuteLogger) \
     -l$$qtLibraryTargetName(MobilePlusTerminal) \
     -l$$qtLibraryTargetName(SmartLaneController) \
-    -l$$qtLibraryTargetName(VehRecognizer)
+    -l$$qtLibraryTargetName(VehRecognizer) \
+    -l$$qtLibraryTargetName(DeployTool)
 
 INCLUDEPATH += \
     $$MGS_INCLUDE_PATH/ElaWidgetTools \
     $$MGS_INCLUDE_PATH/CuteLogger \
     $$MGS_INCLUDE_PATH/MobilePlusTerminal \
     $$MGS_INCLUDE_PATH/SmartLaneController \
-    $$MGS_INCLUDE_PATH/VehRecognizer
+    $$MGS_INCLUDE_PATH/VehRecognizer \
+    $$MGS_INCLUDE_PATH/DeployTool
 
 # 交付安装
 win32 {
@@ -86,14 +88,16 @@ win32 {
         $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(CuteLogger)}.dll \
         $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(MobilePlusTerminal)}.dll \
         $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(SmartLaneController)}.dll \
-        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(VehRecognizer)}.dll
+        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(VehRecognizer)}.dll \
+        $$MGS_LIBRARY_PATH/win/$${qtLibraryTargetName(DeployTool)}.dll
 } else {
     RUNTIME_LIBRARIES = \
         $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(ElaWidgetTools)}.so* \
         $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(CuteLogger)}.so* \
         $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(MobilePlusTerminal)}.so* \
         $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(SmartLaneController)}.so* \
-        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(VehRecognizer)}.so*
+        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(VehRecognizer)}.so* \
+        $$MGS_LIBRARY_PATH/linux/lib$${qtLibraryTargetName(DeployTool)}.so*
 
     # 动态库和可执行程序安装在同一个目录
     QMAKE_LFLAGS += -Wl,-rpath=\'\$$ORIGIN\'

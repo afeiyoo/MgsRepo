@@ -279,8 +279,8 @@ public:
     virtual bool isNetworkUpdating() const = 0;
 
 signals:
-    void networkUpdateStarted();
-    void networkUpdateFinished(bool success, const QString &message);
+    void sigNetworkUpdateStarted();
+    void sigNetworkUpdateFinished(bool success, const QString &message);
 };
 
 extern "C" DEPLOYTOOL_EXPORT IDeployTool *createDeployTool();
