@@ -85,8 +85,10 @@ MGS_OUTPUT_PATH = $$PWD
     MGS_LIBRARY_PATH = $$MGS_OUTPUT_PATH/$$MGS_LIBRARY_BASENAME
     # 可执行文件的输出目录
     MGS_BIN_PATH = $$MGS_OUTPUT_PATH/bin
-    # 引文头文件的输出目录
+    # 引用头文件的输出目录
     MGS_INCLUDE_PATH = $$MGS_OUTPUT_PATH/include
+    # 脚本文件的输出目录
+    MGS_SCRIPT_PATH = $$MGS_OUTPUT_PATH/script
 }
 
 # 函数定义，拷贝指定的动态库到目标目录 DESTDIR
