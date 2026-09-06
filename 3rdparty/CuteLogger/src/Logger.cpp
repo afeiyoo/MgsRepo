@@ -545,6 +545,7 @@ Logger::Logger(QObject *parent)
     , d_ptr(new LoggerPrivate)
 {
     Q_D(Logger);
+    qRegisterMetaType<LogLevel>("LogLevel");
     d->writeDefaultCategoryToGlobalInstance = false;
 }
 
