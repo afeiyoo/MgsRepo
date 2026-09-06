@@ -1,10 +1,10 @@
-﻿#ifndef ELAWINDOW_H
-#define ELAWINDOW_H
+#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAWINDOW_H_
+#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAWINDOW_H_
 
 #include <QMainWindow>
 
 #include "ElaAppBar.h"
-#include "ElaDef.h"
+#include "ElaWidgetToolsDef.h"
 #include "ElaSuggestBox.h"
 class ElaWindowPrivate;
 class ELA_EXPORT ElaWindow : public QMainWindow
@@ -15,6 +15,7 @@ class ELA_EXPORT ElaWindow : public QMainWindow
     Q_PROPERTY_CREATE_Q_H(bool, IsFixedSize)
     Q_PROPERTY_CREATE_Q_H(bool, IsDefaultClosed)
     Q_PROPERTY_CREATE_Q_H(int, AppBarHeight)
+    Q_PROPERTY_CREATE_Q_H(int, RibbonHeight)
     Q_PROPERTY_CREATE_Q_H(int, ThemeChangeTime)
     Q_PROPERTY_CREATE_Q_H(bool, IsCentralStackedWidgetTransparent)
     Q_PROPERTY_CREATE_Q_H(bool, IsAllowPageOpenInNewWindow)
@@ -41,9 +42,9 @@ public:
     QMenu* getCustomMenu() const;
 
     void setUserInfoCardVisible(bool isVisible);
-    void setUserInfoCardPixmap(QPixmap pix);
-    void setUserInfoCardTitle(QString title);
-    void setUserInfoCardSubTitle(QString subTitle);
+    void setUserInfoCardPixmap(const QPixmap& pix);
+    void setUserInfoCardTitle(const QString& title);
+    void setUserInfoCardSubTitle(const QString& subTitle);
     ElaNavigationType::NodeResult addExpanderNode(const QString& expanderTitle, QString& expanderKey, ElaIconType::IconName awesome = ElaIconType::None) const;
     ElaNavigationType::NodeResult addExpanderNode(const QString& expanderTitle, QString& expanderKey, const QString& targetExpanderKey, ElaIconType::IconName awesome = ElaIconType::None) const;
     ElaNavigationType::NodeResult addPageNode(const QString& pageTitle, QWidget* page, ElaIconType::IconName awesome = ElaIconType::None);
@@ -59,24 +60,24 @@ public:
     QWidget* getCentralWidget(int index) const;
     void removeCentralWidget(QWidget* centralWidget);
 
-    bool getNavigationNodeIsExpanded(QString expanderKey) const;
-    void expandNavigationNode(QString expanderKey);
-    void collapseNavigationNode(QString expanderKey);
-    void removeNavigationNode(QString nodeKey) const;
-    int getPageOpenInNewWindowCount(QString nodeKey) const;
-    void backtrackNavigationNode(QString nodeKey);
+    bool getNavigationNodeIsExpanded(const QString& expanderKey) const;
+    void expandNavigationNode(const QString& expanderKey);
+    void collapseNavigationNode(const QString& expanderKey);
+    void removeNavigationNode(const QString& nodeKey) const;
+    int getPageOpenInNewWindowCount(const QString& nodeKey) const;
+    void backtrackNavigationNode(const QString& nodeKey);
 
-    void setNodeKeyPoints(QString nodeKey, int keyPoints);
-    int getNodeKeyPoints(QString nodeKey) const;
+    void setNodeKeyPoints(const QString& nodeKey, int keyPoints);
+    int getNodeKeyPoints(const QString& nodeKey) const;
 
-    void setNavigationNodeTitle(QString nodeKey, QString nodeTitle);
-    QString getNavigationNodeTitle(QString nodeKey) const;
+    void setNavigationNodeTitle(const QString& nodeKey, const QString& nodeTitle);
+    QString getNavigationNodeTitle(const QString& nodeKey) const;
 
-    void navigation(QString pageKey);
+    void navigation(const QString& pageKey);
     int getCurrentNavigationIndex() const;
     QString getCurrentNavigationPageKey() const;
 
-    QList<ElaSuggestBox::SuggestData> getNavigationSuggestDataList() const;
+    const QList<ElaSuggestBox::SuggestData>& getNavigationSuggestDataList() const;
 
     void setWindowButtonFlag(ElaAppBarType::ButtonType buttonFlag, bool isEnable = true);
     void setWindowButtonFlags(ElaAppBarType::ButtonFlags buttonFlags);
@@ -86,7 +87,7 @@ public:
     QString getWindowMoviePath(ElaThemeType::ThemeMode themeMode) const;
 
     void setWindowPixmap(ElaThemeType::ThemeMode themeMode, const QPixmap& pixmap);
-    QPixmap getWindowPixmap(ElaThemeType::ThemeMode themeMode) const;
+    const QPixmap& getWindowPixmap(ElaThemeType::ThemeMode themeMode) const;
 
     void setWindowMovieRate(qreal rate);
     qreal getWindowMovieRate() const;
@@ -113,4 +114,5 @@ private:
     void setCentralWidget(QWidget* widget);
 };
 
-#endif // ELAWINDOW_H
+#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAWINDOW_H_
+

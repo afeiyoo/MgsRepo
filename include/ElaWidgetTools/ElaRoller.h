@@ -1,7 +1,8 @@
-#ifndef ELAFRAMEWORK_ELAWIDGETTOOLS_INCLUDE_ELAROLLER_H_
-#define ELAFRAMEWORK_ELAWIDGETTOOLS_INCLUDE_ELAROLLER_H_
+#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAROLLER_H_
+#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAROLLER_H_
 
-#include "ElaProperty.h"
+#include "ElaWidgetToolsExport.h"
+#include "ElaPropertyMacro.h"
 #include <QWidget>
 
 class ElaRollerPrivate;
@@ -10,7 +11,7 @@ class ELA_EXPORT ElaRoller : public QWidget
     Q_OBJECT
     Q_Q_CREATE(ElaRoller)
     Q_PROPERTY_CREATE_Q_H(int, BorderRadius)
-    Q_PROPERTY_CREATE_Q_H(QStringList, ItemList)
+    Q_PROPERTY_REF_CREATE_Q_H(QStringList, ItemList)
     Q_PROPERTY_CREATE_Q_H(int, ItemHeight)
     Q_PROPERTY_CREATE_Q_H(int, MaxVisibleItems)
     Q_PROPERTY_CREATE_Q_H(int, CurrentIndex)
@@ -34,4 +35,4 @@ protected:
     virtual void paintEvent(QPaintEvent* event) override;
 };
 
-#endif //ELAFRAMEWORK_ELAWIDGETTOOLS_INCLUDE_ELAROLLER_H_
+#endif //ELAWORKSPACE_ELAWIDGETTOOLS_ELAROLLER_H_
