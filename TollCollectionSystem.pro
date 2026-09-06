@@ -12,13 +12,13 @@ SUBDIRS += \
     # MobilePlusTerminal \
     # MgsToolsKit \
     # SmartLaneController \
-    # LaneDataService \
+    LaneDataService \
     # PadService \
     # ETC \
     # StationService \
     # ServiceHub \
     # CardService \
-    # DeployTool \
+    DeployTool \
     # VehRecognizer \
 
 LaneMaster.file = src/LaneMaster/LaneMaster.pro

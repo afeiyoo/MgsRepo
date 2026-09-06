@@ -1,6 +1,7 @@
 include($$PWD/../../Public.pri)
 
 QT -= gui
+QT += network sql
 
 TARGET = DeployTool
 
@@ -21,11 +22,12 @@ shared|dll {
 }
 
 include($$THIRD_PARTY_LIBRARY_PATH/utils/Utils.pri)
+include($$THIRD_PARTY_LIBRARY_PATH/EasyQtSql/EasyQtSql.pri)
 
 # 引入QXlsx库
-QXLSX_PARENTPATH = $$THIRD_PARTY_LIBRARY_PATH/QXlsx
-QXLSX_HEADERPATH = $$THIRD_PARTY_LIBRARY_PATH/QXlsx/header
-QXLSX_SOURCEPATH = $$THIRD_PARTY_LIBRARY_PATH/QXlsx/source
+QXLSX_PARENTPATH = $$THIRD_PARTY_LIBRARY_PATH/QXlsx/
+QXLSX_HEADERPATH = $$THIRD_PARTY_LIBRARY_PATH/QXlsx/header/
+QXLSX_SOURCEPATH = $$THIRD_PARTY_LIBRARY_PATH/QXlsx/source/
 include($$THIRD_PARTY_LIBRARY_PATH/QXlsx/QXlsx.pri)
 
 # You can make your code fail to compile if it uses deprecated APIs.
@@ -48,8 +50,25 @@ unix:!macx|win32: LIBS += \
 INCLUDEPATH += \
     $$MGS_INCLUDE_PATH/CuteLogger
 
-# Default rules for deployment.
-unix {
-    target.path = /usr/lib
+DISTFILES += \
+    $$MGS_SCRIPT_PATH/update_network.sh
+
+# 交付安装
+PUBLIC_HEADERS = \
+    $$PWD/deploytool_global.h \
+    $$PWD/ideploytool.h
+
+win32 {
+    INSTALL_DIR = $$MGS_BIN_PATH/win/$$TARGET
+} else {
+    INSTALL_DIR = $$MGS_BIN_PATH/linux/$$TARGET
 }
-!isEmpty(target.path): INSTALLS += target
+target.path = $$INSTALL_DIR/lib
+
+target_headers.files = $$PUBLIC_HEADERS
+target_headers.path = $$INSTALL_DIR/include
+
+public_include.files = $$PUBLIC_HEADERS
+public_include.path = $$MGS_INCLUDE_PATH/$$TARGET
+
+INSTALLS += target target_headers public_include
