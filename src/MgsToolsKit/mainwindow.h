@@ -4,7 +4,6 @@
 
 class ElaContentDialog;
 class ElaText;
-class ElaSuggestBox;
 
 class T_DeskPrinter;
 class T_InfoBoard;
@@ -27,7 +26,6 @@ public:
 
 private:
     ElaContentDialog *m_closeDialog = nullptr;
-    ElaSuggestBox *m_windowSuggestBox = nullptr;
     ElaText *m_statusText = nullptr;
 
     T_DeskPrinter *m_deskPrinterPage = nullptr;

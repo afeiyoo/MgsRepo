@@ -1,12 +1,8 @@
 #include "mainwindow.h"
 
-#include <QHBoxLayout>
-
-#include "ElaActionCommander.h"
 #include "ElaContentDialog.h"
 #include "ElaStatusBar.h"
 #include "ElaText.h"
-#include "ElaToolButton.h"
 
 #include "global/constant.h"
 #include "pages/t_cardrobot.h"
@@ -57,54 +53,6 @@ void MainWindow::initWindow()
     resize(780, 650);
 
     // 自定义AppBar菜单（TODO）
-
-    // 堆栈独立自定义窗口
-    QWidget *centralCustomWidget = new QWidget(this);
-    QHBoxLayout *centralCustomWidgetLayout = new QHBoxLayout(centralCustomWidget);
-    centralCustomWidgetLayout->setContentsMargins(13, 15, 9, 6);
-    ElaToolButton *leftButton = new ElaToolButton(this);
-    leftButton->setElaIcon(ElaIconType::AngleLeft);
-    leftButton->setEnabled(false);
-    connect(leftButton, &ElaToolButton::clicked, this, [=]() { ElaActionCommander::getInstance()->undoCommand("MgsToolsKitAction"); });
-    ElaToolButton *rightButton = new ElaToolButton(this);
-    rightButton->setElaIcon(ElaIconType::AngleRight);
-    rightButton->setEnabled(false);
-    connect(rightButton, &ElaToolButton::clicked, this, [=]() { ElaActionCommander::getInstance()->redoCommand("MgsToolsKitAction"); });
-    connect(ElaActionCommander::getInstance(), &ElaActionCommander::commanderStateChanged, this,
-            [=](const QString &domainName, ElaActionCommanderType::CommanderState state) {
-                if (domainName != "MgsToolsKitAction") {
-                    return;
-                }
-                switch (state) {
-                case ElaActionCommanderType::UndoValid: {
-                    leftButton->setEnabled(true);
-                    break;
-                }
-                case ElaActionCommanderType::UndoInvalid: {
-                    leftButton->setEnabled(false);
-                    break;
-                }
-                case ElaActionCommanderType::RedoValid: {
-                    rightButton->setEnabled(true);
-                    break;
-                }
-                case ElaActionCommanderType::RedoInvalid: {
-                    rightButton->setEnabled(false);
-                    break;
-                }
-                }
-            });
-    m_windowSuggestBox = new ElaSuggestBox(this);
-    m_windowSuggestBox->setFixedHeight(32);
-    m_windowSuggestBox->setPlaceholderText("搜索页面关键字");
-    connect(m_windowSuggestBox, &ElaSuggestBox::suggestionClicked, this,
-            [=](const ElaSuggestBox::SuggestData &suggestData) { navigation(suggestData.getSuggestData().value("ElaPageKey").toString()); });
-
-    centralCustomWidgetLayout->addWidget(leftButton);
-    centralCustomWidgetLayout->addWidget(rightButton);
-    centralCustomWidgetLayout->addWidget(m_windowSuggestBox);
-    centralCustomWidgetLayout->addStretch();
-    setCentralCustomWidget(centralCustomWidget);
 }
 
 void MainWindow::initEdgeLayout()
