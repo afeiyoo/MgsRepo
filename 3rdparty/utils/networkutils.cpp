@@ -40,3 +40,9 @@ QUrl NetworkUtils::appendUrlPath(const QUrl &baseUrl, const QString &pathPart)
 
     return url;
 }
+
+bool NetworkUtils::isIpV4Address(const QString &str)
+{
+    QHostAddress addr;
+    return addr.setAddress(str) && addr.protocol() == QAbstractSocket::IPv4Protocol;
+}
