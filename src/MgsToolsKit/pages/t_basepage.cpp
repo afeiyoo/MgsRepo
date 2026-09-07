@@ -32,5 +32,5 @@ void T_BasePage::createCustomWidget(QString desText)
     topLayout->addSpacing(2);
     topLayout->addWidget(descText);
     topLayout->addSpacing(2);
-    setCustomWidget(customWidget);
+    setTopCustomWidget(customWidget);
 }

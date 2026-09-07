@@ -48,6 +48,7 @@ private:
     ElaPushButton *m_loadButton = nullptr;
 
     // 部署信息展示
+    ElaText *m_infoTitleText = nullptr;
     ElaText *m_statusText = nullptr;
     ElaPushButton *m_expandButton = nullptr;
     ElaTreeView *m_infoTree = nullptr;

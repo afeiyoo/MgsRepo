@@ -10,11 +10,11 @@
 #include <QHeaderView>
 #include <QIntValidator>
 #include <QStandardItemModel>
-#include <QStyledItemDelegate>
 #include <QVBoxLayout>
 #include <QtConcurrent/QtConcurrentRun>
 
 #include "ElaLineEdit.h"
+#include "ElaMessageBar.h"
 #include "ElaPlainTextEdit.h"
 #include "ElaPushButton.h"
 #include "ElaText.h"
@@ -26,22 +26,6 @@
 using namespace Utils;
 
 namespace {
-// Ela 的文本绘制额外留有左边距，尺寸提示也需预留空间，避免列间文字挤压。
-class DeployInfoDelegate : public QStyledItemDelegate
-{
-public:
-    explicit DeployInfoDelegate(QObject *parent)
-        : QStyledItemDelegate(parent)
-    {}
-
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override
-    {
-        QSize size = QStyledItemDelegate::sizeHint(option, index);
-        size.rwidth() += 40;
-        return size;
-    }
-};
-
 ElaText *createLabel(const QString &text, QWidget *parent = nullptr)
 {
     auto *label = new ElaText(text, parent);
@@ -129,7 +113,7 @@ void T_DeployTool::initContent()
     m_laneEdit = new ElaLineEdit(this);
     m_laneEdit->setPlaceholderText("输入车道号");
     m_laneEdit->setValidator(new QIntValidator(1, 99, m_laneEdit)); // 车道号取值范围:1~99
-    m_loadButton = new ElaPushButton("加载部署信息", this);
+    m_loadButton = new ElaPushButton("加载信息", this);
     m_loadButton->setEnabled(false);
 
     inputLayout->addWidget(createLabel("采集表", this), 0, 0);
@@ -144,12 +128,14 @@ void T_DeployTool::initContent()
     inputLayout->setColumnStretch(3, 1);
 
     // 部署信息展示
-    m_statusText = createSectionTitle("部署信息: 尚未加载", this);
+    m_infoTitleText = createSectionTitle("部署信息", this);
+    m_statusText = createLabel("尚未加载", this);
     m_expandButton = new ElaPushButton("展开全部", this);
     m_expandButton->setEnabled(false);
     auto *infoTitleLayout = new QHBoxLayout();
     infoTitleLayout->setContentsMargins(0, 0, 0, 0);
     infoTitleLayout->setSpacing(8);
+    infoTitleLayout->addWidget(m_infoTitleText);
     infoTitleLayout->addWidget(m_statusText);
     infoTitleLayout->addWidget(m_expandButton);
     infoTitleLayout->addStretch();
@@ -157,7 +143,6 @@ void T_DeployTool::initContent()
     m_infoTree = new ElaTreeView(this);
     m_infoTree->setModel(m_infoModel);
     m_infoTree->setHeaderHidden(true);
-    m_infoTree->setItemDelegate(new DeployInfoDelegate(m_infoTree));
     m_infoTree->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_infoTree->setRootIsDecorated(true);
     m_infoTree->setMinimumHeight(220);
@@ -165,6 +150,7 @@ void T_DeployTool::initContent()
     m_infoTree->header()->setResizeContentsPrecision(-1);
     m_infoTree->header()->setStretchLastSection(true);
     m_infoTree->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_infoTree->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     // 日志区
     auto *logTitle = createSectionTitle("交互日志", this);
@@ -238,6 +224,7 @@ void T_DeployTool::onInputChanged()
 {
     refreshControlButtons();
     m_infoModel->removeRows(0, m_infoModel->rowCount());
+    m_statusText->setText("尚未加载");
 }
 
 void T_DeployTool::onLoadDeploymentInfo()
@@ -260,7 +247,7 @@ void T_DeployTool::onLoadDeploymentInfo()
     else if (!laneValid || laneID < 1 || laneID > 99)
         error = "请输入 1～99 范围内的车道号";
     if (!error.isEmpty()) {
-        m_statusText->setText(error);
+        ElaMessageBar::warning(ElaMessageBarType::BottomRight, "参数有误", error, 2000, this);
         appendLog(error);
         return;
     }
@@ -274,7 +261,7 @@ void T_DeployTool::onLoadDeploymentInfo()
         watcher->deleteLater();
         setLoadingState(false);
         if (!result.error.isEmpty()) {
-            m_statusText->setText(result.error);
+            ElaMessageBar::error(ElaMessageBarType::BottomRight, "加载失败", result.error, 2500, this);
             appendLog("加载失败：" + result.error);
             return;
         }
