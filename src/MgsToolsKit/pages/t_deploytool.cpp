@@ -145,10 +145,9 @@ void T_DeployTool::initContent()
     m_infoTree->setHeaderHidden(true);
     m_infoTree->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_infoTree->setRootIsDecorated(true);
-    m_infoTree->setMinimumHeight(220);
-    m_infoTree->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    m_infoTree->header()->setResizeContentsPrecision(-1);
-    m_infoTree->header()->setStretchLastSection(true);
+    m_infoTree->setMinimumHeight(200);
+    m_infoTree->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    m_infoTree->header()->setSectionResizeMode(1, QHeaderView::Stretch);
     m_infoTree->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     m_infoTree->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
@@ -163,8 +162,9 @@ void T_DeployTool::initContent()
     m_logEdit = new ElaPlainTextEdit(this);
     m_logEdit->setReadOnly(true);
     m_logEdit->setMaximumBlockCount(2000);
+    m_logEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_logEdit->setMinimumHeight(150);
-    m_logEdit->setPlaceholderText("采集表加载、车道查询结果和错误信息将显示在这里");
+    m_logEdit->setPlaceholderText("采集表加载、查询结果和错误信息将显示在这里");
 
     auto *centralWidget = new QWidget(this);
     centralWidget->setWindowTitle(windowTitle());
@@ -184,7 +184,15 @@ void T_DeployTool::onSelectExcelFile()
     const QString path = QFileDialog::getOpenFileName(this, "选择车道信息采集表", m_excelPathEdit->text(), "Excel 工作簿 (*.xlsx)");
     if (path.isEmpty())
         return;
-    m_excelPathEdit->setText(QFileInfo(path).absoluteFilePath());
+
+    QFileInfo fileInfo(path);
+    if (fileInfo.suffix().compare("xlsx", Qt::CaseInsensitive) != 0) {
+        ElaMessageBar::warning(ElaMessageBarType::BottomRight, "文件无效", "请选择 XLSX 格式的车道信息采集表", 2000, this);
+        appendLog(QString("文件无效：%1").arg(path));
+        return;
+    }
+
+    m_excelPathEdit->setText(fileInfo.absoluteFilePath());
 
     onInputChanged();
     appendLog(QString("已选择采集表：%1").arg(path));
@@ -294,7 +302,6 @@ void T_DeployTool::onLoadDeploymentInfo()
 void T_DeployTool::setLoadingState(bool loading)
 {
     m_isLoading = loading;
-    m_loadButton->setText(loading ? "正在加载…" : "加载部署信息");
     refreshControlButtons();
 }
 

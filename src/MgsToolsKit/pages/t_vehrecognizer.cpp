@@ -193,13 +193,14 @@ void T_VehRecognizer::initContent()
     logTitleLayout->addWidget(m_logClearButton);
     logTitleLayout->addStretch();
     m_logEdit = new ElaPlainTextEdit(this);
+    m_logEdit->setMaximumBlockCount(2000);
     m_logEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_logEdit->setReadOnly(true);
     m_logEdit->setMinimumHeight(150);
     m_logEdit->setPlaceholderText("设备交互日志将在这里显示");
 
     auto *centralWidget = new QWidget(this);
-    centralWidget->setWindowTitle("车型识别器测试工具");
+    centralWidget->setWindowTitle(windowTitle());
     auto *centralLayout = new QVBoxLayout(centralWidget);
     centralLayout->setContentsMargins(0, 5, 5, 0);
     centralLayout->setSpacing(5);
