@@ -138,6 +138,7 @@ void T_VehRecognizer::initContent()
     m_uploadUrlEdit = new ElaLineEdit(this);
     m_uploadUrlEdit->setPlaceholderText("状态上报URL，例如 http://127.0.0.1/status");
     m_uploadMinutesSpinBox = new ElaSpinBox(this);
+    m_uploadMinutesSpinBox->setButtonMode(ElaSpinBoxType::Compact);
     m_uploadMinutesSpinBox->setRange(1, 60);
     m_uploadMinutesSpinBox->setValue(10);
     m_uploadMinutesSpinBox->setSuffix("min");
@@ -146,6 +147,7 @@ void T_VehRecognizer::initContent()
     m_ledTextEdit = new ElaLineEdit(this);
     m_ledTextEdit->setPlaceholderText("LED显示内容");
     m_ledColorSpinBox = new ElaSpinBox(this);
+    m_ledColorSpinBox->setButtonMode(ElaSpinBoxType::Side);
     m_ledColorSpinBox->setRange(0, 2);
     m_ledColorSpinBox->setPrefix("颜色 ");
     m_ledColorSpinBox->setValue(1);
@@ -154,10 +156,12 @@ void T_VehRecognizer::initContent()
     m_voiceTextEdit = new ElaLineEdit(this);
     m_voiceTextEdit->setPlaceholderText("语音播报内容");
     m_voiceCountSpinBox = new ElaSpinBox(this);
+    m_voiceCountSpinBox->setButtonMode(ElaSpinBoxType::Compact);
     m_voiceCountSpinBox->setRange(0, 10);
     m_voiceCountSpinBox->setValue(1);
     m_voiceCountSpinBox->setPrefix("次数 ");
     m_voiceIntervalSpinBox = new ElaSpinBox(this);
+    m_voiceIntervalSpinBox->setButtonMode(ElaSpinBoxType::Compact);
     m_voiceIntervalSpinBox->setRange(0, 60);
     m_voiceIntervalSpinBox->setValue(3);
     m_voiceIntervalSpinBox->setSuffix("s");
@@ -189,6 +193,7 @@ void T_VehRecognizer::initContent()
     logTitleLayout->addWidget(m_logClearButton);
     logTitleLayout->addStretch();
     m_logEdit = new ElaPlainTextEdit(this);
+    m_logEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_logEdit->setReadOnly(true);
     m_logEdit->setMinimumHeight(150);
     m_logEdit->setPlaceholderText("设备交互日志将在这里显示");

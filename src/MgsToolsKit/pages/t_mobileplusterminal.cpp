@@ -75,7 +75,7 @@ void T_MobilePlusTerminal::initContent()
     m_connectInfoEdit = new ElaLineEdit(this);
     m_connectInfoEdit->setPlaceholderText("IP地址:端口，例如 127.0.0.1:9588");
     m_connectButton = new ElaPushButton("连接", this);
-    m_resetDisplayButton = new ElaPushButton("重置界面", this);
+    m_resetDisplayButton = new ElaPushButton("重置设备界面", this);
     m_connectionStatusText = createLabel("未连接", this);
     m_connectionStatusText->setStyleSheet("color: #ff0000");
     m_helpTypeText = createLabel("-", this);
