@@ -322,9 +322,9 @@ QVector<QPointF> StepperWidget::nodeCenters(const QRectF &content) const
     for (int i = 0; i < m_steps.size(); ++i) {
         const qreal ratio = static_cast<qreal>(i) / static_cast<qreal>(m_steps.size() - 1);
         if (m_orientation == Orientation::Horizontal) {
-            result.push_back(QPointF(content.left() + ratio * content.width(), content.top() + 46.0));
+            result.push_back(QPointF(content.left() + ratio * content.width(), content.top() + 16.0));
         } else {
-            result.push_back(QPointF(content.left() + 48.0, content.top() + ratio * content.height()));
+            result.push_back(QPointF(content.left() + 18.0, content.top() + ratio * content.height()));
         }
     }
     return result;
