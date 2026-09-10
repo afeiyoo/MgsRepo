@@ -2,7 +2,6 @@
 
 #include "t_basepage.h"
 
-class ElaComboBox;
 class ElaLineEdit;
 class ElaPlainTextEdit;
 class ElaPushButton;
@@ -31,7 +30,6 @@ private:
 
     void initContent();
     void createTerminal();
-    void setConnectionFieldsEnabled(bool enabled);
     void setCommandButtonsEnabled(bool enabled);
     void updateConnectionStatus(const QString &text, StatusTone tone);
     void resetConnectionUi();
@@ -41,9 +39,6 @@ private:
 
 private:
     ElaLineEdit *m_connectInfoEdit = nullptr;
-    ElaLineEdit *m_stationIdEdit = nullptr;
-    ElaSpinBox *m_laneIdSpinBox = nullptr;
-    ElaSpinBox *m_deviceSeqSpinBox = nullptr;
     ElaPushButton *m_connectButton = nullptr;
     ElaPushButton *m_resetDisplayButton = nullptr;
     ElaText *m_connectionStatusText = nullptr;

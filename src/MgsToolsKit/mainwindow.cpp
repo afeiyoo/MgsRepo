@@ -1,15 +1,17 @@
 #include "mainwindow.h"
 
-#include <QHBoxLayout>
-
-#include "ElaActionCommander.h"
 #include "ElaContentDialog.h"
+#include "ElaPushButton.h"
 #include "ElaStatusBar.h"
 #include "ElaText.h"
-#include "ElaToolButton.h"
+#include <QContextMenuEvent>
+#include <QMouseEvent>
+#include <QTreeView>
+#include <QVBoxLayout>
 
 #include "global/constant.h"
 #include "pages/t_cardrobot.h"
+#include "pages/t_deploytool.h"
 #include "pages/t_deskprinter.h"
 #include "pages/t_infoboard.h"
 #include "pages/t_mobileplusterminal.h"
@@ -56,54 +58,6 @@ void MainWindow::initWindow()
     resize(780, 650);
 
     // 自定义AppBar菜单（TODO）
-
-    // 堆栈独立自定义窗口
-    QWidget *centralCustomWidget = new QWidget(this);
-    QHBoxLayout *centralCustomWidgetLayout = new QHBoxLayout(centralCustomWidget);
-    centralCustomWidgetLayout->setContentsMargins(13, 15, 9, 6);
-    ElaToolButton *leftButton = new ElaToolButton(this);
-    leftButton->setElaIcon(ElaIconType::AngleLeft);
-    leftButton->setEnabled(false);
-    connect(leftButton, &ElaToolButton::clicked, this, [=]() { ElaActionCommander::getInstance()->undoCommand("MgsToolsKitAction"); });
-    ElaToolButton *rightButton = new ElaToolButton(this);
-    rightButton->setElaIcon(ElaIconType::AngleRight);
-    rightButton->setEnabled(false);
-    connect(rightButton, &ElaToolButton::clicked, this, [=]() { ElaActionCommander::getInstance()->redoCommand("MgsToolsKitAction"); });
-    connect(ElaActionCommander::getInstance(), &ElaActionCommander::commanderStateChanged, this,
-            [=](const QString &domainName, ElaActionCommanderType::CommanderState state) {
-                if (domainName != "MgsToolsKitAction") {
-                    return;
-                }
-                switch (state) {
-                case ElaActionCommanderType::UndoValid: {
-                    leftButton->setEnabled(true);
-                    break;
-                }
-                case ElaActionCommanderType::UndoInvalid: {
-                    leftButton->setEnabled(false);
-                    break;
-                }
-                case ElaActionCommanderType::RedoValid: {
-                    rightButton->setEnabled(true);
-                    break;
-                }
-                case ElaActionCommanderType::RedoInvalid: {
-                    rightButton->setEnabled(false);
-                    break;
-                }
-                }
-            });
-    m_windowSuggestBox = new ElaSuggestBox(this);
-    m_windowSuggestBox->setFixedHeight(32);
-    m_windowSuggestBox->setPlaceholderText("搜索页面关键字");
-    connect(m_windowSuggestBox, &ElaSuggestBox::suggestionClicked, this,
-            [=](const ElaSuggestBox::SuggestData &suggestData) { navigation(suggestData.getSuggestData().value("ElaPageKey").toString()); });
-
-    centralCustomWidgetLayout->addWidget(leftButton);
-    centralCustomWidgetLayout->addWidget(rightButton);
-    centralCustomWidgetLayout->addWidget(m_windowSuggestBox);
-    centralCustomWidgetLayout->addStretch();
-    setCentralCustomWidget(centralCustomWidget);
 }
 
 void MainWindow::initEdgeLayout()
@@ -133,6 +87,64 @@ void MainWindow::initContent()
     m_mobilePlusTerminalPage = new T_MobilePlusTerminal(this);
     addPageNode("手机+自助终端测试", m_mobilePlusTerminalPage, ElaIconType::MobileScreenButton);
 
+#ifdef Q_OS_LINUX
+    m_deployToolPage = new T_DeployTool(this);
+    addPageNode("信创车道系统部署", m_deployToolPage, ElaIconType::FerrisWheel);
+#else
+    addPageNode("信创车道系统部署", new QWidget(this), ElaIconType::FerrisWheel);
+    // 功能条件过滤
+    m_navigationView = findChild<QTreeView *>("ElaNavigationView");
+    if (m_navigationView) {
+        auto *model = m_navigationView->model();
+        m_deployToolIndex = model->index(model->rowCount() - 1, 0);
+        m_navigationView->viewport()->installEventFilter(this);
+    }
+#endif
+
     m_vehRecognizerPage = new T_VehRecognizer(this);
     addPageNode("车型识别器测试", m_vehRecognizerPage, ElaIconType::Dinosaur);
 }
+
+#ifndef Q_OS_LINUX
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (m_navigationView && watched == m_navigationView->viewport()) {
+        const auto type = event->type();
+        if (type == QEvent::MouseButtonPress || type == QEvent::MouseButtonRelease || type == QEvent::MouseButtonDblClick) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (m_navigationView->indexAt(mouseEvent->pos()) == m_deployToolIndex) {
+                if (type == QEvent::MouseButtonRelease && mouseEvent->button() == Qt::LeftButton) {
+                    ElaContentDialog dialog(this);
+                    auto *content = new QWidget(&dialog);
+                    auto *layout = new QVBoxLayout(content);
+                    layout->setContentsMargins(15, 25, 15, 10);
+                    auto *title = new ElaText("系统不支持", content);
+                    title->setTextStyle(ElaTextType::Title);
+                    auto *message = new ElaText("该工具仅支持 Linux 系统。", content);
+                    message->setTextStyle(ElaTextType::Body);
+                    message->setWordWrap(true);
+                    layout->addWidget(title);
+                    layout->addWidget(message);
+                    dialog.setCentralWidget(content);
+                    dialog.setLeftButtonText("");
+                    dialog.setMiddleButtonText("");
+                    dialog.setRightButtonText("确定");
+                    // 当前版本未提供按钮可见性接口，隐藏两个空文本按钮。
+                    for (auto *button : dialog.findChildren<ElaPushButton *>()) {
+                        if (button->text().isEmpty())
+                            button->hide();
+                    }
+                    dialog.exec();
+                }
+                return true;
+            }
+        } else if (type == QEvent::ContextMenu) {
+            // 禁止通过右键菜单在新窗口中打开占位页面。
+            auto *contextEvent = static_cast<QContextMenuEvent *>(event);
+            if (m_navigationView->indexAt(contextEvent->pos()) == m_deployToolIndex)
+                return true;
+        }
+    }
+    return ElaWindow::eventFilter(watched, event);
+}
+#endif

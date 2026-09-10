@@ -213,7 +213,7 @@ void MobilePlusTerminal::onReadyRead()
         uchar seq = static_cast<uchar>(m_buffer.at(3));
         bool ok = ((seq & 0xF0) == 0x80) && ((seq & 0x0F) >= 1 && (seq & 0x0F) <= 9);
         if (!ok) {
-            LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "序列号错误:" << seq;
+            LOG_CERROR(L_CATE).noquote() << deviceLogTag() << "序列号错误";
             m_buffer.remove(0, 1);
             continue;
         }

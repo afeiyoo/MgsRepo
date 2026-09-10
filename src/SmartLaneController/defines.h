@@ -21,7 +21,7 @@ static const int MAX_RETRY_TIMES = 3;   // 最大重传尝试次数
 static const int REQUEST_TIMEOUT = 750; // 请求超时时间，单位ms
 
 // 重连参数
-static const int HEARTBEAT_TIMEOUT = 6000;  // 心跳超时时间，单位ms
+static const int HEARTBEAT_TIMEOUT = 15000;  // 心跳超时时间，单位ms
 static const int MAX_RECONNECT_TIMES = 3;   // 最大自动重连次数
 static const int RECONNECT_INTERVAL = 1000; // 自动重连等待间隔，单位ms
 

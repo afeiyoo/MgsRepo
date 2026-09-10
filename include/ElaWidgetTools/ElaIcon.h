@@ -1,10 +1,11 @@
-#ifndef ELAICON_H
-#define ELAICON_H
+#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAICON_H_
+#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAICON_H_
 #include <QIcon>
 
-#include "ElaDef.h"
-#include "ElaProperty.h"
-#include "ElaSingleton.h"
+#include "ElaWidgetToolsDef.h"
+#include "ElaWidgetToolsExport.h"
+#include "ElaPropertyMacro.h"
+#include "ElaSingletonMacro.h"
 class ELA_EXPORT ElaIcon
 {
     Q_SINGLETON_CREATE_H(ElaIcon)
@@ -21,4 +22,4 @@ public:
     QIcon getElaIcon(ElaIconType::IconName awesome, int pixelSize, int fixedWidth, int fixedHeight, QColor iconColor);
 };
 
-#endif // ELAICON_H
+#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAICON_H_

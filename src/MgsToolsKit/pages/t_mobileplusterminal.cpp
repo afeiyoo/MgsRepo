@@ -9,7 +9,6 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
-#include "ElaComboBox.h"
 #include "ElaLineEdit.h"
 #include "ElaMessageBar.h"
 #include "ElaPlainTextEdit.h"
@@ -41,6 +40,8 @@ T_MobilePlusTerminal::T_MobilePlusTerminal(QWidget *parent)
     createCustomWidget("测试手机+自助终端的连接、展码、LED、图片显示及状态上传配置");
     initContent();
 
+    createTerminal();
+
     connect(m_connectButton, &ElaPushButton::clicked, this, &T_MobilePlusTerminal::onConnectServer);
     connect(m_qrCodeButton, &ElaPushButton::clicked, this, &T_MobilePlusTerminal::onShowQrCode);
     connect(m_ledButton, &ElaPushButton::clicked, this, &T_MobilePlusTerminal::onShowLed);
@@ -66,54 +67,28 @@ T_MobilePlusTerminal::~T_MobilePlusTerminal()
 
 void T_MobilePlusTerminal::initContent()
 {
-    auto *connectionBox = new QGroupBox("设备初始化", this);
-    auto *connectionLayout = new QVBoxLayout(connectionBox);
+    auto *connectionBox = new QGroupBox("设备初始化（初始化信息：站代码6701/福州西/车道11/设备序号1/协议0x01）", this);
+    auto *connectionLayout = new QHBoxLayout(connectionBox);
     connectionLayout->setContentsMargins(12, 8, 12, 8);
     connectionLayout->setSpacing(8);
 
     m_connectInfoEdit = new ElaLineEdit(this);
     m_connectInfoEdit->setPlaceholderText("IP地址:端口，例如 127.0.0.1:9588");
-    m_stationIdEdit = new ElaLineEdit(this);
-    m_stationIdEdit->setPlaceholderText("站编号");
-    m_laneIdSpinBox = new ElaSpinBox(this);
-    m_laneIdSpinBox->setRange(0, 99);
-    m_laneIdSpinBox->setValue(1);
-    m_deviceSeqSpinBox = new ElaSpinBox(this);
-    m_deviceSeqSpinBox->setRange(0, 99);
-    m_deviceSeqSpinBox->setValue(1);
     m_connectButton = new ElaPushButton("连接", this);
-    m_resetDisplayButton = new ElaPushButton("重置界面", this);
+    m_resetDisplayButton = new ElaPushButton("重置设备界面", this);
     m_connectionStatusText = createLabel("未连接", this);
     m_connectionStatusText->setStyleSheet("color: #ff0000");
     m_helpTypeText = createLabel("-", this);
 
-    auto *endpointLayout = new QHBoxLayout();
-    endpointLayout->setContentsMargins(0, 0, 0, 0);
-    endpointLayout->setSpacing(8);
-    endpointLayout->addWidget(m_connectInfoEdit, 1);
-    endpointLayout->addWidget(m_connectButton);
-    endpointLayout->addWidget(m_resetDisplayButton);
-    endpointLayout->addSpacing(16);
-    endpointLayout->addWidget(createLabel("设备状态", this));
-    endpointLayout->addWidget(m_connectionStatusText);
-    endpointLayout->addSpacing(16);
-    endpointLayout->addWidget(createLabel("求助类型", this));
-    endpointLayout->addWidget(m_helpTypeText);
-
-    auto *deviceLayout = new QHBoxLayout();
-    deviceLayout->setContentsMargins(0, 0, 0, 0);
-    deviceLayout->setSpacing(8);
-    deviceLayout->addWidget(createLabel("站编号", this));
-    deviceLayout->addWidget(m_stationIdEdit, 1);
-    deviceLayout->addSpacing(12);
-    deviceLayout->addWidget(createLabel("车道号", this));
-    deviceLayout->addWidget(m_laneIdSpinBox);
-    deviceLayout->addSpacing(12);
-    deviceLayout->addWidget(createLabel("设备序号", this));
-    deviceLayout->addWidget(m_deviceSeqSpinBox);
-
-    connectionLayout->addLayout(endpointLayout);
-    connectionLayout->addLayout(deviceLayout);
+    connectionLayout->addWidget(m_connectInfoEdit, 1);
+    connectionLayout->addWidget(m_connectButton);
+    connectionLayout->addWidget(m_resetDisplayButton);
+    connectionLayout->addSpacing(16);
+    connectionLayout->addWidget(createLabel("设备状态", this));
+    connectionLayout->addWidget(m_connectionStatusText);
+    connectionLayout->addSpacing(16);
+    connectionLayout->addWidget(createLabel("求助类型", this));
+    connectionLayout->addWidget(m_helpTypeText);
 
     auto *qrCodeBox = new QGroupBox("二维码显示", this);
     auto *qrCodeLayout = new QGridLayout(qrCodeBox);
@@ -154,6 +129,7 @@ void T_MobilePlusTerminal::initContent()
     m_uploadUrlEdit = new ElaLineEdit(this);
     m_uploadUrlEdit->setPlaceholderText("例如 http://127.0.0.1/status");
     m_uploadIntervalSpinBox = new ElaSpinBox(this);
+    m_uploadIntervalSpinBox->setButtonMode(ElaSpinBoxType::Compact);
     m_uploadIntervalSpinBox->setRange(1, 999);
     m_uploadIntervalSpinBox->setValue(10);
     m_uploadIntervalSpinBox->setSuffix(" s");
@@ -184,12 +160,14 @@ void T_MobilePlusTerminal::initContent()
     logTitleLayout->addWidget(m_logClearButton);
     logTitleLayout->addStretch();
     m_logEdit = new ElaPlainTextEdit(this);
+    m_logEdit->setMaximumBlockCount(2000);
+    m_logEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_logEdit->setReadOnly(true);
     m_logEdit->setPlaceholderText("设备交互日志将在这里显示");
     m_logEdit->setMinimumHeight(150);
 
     auto *centralWidget = new QWidget(this);
-    centralWidget->setWindowTitle("手机+自助终端测试工具");
+    centralWidget->setWindowTitle(windowTitle());
     auto *centralLayout = new QVBoxLayout(centralWidget);
     centralLayout->setContentsMargins(0, 5, 5, 0);
     centralLayout->setSpacing(5);
@@ -205,10 +183,10 @@ void T_MobilePlusTerminal::createTerminal()
 {
     if (m_terminal) {
         destroyMobilePlusTerminal(m_terminal);
+        m_terminal = nullptr;
     }
 
-    m_terminal = createMobilePlusTerminal(m_stationIdEdit->text().trimmed(), static_cast<uint>(m_laneIdSpinBox->value()),
-                                          static_cast<uint>(m_deviceSeqSpinBox->value()));
+    m_terminal = createMobilePlusTerminal("6701", 11, 1);
     m_terminal->setVersion(0x01);
 
     connect(m_terminal, &IMobilePlusTerminal::sigRequestHelp, this,
@@ -221,13 +199,13 @@ void T_MobilePlusTerminal::createTerminal()
 
         if (connected) {
             m_userDisconnectRequested = false;
-            setConnectionFieldsEnabled(false);
+            m_connectInfoEdit->setEnabled(false);
             m_connectButton->setText("断开");
             updateConnectionStatus("初始化中", StatusTone::Pending);
         } else if (m_userDisconnectRequested) {
             resetConnectionUi();
         } else {
-            setConnectionFieldsEnabled(false);
+            m_connectInfoEdit->setEnabled(false);
             m_connectButton->setText("停止重连");
             updateConnectionStatus("重连中", StatusTone::Pending);
         }
@@ -240,17 +218,18 @@ void T_MobilePlusTerminal::createTerminal()
         static const QStringList commandNames = {"设备初始化", "二维码显示", "LED显示", "图片显示", "状态上传配置", "界面重置"};
         const QString name = type < commandNames.size() ? commandNames.at(type) : QString("Type %1").arg(type);
         const QString title = success ? "指令成功" : "指令失败";
-        if (success)
+        if (success) {
             ElaMessageBar::success(ElaMessageBarType::BottomRight, title, name + "执行成功", 1200, this);
-        else
+        } else {
             ElaMessageBar::error(ElaMessageBarType::BottomRight, title, name + "执行失败或响应超时", 1800, this);
+        }
     });
     connect(m_terminal, &IMobilePlusTerminal::sigReconnectFailed, this, [this](uint) {
         m_connecting = false;
         m_connected = false;
         m_reconnecting = false;
         m_userDisconnectRequested = false;
-        setConnectionFieldsEnabled(true);
+        m_connectInfoEdit->setEnabled(true);
         setCommandButtonsEnabled(false);
         m_connectButton->setText("连接");
         updateConnectionStatus("未连接", StatusTone::Error);
@@ -266,18 +245,10 @@ void T_MobilePlusTerminal::onConnectServer()
         resetConnectionUi();
         return;
     }
-    if (m_stationIdEdit->text().trimmed().isEmpty()) {
-        showInputError("请输入站编号");
-        return;
-    }
 
     QString ip;
     quint16 port = 0;
     if (!parseEndpoint(ip, port))
-        return;
-
-    createTerminal();
-    if (!m_terminal)
         return;
 
     m_userDisconnectRequested = false;
@@ -285,7 +256,7 @@ void T_MobilePlusTerminal::onConnectServer()
     m_connected = false;
     m_reconnecting = false;
     updateConnectionStatus("连接中", StatusTone::Pending);
-    setConnectionFieldsEnabled(false);
+    m_connectInfoEdit->setEnabled(false);
     m_connectButton->setText("取消连接");
     m_terminal->connectServer(ip, port);
 }
@@ -354,14 +325,6 @@ void T_MobilePlusTerminal::onResetDisplay()
     m_terminal->resetDisplay();
 }
 
-void T_MobilePlusTerminal::setConnectionFieldsEnabled(bool enabled)
-{
-    m_connectInfoEdit->setEnabled(enabled);
-    m_stationIdEdit->setEnabled(enabled);
-    m_laneIdSpinBox->setEnabled(enabled);
-    m_deviceSeqSpinBox->setEnabled(enabled);
-}
-
 void T_MobilePlusTerminal::setCommandButtonsEnabled(bool enabled)
 {
     m_qrCodeButton->setEnabled(enabled);
@@ -392,7 +355,7 @@ void T_MobilePlusTerminal::resetConnectionUi()
     m_connecting = false;
     m_connected = false;
     m_reconnecting = false;
-    setConnectionFieldsEnabled(true);
+    m_connectInfoEdit->setEnabled(true);
     setCommandButtonsEnabled(false);
     m_connectButton->setText("连接");
     updateConnectionStatus("未连接", StatusTone::Error);

@@ -63,8 +63,7 @@ bin/
 .svn/
 
 # temp
-src/Common/
-src/Devices/
-src/DTPV2/
 lib/
 bin/
+.codegraph/
+
