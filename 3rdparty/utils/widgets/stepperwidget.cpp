@@ -256,7 +256,12 @@ void StepperWidget::paintEvent(QPaintEvent *)
 
         QRectF textRect;
         if (m_orientation == Orientation::Horizontal) {
-            textRect = QRectF(center.x() - 82.0, center.y() + 28.0, 164.0, 70.0);
+            // 文字宽度不能超过相邻节点间距，窄窗口下保留间隔并换行/省略。
+            const qreal nodeSpacing = centers.size() > 1 ? area.width() / (centers.size() - 1) : width();
+            const qreal textWidth = qMax(0.0, qMin(164.0, nodeSpacing - 12.0));
+            textRect = QRectF(center.x() - textWidth / 2.0, center.y() + 28.0, textWidth, 70.0);
+            painter.save();
+            painter.setClipRect(textRect, Qt::IntersectClip);
             painter.setFont(titleFont);
             painter.setPen(step.enabled ? QColor("#2d3740") : QColor("#8A96A0"));
             painter.drawText(textRect.adjusted(0, 0, 0, -38), Qt::AlignTop | Qt::AlignHCenter,
@@ -265,6 +270,7 @@ void StepperWidget::paintEvent(QPaintEvent *)
             painter.setPen(step.enabled ? QColor("#66727c") : QColor("#9AA5AE"));
             painter.drawText(textRect.adjusted(0, 24, 0, 0), Qt::AlignTop | Qt::AlignHCenter,
                              elidedDescription(descMetrics, step.description, static_cast<int>(textRect.width()), 2));
+            painter.restore();
         } else {
             textRect = QRectF(center.x() + 34.0, center.y() - 24.0, area.right() - center.x() - 48.0, 64.0);
             painter.setFont(titleFont);
