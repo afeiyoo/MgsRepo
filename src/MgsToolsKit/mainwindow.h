@@ -1,6 +1,9 @@
 #pragma once
 
 #include "ElaWindow.h"
+#include <QPersistentModelIndex>
+
+class QTreeView;
 
 class ElaContentDialog;
 class ElaText;
@@ -25,6 +28,11 @@ public:
     void initContent();
 
 private:
+#ifndef Q_OS_LINUX
+    bool eventFilter(QObject *watched, QEvent *event) override;
+    QTreeView *m_navigationView = nullptr;
+    QPersistentModelIndex m_deployToolIndex;
+#endif
     ElaContentDialog *m_closeDialog = nullptr;
     ElaText *m_statusText = nullptr;
 

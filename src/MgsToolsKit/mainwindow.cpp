@@ -1,8 +1,13 @@
 #include "mainwindow.h"
 
 #include "ElaContentDialog.h"
+#include "ElaPushButton.h"
 #include "ElaStatusBar.h"
 #include "ElaText.h"
+#include <QContextMenuEvent>
+#include <QMouseEvent>
+#include <QTreeView>
+#include <QVBoxLayout>
 
 #include "global/constant.h"
 #include "pages/t_cardrobot.h"
@@ -82,9 +87,64 @@ void MainWindow::initContent()
     m_mobilePlusTerminalPage = new T_MobilePlusTerminal(this);
     addPageNode("手机+自助终端测试", m_mobilePlusTerminalPage, ElaIconType::MobileScreenButton);
 
+#ifdef Q_OS_LINUX
     m_deployToolPage = new T_DeployTool(this);
     addPageNode("信创车道系统部署", m_deployToolPage, ElaIconType::FerrisWheel);
+#else
+    addPageNode("信创车道系统部署", new QWidget(this), ElaIconType::FerrisWheel);
+    // 功能条件过滤
+    m_navigationView = findChild<QTreeView *>("ElaNavigationView");
+    if (m_navigationView) {
+        auto *model = m_navigationView->model();
+        m_deployToolIndex = model->index(model->rowCount() - 1, 0);
+        m_navigationView->viewport()->installEventFilter(this);
+    }
+#endif
 
     m_vehRecognizerPage = new T_VehRecognizer(this);
     addPageNode("车型识别器测试", m_vehRecognizerPage, ElaIconType::Dinosaur);
 }
+
+#ifndef Q_OS_LINUX
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (m_navigationView && watched == m_navigationView->viewport()) {
+        const auto type = event->type();
+        if (type == QEvent::MouseButtonPress || type == QEvent::MouseButtonRelease || type == QEvent::MouseButtonDblClick) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (m_navigationView->indexAt(mouseEvent->pos()) == m_deployToolIndex) {
+                if (type == QEvent::MouseButtonRelease && mouseEvent->button() == Qt::LeftButton) {
+                    ElaContentDialog dialog(this);
+                    auto *content = new QWidget(&dialog);
+                    auto *layout = new QVBoxLayout(content);
+                    layout->setContentsMargins(15, 25, 15, 10);
+                    auto *title = new ElaText("系统不支持", content);
+                    title->setTextStyle(ElaTextType::Title);
+                    auto *message = new ElaText("该工具仅支持 Linux 系统。", content);
+                    message->setTextStyle(ElaTextType::Body);
+                    message->setWordWrap(true);
+                    layout->addWidget(title);
+                    layout->addWidget(message);
+                    dialog.setCentralWidget(content);
+                    dialog.setLeftButtonText("");
+                    dialog.setMiddleButtonText("");
+                    dialog.setRightButtonText("确定");
+                    // 当前版本未提供按钮可见性接口，隐藏两个空文本按钮。
+                    for (auto *button : dialog.findChildren<ElaPushButton *>()) {
+                        if (button->text().isEmpty())
+                            button->hide();
+                    }
+                    dialog.exec();
+                }
+                return true;
+            }
+        } else if (type == QEvent::ContextMenu) {
+            // 禁止通过右键菜单在新窗口中打开占位页面。
+            auto *contextEvent = static_cast<QContextMenuEvent *>(event);
+            if (m_navigationView->indexAt(contextEvent->pos()) == m_deployToolIndex)
+                return true;
+        }
+    }
+    return ElaWindow::eventFilter(watched, event);
+}
+#endif
