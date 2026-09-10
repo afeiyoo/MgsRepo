@@ -16,7 +16,6 @@
 #include <QProcess>
 #include <QSqlDatabase>
 #include <QStandardPaths>
-#include <QTimer>
 
 using namespace Utils;
 using namespace QXlsx;
@@ -26,65 +25,6 @@ DeployTool::DeployTool(QObject *parent)
     : IDeployTool(parent)
 {
     m_conf = new ConfigUtils(this);
-
-    m_networkProcess = new QProcess(this);
-    m_networkProcess->setProcessChannelMode(QProcess::SeparateChannels);
-
-    m_networkTimeoutTimer = new QTimer(this);
-    m_networkTimeoutTimer->setSingleShot(true);
-
-    connect(m_networkProcess, &QProcess::started, this, [this]() { emit sigNetworkUpdateStarted(); });
-
-    connect(m_networkProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-            [this](int exitCode, QProcess::ExitStatus exitStatus) {
-                if (!m_networkUpdating)
-                    return;
-
-                m_networkTimeoutTimer->stop();
-                const QString standardOutput = QString::fromLocal8Bit(m_networkProcess->readAllStandardOutput()).trimmed();
-                const QString standardError = QString::fromLocal8Bit(m_networkProcess->readAllStandardError()).trimmed();
-
-                if (m_networkTimedOut) {
-                    const QString message = standardError.isEmpty() ? "网络配置脚本执行超时"
-                                                                    : QStringLiteral("网络配置脚本执行超时: %1").arg(standardError);
-                    finishNetworkUpdate(false, message);
-                    return;
-                }
-
-                if (exitStatus != QProcess::NormalExit || exitCode != 0) {
-                    QString detail = standardError;
-                    if (detail.isEmpty())
-                        detail = standardOutput;
-
-                    const QString message = detail.isEmpty() ? QStringLiteral("网络配置脚本执行失败，退出码: %1").arg(exitCode)
-                                                             : QStringLiteral("网络配置脚本执行失败，退出码: %1，错误: %2").arg(exitCode).arg(detail);
-                    finishNetworkUpdate(false, message);
-                    return;
-                }
-
-                finishNetworkUpdate(true, standardOutput.isEmpty() ? QStringLiteral("网络配置成功") : standardOutput);
-            });
-
-    connect(m_networkProcess, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
-        if (!m_networkUpdating || error != QProcess::FailedToStart)
-            return;
-
-        m_networkTimeoutTimer->stop();
-        finishNetworkUpdate(false, QStringLiteral("无法启动网络配置脚本: %1").arg(m_networkProcess->errorString()));
-    });
-
-    connect(m_networkTimeoutTimer, &QTimer::timeout, this, [this]() {
-        if (!m_networkUpdating)
-            return;
-
-        m_networkTimedOut = true;
-        m_networkProcess->terminate();
-
-        QTimer::singleShot(3000, this, [this]() {
-            if (m_networkUpdating && m_networkProcess->state() != QProcess::NotRunning)
-                m_networkProcess->kill();
-        });
-    });
 }
 
 DeployTool::~DeployTool()
@@ -345,7 +285,7 @@ ST_DeployInfo DeployTool::getCurDeployInfo(const QString &stationID, int laneID)
     return m_deployInfos.value(key);
 }
 
-bool DeployTool::saveDeviceCtrlFile(const ST_DeployInfo &info, const QString &path, QString &errDesc)
+bool DeployTool::saveDeviceCtrlFile(const ST_DeployInfo &info, QString &errDesc)
 {
     QVariantMap oneMap;
 
@@ -488,16 +428,12 @@ bool DeployTool::saveDeviceCtrlFile(const ST_DeployInfo &info, const QString &pa
     oneMap["LaneType"] = info.baseInfo.laneType;
 
     QByteArray data = DataDealUtils::mapToJson(oneMap, QJsonDocument::Indented);
-    return saveFile(path, data, errDesc);
+    QString savePath = QDir(LANE_CONFIG_DIR).filePath("DeviceCtrl.json");
+    return saveFile(savePath, data, errDesc);
 }
 
-bool DeployTool::saveLaneUIFile(const ST_DeployInfo &info, const QString &path, QString &errDesc)
+bool DeployTool::saveLaneUIFile(const ST_DeployInfo &info, QString &errDesc)
 {
-    if (info.baseInfo.laneType == 3 || info.baseInfo.laneType == 4) {
-        LOG_CINFO(L_CATE).noquote() << "ETC车道不需要生成LaneUI.json文件";
-        return true;
-    }
-
     QVariantMap oneMap;
     if (info.reader.isEnable) {
         QVariantMap aMap;
@@ -515,10 +451,11 @@ bool DeployTool::saveLaneUIFile(const ST_DeployInfo &info, const QString &path, 
     oneMap["CfgVersion"] = "202312231614";
 
     QByteArray data = DataDealUtils::mapToJson(oneMap, QJsonDocument::Indented);
-    return saveFile(path, data, errDesc);
+    QString savePath = QDir(LANE_CONFIG_DIR).filePath("LaneUI.json");
+    return saveFile(savePath, data, errDesc);
 }
 
-bool DeployTool::saveLaneBaseConfigFile(const ST_DeployInfo &info, const QString &path, QString &errDesc)
+bool DeployTool::saveLaneBaseConfigFile(const ST_DeployInfo &info, QString &errDesc)
 {
     QString content;
     QTextStream stream(&content);
@@ -547,10 +484,34 @@ bool DeployTool::saveLaneBaseConfigFile(const ST_DeployInfo &info, const QString
                << "dbuser=" << info.redis.dbUser << "\n";
     }
 
-    return saveFile(path, content.toUtf8(), errDesc);
+    QString savePath = QDir(LANE_CONFIG_DIR).filePath("LaneBaseConfig.ini");
+    return saveFile(savePath, content.toUtf8(), errDesc);
 }
 
-bool DeployTool::saveDtpAgentFile(const ST_DeployInfo &info, const QString &fullBlackName, const QString &path, QString &errDesc)
+bool DeployTool::initLaneSoftware(const ST_DeployInfo &info, QString &errDesc)
+{
+    if (!saveDeviceCtrlFile(info, errDesc)) {
+        LOG_CERROR(L_CATE).noquote() << "保存DeviceCtrl.json失败:" << errDesc;
+        return false;
+    }
+    if ((info.baseInfo.laneType != 3 && info.baseInfo.laneType != 4) && !saveLaneUIFile(info, errDesc)) {
+        LOG_CERROR(L_CATE).noquote() << "保存LaneUI.json失败:" << errDesc;
+        return false;
+    }
+    if (!saveLaneBaseConfigFile(info, errDesc)) {
+        LOG_CERROR(L_CATE).noquote() << "保存LaneBaseConfig.ini失败:" << errDesc;
+        return false;
+    }
+    if (!syncDBConfig(info, errDesc)) {
+        LOG_CERROR(L_CATE).noquote() << "数据库配置同步失败:" << errDesc;
+        return false;
+    }
+
+    LOG_CINFO(L_CATE).noquote() << "车道收费软件初始化完成";
+    return true;
+}
+
+bool DeployTool::initDtpAgent(const ST_DeployInfo &info, const QString &fullVer, QString &errDesc)
 {
     QString content;
     QTextStream stream(&content);
@@ -583,7 +544,7 @@ bool DeployTool::saveDtpAgentFile(const ST_DeployInfo &info, const QString &full
            << "DBUser=tsman\n"
            << "\n"
            << "[System]\n"
-           << QString("Black515=%1\n").arg(fullBlackName) << "SubSysID=4\n"
+           << QString("Black515=ETCBlackCard_%1.zip\n").arg(fullVer) << "SubSysID=4\n"
            << "deal_threads=TradeQ:1, CommandQ:2, MonitorQ:1, ParamQ:2\n"
            << "down_path=/lane_data/fjeit/dtpagent/download\n"
            << "err_path=/lane_data/fjeit/dtpagent/err\n"
@@ -594,10 +555,14 @@ bool DeployTool::saveDtpAgentFile(const ST_DeployInfo &info, const QString &full
            << "sibling_queue=\n"
            << "upload_path=/lane_data/fjeit/LaneMainLocal/upload\n";
 
-    return saveFile(path, content.toUtf8(), errDesc);
+    QString savePath = QDir(DTP_CONFGI_DIR).filePath("DtpAgent.cfg");
+    if (!saveFile(savePath, content.toUtf8(), errDesc))
+        return false;
+
+    return restartService("dtpagent.service", errDesc);
 }
 
-bool DeployTool::saveStartFile(const ST_DeployInfo &info, const QString &ver, const QString &path, QString &errDesc)
+bool DeployTool::initStart123(const ST_DeployInfo &info, const QString &ver, QString &errDesc)
 {
     QVariantMap oneMap;
     oneMap["apptype"] = "local";
@@ -624,17 +589,68 @@ bool DeployTool::saveStartFile(const ST_DeployInfo &info, const QString &ver, co
     oneMap["server1"] = info.baseInfo.stationIP;
 
     QByteArray data = DataDealUtils::mapToJson(oneMap, QJsonDocument::Indented);
-    return saveFile(path, data, errDesc);
+    QString savePath = QDir(START123_CONFIG_DIR).filePath("start123.json");
+    if (!saveFile(savePath, data, errDesc))
+        return false;
+
+    return restartService("start123.service", errDesc);
+}
+
+bool DeployTool::restartService(const QString &serviceName, QString &errDesc)
+{
+    errDesc.clear();
+    const QString systemctl = QStandardPaths::findExecutable(QStringLiteral("systemctl"));
+    if (systemctl.isEmpty()) {
+        errDesc = QStringLiteral("无法重启服务 %1：未找到 systemctl").arg(serviceName);
+        LOG_CERROR(L_CATE).noquote() << errDesc;
+        return false;
+    }
+
+    LOG_CINFO(L_CATE).noquote() << QStringLiteral("开始重启服务：%1").arg(serviceName);
+    QProcess process;
+    process.setProcessChannelMode(QProcess::SeparateChannels);
+    // 禁止交互式密码询问，权限不足时直接返回错误。
+    process.start(systemctl, {QStringLiteral("--no-ask-password"), QStringLiteral("restart"), serviceName});
+    if (!process.waitForStarted(5000)) {
+        errDesc = QStringLiteral("无法启动服务重启命令（%1）：%2").arg(serviceName, process.errorString());
+        LOG_CERROR(L_CATE).noquote() << errDesc;
+        return false;
+    }
+
+    const bool finished = process.waitForFinished(120000);
+    if (!finished) {
+        const bool timedOut = process.error() == QProcess::Timedout;
+        const QString processError = process.errorString();
+        if (process.state() != QProcess::NotRunning) {
+            process.terminate();
+            if (!process.waitForFinished(3000)) {
+                process.kill();
+                process.waitForFinished(3000);
+            }
+        }
+        // 停止 systemctl 客户端不代表 systemd 中的重启任务已取消。
+        errDesc = timedOut ? QStringLiteral("等待服务 %1 重启超时（120秒），请检查服务实际状态").arg(serviceName)
+                           : QStringLiteral("等待服务 %1 重启失败：%2").arg(serviceName, processError);
+    } else if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        errDesc = QStringLiteral("服务 %1 重启失败，退出码：%2").arg(serviceName).arg(process.exitCode());
+    }
+
+    const QString standardError = QString::fromLocal8Bit(process.readAllStandardError()).trimmed();
+    const QString standardOutput = QString::fromLocal8Bit(process.readAllStandardOutput()).trimmed();
+    if (!errDesc.isEmpty()) {
+        const QString detail = standardError.isEmpty() ? standardOutput : standardError;
+        if (!detail.isEmpty())
+            errDesc += QStringLiteral("，详情：%1").arg(detail);
+        LOG_CERROR(L_CATE).noquote() << errDesc;
+        return false;
+    }
+    LOG_CINFO(L_CATE).noquote() << QStringLiteral("服务 %1 重启成功").arg(serviceName);
+    return true;
 }
 
 bool DeployTool::updateNetwork(const ST_DeployInfo &info, const QString &interfaceName, QString &errDesc)
 {
     errDesc.clear();
-
-    if (m_networkUpdating) {
-        errDesc = "网络配置任务正在执行，请勿重复操作";
-        return false;
-    }
 
     const QString scriptPath = QDir(QCoreApplication::applicationDirPath()).filePath("script/update_network.sh");
     const QFileInfo scriptInfo(scriptPath);
@@ -659,15 +675,41 @@ bool DeployTool::updateNetwork(const ST_DeployInfo &info, const QString &interfa
                                    DNS_1,
                                    DNS_2};
 
-    m_networkProcess->readAllStandardOutput();
-    m_networkProcess->readAllStandardError();
-    m_networkProcess->setProgram(bash);
-    m_networkProcess->setArguments(arguments);
+    QProcess process;
+    process.setProcessChannelMode(QProcess::SeparateChannels);
+    process.start(bash, arguments);
+    if (!process.waitForStarted(5000)) {
+        errDesc = QStringLiteral("无法启动网络配置脚本: %1").arg(process.errorString());
+        LOG_CERROR(L_CATE).noquote() << errDesc;
+        return false;
+    }
 
-    m_networkTimedOut = false;
-    m_networkUpdating = true;
-    m_networkProcess->start();            // 启动异步执行脚本
-    m_networkTimeoutTimer->start(120000); // 120s超时
+    const bool finished = process.waitForFinished(120000);
+    if (!finished) {
+        const bool timedOut = process.error() == QProcess::Timedout;
+        const QString processError = process.errorString();
+        if (process.state() != QProcess::NotRunning) {
+            process.terminate();
+            if (!process.waitForFinished(3000)) {
+                process.kill();
+                process.waitForFinished(3000);
+            }
+        }
+        errDesc = timedOut ? QStringLiteral("网络配置脚本执行超时（120秒）") : QStringLiteral("网络配置脚本执行失败: %1").arg(processError);
+    }
+
+    const QString standardOutput = QString::fromLocal8Bit(process.readAllStandardOutput()).trimmed();
+    const QString standardError = QString::fromLocal8Bit(process.readAllStandardError()).trimmed();
+    if (finished && (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0))
+        errDesc = QStringLiteral("网络配置脚本执行失败，退出码: %1").arg(process.exitCode());
+    if (!errDesc.isEmpty()) {
+        const QString detail = standardError.isEmpty() ? standardOutput : standardError;
+        if (!detail.isEmpty())
+            errDesc += QStringLiteral("，详情: %1").arg(detail);
+        LOG_CERROR(L_CATE).noquote() << errDesc;
+        return false;
+    }
+    LOG_CINFO(L_CATE).noquote() << (standardOutput.isEmpty() ? QStringLiteral("网络配置成功") : standardOutput);
     return true;
 }
 
@@ -749,11 +791,85 @@ bool DeployTool::syncDBConfig(const ST_DeployInfo &info, QString &errDesc)
     QStringList errors;
 
     // 同步t_laneconfig表
+    // 将全表记录统一归属到当前车道
+    const QString sqlUpdateLane = QStringLiteral("UPDATE t_laneconfig SET stationId = :stationId, laneId = :laneId, laneType = :laneType");
+    const QVariantMap laneParams = {{"stationId", info.baseInfo.stationID}, {"laneId", info.baseInfo.laneID}, {"laneType", info.baseInfo.laneType}};
+    if (!executeSql(sdb, "t_laneconfig全表车道信息", sqlUpdateLane, laneParams, errDesc)) {
+        LOG_CERROR(L_CATE).noquote() << errDesc;
+        return false;
+    }
+
     const QString sqlLaneconfig = QStringLiteral("INSERT INTO t_laneconfig "
-                                                 "(stationId, laneId, LaneType, ItemKey, ItemValue, reserve, updateTime) "
+                                                 "(stationId, laneId, laneType, itemKey, itemValue, reserve, updateTime) "
                                                  "VALUES (:stationId, :laneId, :laneType, :itemKey, :itemValue, NULL, CURRENT_TIMESTAMP) "
                                                  "ON DUPLICATE KEY UPDATE "
                                                  "ItemValue = VALUES(ItemValue), updateTime = CURRENT_TIMESTAMP");
+    // 更新基础信息
+    {
+        const QVariantMap params1 = {{"stationId", info.baseInfo.stationID},
+                                     {"laneId", info.baseInfo.laneID},
+                                     {"laneType", info.baseInfo.laneType},
+                                     {"itemKey", "LaneBaseEnv_CNLaneID"},
+                                     {"itemValue", info.baseInfo.roadNetNo}};
+        const QVariantMap params2 = {{"stationId", info.baseInfo.stationID},
+                                     {"laneId", info.baseInfo.laneID},
+                                     {"laneType", info.baseInfo.laneType},
+                                     {"itemKey", "LaneBaseEnv_PSDFlagID"},
+                                     {"itemValue", info.baseInfo.flagHexNo}};
+        const QVariantMap params3 = {{"stationId", info.baseInfo.stationID},
+                                     {"laneId", info.baseInfo.laneID},
+                                     {"laneType", info.baseInfo.laneType},
+                                     {"itemKey", "LaneBaseEnv_PSDFlagName"},
+                                     {"itemValue", info.baseInfo.flagName}};
+        const QVariantMap params4 = {{"stationId", info.baseInfo.stationID},
+                                     {"laneId", info.baseInfo.laneID},
+                                     {"laneType", info.baseInfo.laneType},
+                                     {"itemKey", "LaneBaseEnv_StationID"},
+                                     {"itemValue", info.baseInfo.flagName}};
+        const QVariantMap params5 = {{"stationId", info.baseInfo.stationID},
+                                     {"laneId", info.baseInfo.laneID},
+                                     {"laneType", info.baseInfo.laneType},
+                                     {"itemKey", "LaneBaseEnv_LaneIP"},
+                                     {"itemValue", info.baseInfo.flagName}};
+        QString itemError;
+        if (!executeSql(sdb, "t_laneconfig.LaneBaseEnv_CNLaneID", sqlLaneconfig, params1, itemError))
+            errors.append(itemError);
+        if (!executeSql(sdb, "t_laneconfig.LaneBaseEnv_PSDFlagID", sqlLaneconfig, params2, itemError))
+            errors.append(itemError);
+        if (!executeSql(sdb, "t_laneconfig.LaneBaseEnv_PSDFlagName", sqlLaneconfig, params3, itemError))
+            errors.append(itemError);
+        if (!executeSql(sdb, "t_laneconfig.LaneBaseEnv_StationID", sqlLaneconfig, params3, itemError))
+            errors.append(itemError);
+        if (!executeSql(sdb, "t_laneconfig.LaneBaseEnv_LaneIP", sqlLaneconfig, params3, itemError))
+            errors.append(itemError);
+    }
+    // 更新后通道配置
+    if (info.baseInfo.isConvenientLane && info.baseInfo.laneType != 3 && info.baseInfo.laneType != 4) {
+        const QVariantMap params1 = {{"stationId", info.baseInfo.stationID},
+                                     {"laneId", info.baseInfo.laneID},
+                                     {"laneType", info.baseInfo.laneType},
+                                     {"itemKey", "SpecialStationFlag"},
+                                     {"itemValue", "1"}};
+        const QVariantMap params2 = {{"stationId", info.baseInfo.stationID},
+                                     {"laneId", info.baseInfo.laneID},
+                                     {"laneType", info.baseInfo.laneType},
+                                     {"itemKey", "SpecialHolidayFlag"},
+                                     {"itemValue", "1"}};
+        const QVariantMap params3 = {{"stationId", info.baseInfo.stationID},
+                                     {"laneId", info.baseInfo.laneID},
+                                     {"laneType", info.baseInfo.laneType},
+                                     {"itemKey", "UTurnFreeFlag"},
+                                     {"itemValue", "1"}};
+        QString itemError;
+        if (!executeSql(sdb, "t_laneconfig.SpecialStationFlag", sqlLaneconfig, params1, itemError))
+            errors.append(itemError);
+        if (!executeSql(sdb, "t_laneconfig.SpecialHolidayFlag", sqlLaneconfig, params2, itemError))
+            errors.append(itemError);
+        if (info.baseInfo.laneType == 2 && !executeSql(sdb, "t_laneconfig.UTurnFreeFlag", sqlLaneconfig, params1, itemError)) {
+            errors.append(itemError);
+        }
+    }
+
     // 更新小黄人配置
     if (info.recognizer.isEnable) {
         const QVariantMap params1 = {{"stationId", info.baseInfo.stationID},
@@ -768,9 +884,9 @@ bool DeployTool::syncDBConfig(const ST_DeployInfo &info, QString &errDesc)
                                      {"itemValue", info.recognizer.port}};
 
         QString itemError;
-        if (!executeUpsert(sdb, "t_laneconfig.VehRecognizer_IP", sqlLaneconfig, params1, itemError))
+        if (!executeSql(sdb, "t_laneconfig.VehRecognizer_IP", sqlLaneconfig, params1, itemError))
             errors.append(itemError);
-        if (!executeUpsert(sdb, "t_laneconfig.VehRecognizer_Port", sqlLaneconfig, params2, itemError))
+        if (!executeSql(sdb, "t_laneconfig.VehRecognizer_Port", sqlLaneconfig, params2, itemError))
             errors.append(itemError);
     }
     // 更新天线信息
@@ -791,11 +907,11 @@ bool DeployTool::syncDBConfig(const ST_DeployInfo &info, QString &errDesc)
                                      {"itemKey", "NearRsu_Port"},
                                      {"itemValue", info.rsu.port}};
         QString itemError;
-        if (!executeUpsert(sdb, "t_laneconfig.NearRsu_IP", sqlLaneconfig, params1, itemError))
+        if (!executeSql(sdb, "t_laneconfig.NearRsu_IP", sqlLaneconfig, params1, itemError))
             errors.append(itemError);
-        if (!executeUpsert(sdb, "t_laneconfig.NearRsu_TxPower", sqlLaneconfig, params2, itemError))
+        if (!executeSql(sdb, "t_laneconfig.NearRsu_TxPower", sqlLaneconfig, params2, itemError))
             errors.append(itemError);
-        if (!executeUpsert(sdb, "t_laneconfig.NearRsu_Port", sqlLaneconfig, params3, itemError))
+        if (!executeSql(sdb, "t_laneconfig.NearRsu_Port", sqlLaneconfig, params3, itemError))
             errors.append(itemError);
     }
     // 更新缴费机信息
@@ -811,9 +927,9 @@ bool DeployTool::syncDBConfig(const ST_DeployInfo &info, QString &errDesc)
                                      {"itemKey", "SPT_port"},
                                      {"itemValue", info.payRobot.port}};
         QString itemError;
-        if (!executeUpsert(sdb, "t_laneconfig.SPT_IP", sqlLaneconfig, params1, itemError))
+        if (!executeSql(sdb, "t_laneconfig.SPT_IP", sqlLaneconfig, params1, itemError))
             errors.append(itemError);
-        if (!executeUpsert(sdb, "t_laneconfig.SPT_port", sqlLaneconfig, params2, itemError))
+        if (!executeSql(sdb, "t_laneconfig.SPT_port", sqlLaneconfig, params2, itemError))
             errors.append(itemError);
     }
 
@@ -826,7 +942,7 @@ bool DeployTool::syncDBConfig(const ST_DeployInfo &info, QString &errDesc)
                                 {"envName", "心跳数据上传URL地址"},
                                 {"envValue", QString("http://%1:19115/api/lane/heartbeat").arg(info.baseInfo.heartIP)}};
     QString itemError;
-    if (!executeUpsert(sdb, "t_lanebaseenv.PSD_LaneHeartBeatUrl", sqlLanebaseenv, params, itemError))
+    if (!executeSql(sdb, "t_lanebaseenv.PSD_LaneHeartBeatUrl", sqlLanebaseenv, params, itemError))
         errors.append(itemError);
 
     if (!errors.isEmpty()) {
@@ -839,7 +955,7 @@ bool DeployTool::syncDBConfig(const ST_DeployInfo &info, QString &errDesc)
     return true;
 }
 
-bool DeployTool::executeUpsert(const QSqlDatabase &sdb, const QString &itemName, const QString &sql, const QVariantMap &params, QString &errDesc) const
+bool DeployTool::executeSql(const QSqlDatabase &sdb, const QString &itemName, const QString &sql, const QVariantMap &params, QString &errDesc) const
 {
     errDesc.clear();
 
@@ -858,28 +974,6 @@ bool DeployTool::executeUpsert(const QSqlDatabase &sdb, const QString &itemName,
         errDesc = QStringLiteral("同步%1失败: %2").arg(itemName, e.lastError.text());
         return false;
     }
-}
-
-bool DeployTool::isNetworkUpdating() const
-{
-    return m_networkUpdating;
-}
-
-void DeployTool::finishNetworkUpdate(bool success, const QString &message)
-{
-    if (!m_networkUpdating)
-        return;
-
-    m_networkUpdating = false;
-    m_networkTimedOut = false;
-
-    if (success) {
-        LOG_CINFO(L_CATE).noquote() << message;
-    } else {
-        LOG_CERROR(L_CATE).noquote() << message;
-    }
-
-    emit sigNetworkUpdateFinished(success, message);
 }
 
 int DeployTool::getLaneType(const QString &str) const

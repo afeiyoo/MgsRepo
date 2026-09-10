@@ -6,7 +6,7 @@ CONFIG += c++14
 CONFIG += resource_big  # 防止资源文件过大而导致程序崩溃
 CONFIG -= app_bundle
 CONFIG += depend_includepath  # 确保 INCLUDEPATH 中的路径用于依赖关系分析。
-CONFIG += skip_target_version_ext unversioned_libname  # 取消so文件版本后缀
+ CONFIG += skip_target_version_ext unversioned_libname  # 取消so文件版本后缀
 
 
 # 使Qt系统的日志信息包含更多的上下文信息，例如文件名、行号、函数名等

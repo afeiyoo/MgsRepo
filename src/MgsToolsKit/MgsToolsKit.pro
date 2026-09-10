@@ -21,6 +21,7 @@ include($$THIRD_PARTY_LIBRARY_PATH/HttpClient/HttpClient.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/NlohmannJson/NlohmannJson.pri)
 include($$THIRD_PARTY_LIBRARY_PATH/QZXing/QZXing.pri)
 
+
 SOURCES += \
     bend/cardrobot/cardrobothandler.cpp \
     bend/infoboard/infoboardhandler.cpp \
@@ -71,7 +72,10 @@ INCLUDEPATH += \
     $$MGS_INCLUDE_PATH/MobilePlusTerminal \
     $$MGS_INCLUDE_PATH/SmartLaneController \
     $$MGS_INCLUDE_PATH/VehRecognizer \
-    $$MGS_INCLUDE_PATH/DeployTool
+    $$MGS_INCLUDE_PATH/DeployTool    
+
+RESOURCES += \
+    resources.qrc
 
 # 交付安装
 win32 {
@@ -107,7 +111,9 @@ runtime_libraries.files = $$RUNTIME_LIBRARIES
 runtime_libraries.path = $$INSTALL_DIR
 runtime_libraries.CONFIG += no_check_exist
 
-INSTALLS += target runtime_libraries
+script.files = $$MGS_SCRIPT_PATH/update_network.sh
+script.path = $$INSTALL_DIR/script
 
-RESOURCES += \
-    resources.qrc
+INSTALLS += target runtime_libraries script
+
+

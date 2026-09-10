@@ -10,7 +10,7 @@ SUBDIRS += \
     # QSimpleUpdater \
     # LaneMaster \
     # MobilePlusTerminal \
-    DeployTool \
+    # DeployTool \
     MgsToolsKit \
     # SmartLaneController \
     # LaneDataService \

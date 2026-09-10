@@ -252,35 +252,20 @@ public:
     // 获取指定车道的部署信息
     virtual ST_DeployInfo getCurDeployInfo(const QString &stationID, int laneID) = 0;
 
-    // 生成DeviceCtrl.json配置文件
-    virtual bool saveDeviceCtrlFile(const ST_DeployInfo &info, const QString &path, QString &errDesc) = 0;
+    // 初始化收费软件
+    virtual bool initLaneSoftware(const ST_DeployInfo &info, QString &errDesc) = 0;
 
-    // 生成LaneUI.json配置文件
-    virtual bool saveLaneUIFile(const ST_DeployInfo &info, const QString &path, QString &errDesc) = 0;
+    // 初始化DtpAgent
+    virtual bool initDtpAgent(const ST_DeployInfo &info, const QString &fullVer, QString &errDesc) = 0;
 
-    // 生成LaneBaseConfig.ini配置文件
-    virtual bool saveLaneBaseConfigFile(const ST_DeployInfo &info, const QString &path, QString &errDesc) = 0;
-
-    // 生成DtpAgent.cfg配置文件
-    virtual bool saveDtpAgentFile(const ST_DeployInfo &info, const QString &fullBlackName, const QString &path, QString &errDesc) = 0;
-
-    // 生成Start123.json配置文件
-    virtual bool saveStartFile(const ST_DeployInfo &info, const QString &ver, const QString &path, QString &errDesc) = 0;
-
-    // 同步数据库配置
-    virtual bool syncDBConfig(const ST_DeployInfo &info, QString &errDesc) = 0;
+    // 初始化Start123
+    virtual bool initStart123(const ST_DeployInfo &info, const QString &ver, QString &errDesc) = 0;
 
     // 同步590费率文件
     virtual bool syncFeeRate(const QString &filePath, const QString &stationID, QString &errDesc) = 0;
 
-    // 修改指定网卡的网络配置。返回true仅表示任务已受理，最终结果通过networkUpdateFinished()通知。
+    // 同步修改指定网卡的网络配置，返回最终执行结果；执行等待上限120秒，请在工作线程调用。
     virtual bool updateNetwork(const ST_DeployInfo &info, const QString &interfaceName, QString &errDesc) = 0;
-
-    virtual bool isNetworkUpdating() const = 0;
-
-signals:
-    void sigNetworkUpdateStarted();
-    void sigNetworkUpdateFinished(bool success, const QString &message);
 };
 
 extern "C" DEPLOYTOOL_EXPORT IDeployTool *createDeployTool();

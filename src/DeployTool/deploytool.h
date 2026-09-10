@@ -15,8 +15,6 @@ class Document;
 namespace EasyQtSql {
 class SqlFactory;
 }
-class QProcess;
-class QTimer;
 struct ST_DeployInfo;
 class DeployTool : public IDeployTool
 {
@@ -29,25 +27,28 @@ public:
 
     ST_DeployInfo getCurDeployInfo(const QString &stationID, int laneID) override;
 
-    bool saveDeviceCtrlFile(const ST_DeployInfo &info, const QString &path, QString &errDesc) override;
+    bool initLaneSoftware(const ST_DeployInfo &info, QString &errDesc) override;
 
-    bool saveLaneUIFile(const ST_DeployInfo &info, const QString &path, QString &errDesc) override;
+    bool initDtpAgent(const ST_DeployInfo &info, const QString &fullVer, QString &errDesc) override;
 
-    bool saveLaneBaseConfigFile(const ST_DeployInfo &info, const QString &path, QString &errDesc) override;
-
-    bool saveDtpAgentFile(const ST_DeployInfo &info, const QString &fullBlackName, const QString &path, QString &errDesc) override;
-
-    bool saveStartFile(const ST_DeployInfo &info, const QString &ver, const QString &path, QString &errDesc) override;
+    bool initStart123(const ST_DeployInfo &info, const QString &ver, QString &errDesc) override;
 
     bool updateNetwork(const ST_DeployInfo &info, const QString &interfaceName, QString &errDesc) override;
 
     bool syncFeeRate(const QString &filePath, const QString &stationID, QString &errDesc) override;
 
-    bool syncDBConfig(const ST_DeployInfo &info, QString &errDesc) override;
-
-    bool isNetworkUpdating() const override;
-
 private:
+    bool saveDeviceCtrlFile(const ST_DeployInfo &info, QString &errDesc);
+
+    bool saveLaneUIFile(const ST_DeployInfo &info, QString &errDesc);
+
+    bool saveLaneBaseConfigFile(const ST_DeployInfo &info, QString &errDesc);
+
+    bool syncDBConfig(const ST_DeployInfo &info, QString &errDesc);
+
+    // 同步重启服务；调用方应在工作线程中执行。
+    static bool restartService(const QString &serviceName, QString &errDesc);
+
     int getLaneType(const QString &str) const;
     int getCapTriggerMode(const QString &str) const;
     int getOverlapType(const QString &str) const;
@@ -58,19 +59,12 @@ private:
     // 将数据data保存到文件path中
     bool saveFile(const QString &path, const QByteArray &data, QString &errDesc) const;
 
-    // 使用EasyQtSql执行一条MySQL UPSERT语句
-    bool executeUpsert(const QSqlDatabase &sdb, const QString &itemName, const QString &sql, const QVariantMap &params, QString &errDesc) const;
-
-    void finishNetworkUpdate(bool success, const QString &message);
+    bool executeSql(const QSqlDatabase &sdb, const QString &itemName, const QString &sql, const QVariantMap &params, QString &errDesc) const;
 
 private:
     // 完整部署信息
     QHash<QString, ST_DeployInfo> m_deployInfos;
     Utils::ConfigUtils *m_conf = nullptr;
-    QProcess *m_networkProcess = nullptr;
-    QTimer *m_networkTimeoutTimer = nullptr;
-    bool m_networkUpdating = false;
-    bool m_networkTimedOut = false;
     // 数据库连接池
     EasyQtSql::SqlFactory *m_dbFactory = nullptr;
 };
