@@ -1,8 +1,7 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELACALENDAR_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELACALENDAR_H_
+#ifndef ELACALENDAR_H
+#define ELACALENDAR_H
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 #include <QDate>
 #include <QWidget>
 class ElaCalendarPrivate;
@@ -10,7 +9,7 @@ class ELA_EXPORT ElaCalendar : public QWidget
 {
     Q_OBJECT
     Q_Q_CREATE(ElaCalendar)
-    Q_PROPERTY_CREATE_Q_H(int, BorderRaiuds)
+    Q_PROPERTY_CREATE_Q_H(int, BorderRadius)
     Q_PROPERTY_CREATE_Q_H(QDate, SelectedDate)
     Q_PROPERTY_CREATE_Q_H(QDate, MinimumDate)
     Q_PROPERTY_CREATE_Q_H(QDate, MaximumDate)
@@ -24,4 +23,4 @@ protected:
     virtual void paintEvent(QPaintEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELACALENDAR_H_
+#endif // ELACALENDAR_H

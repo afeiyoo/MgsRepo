@@ -1,10 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAPLAINTEXTEDIT_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAPLAINTEXTEDIT_H_
+#ifndef ELAPLAINTEXTEDIT_H
+#define ELAPLAINTEXTEDIT_H
 
 #include <QPlainTextEdit>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 
 class ElaPlainTextEditPrivate;
 class ELA_EXPORT ElaPlainTextEdit : public QPlainTextEdit
@@ -21,6 +20,7 @@ protected:
     virtual void focusOutEvent(QFocusEvent* event) override;
     virtual void contextMenuEvent(QContextMenuEvent* event) override;
     virtual void paintEvent(QPaintEvent* event) override;
+    virtual void resizeEvent(QResizeEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAPLAINTEXTEDIT_H_
+#endif // ELAPLAINTEXTEDIT_H

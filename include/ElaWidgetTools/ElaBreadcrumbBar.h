@@ -1,9 +1,8 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELABREADCRUMBBAR_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELABREADCRUMBBAR_H_
+#ifndef ELABREADCRUMBBAR_H
+#define ELABREADCRUMBBAR_H
 #include <QWidget>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 
 class ElaBreadcrumbBarPrivate;
 class ELA_EXPORT ElaBreadcrumbBar : public QWidget
@@ -14,16 +13,16 @@ class ELA_EXPORT ElaBreadcrumbBar : public QWidget
     Q_PROPERTY_CREATE_Q_H(bool, IsAutoRemove)
 public:
     explicit ElaBreadcrumbBar(QWidget* parent = nullptr);
-    ~ElaBreadcrumbBar() override;
-    void setBreadcrumbList(const QStringList& breadcrumbList);
+    ~ElaBreadcrumbBar();
+    void setBreadcrumbList(QStringList breadcrumbList);
     QStringList appendBreadcrumb(QString breadcrumb);
     QStringList removeBreadcrumb(QString breadcrumb);
 
     int getBreadcrumbListCount() const;
-    const QStringList& getBreadcrumbList() const;
+    QStringList getBreadcrumbList() const;
 
 Q_SIGNALS:
     Q_SIGNAL void breadcrumbClicked(QString breadcrumb, QStringList lastBreadcrumbList);
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELABREADCRUMBBAR_H_
+#endif // ELABREADCRUMBBAR_H

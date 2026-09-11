@@ -1,11 +1,10 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAEXPONENTIALBLUR_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAEXPONENTIALBLUR_H_
+#ifndef ELAEXPONENTIALBLUR_H
+#define ELAEXPONENTIALBLUR_H
 
 #include <QObject>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
-#include "ElaSingletonMacro.h"
+#include "ElaProperty.h"
+#include "ElaSingleton.h"
 
 class ElaExponentialBlurPrivate;
 class ELA_EXPORT ElaExponentialBlur : public QObject
@@ -21,4 +20,4 @@ public:
     static QPixmap doExponentialBlur(QImage img, const quint16& blurRadius);
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAEXPONENTIALBLUR_H_
+#endif // ELAEXPONENTIALBLUR_H

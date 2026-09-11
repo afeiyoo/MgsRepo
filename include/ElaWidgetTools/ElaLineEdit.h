@@ -1,10 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELALINEEDIT_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELALINEEDIT_H_
+#ifndef ELALINEEDIT_H
+#define ELALINEEDIT_H
 
 #include <QLineEdit>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 
 class ElaLineEditPrivate;
 class ELA_EXPORT ElaLineEdit : public QLineEdit
@@ -29,4 +28,4 @@ protected:
     void contextMenuEvent(QContextMenuEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELALINEEDIT_H_
+#endif // ELALINEEDIT_H

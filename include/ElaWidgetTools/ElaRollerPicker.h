@@ -1,8 +1,7 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAROLLERPICKER_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAROLLERPICKER_H_
+#ifndef ELAFRAMEWORK_ELAROLLERPICKER_H
+#define ELAFRAMEWORK_ELAROLLERPICKER_H
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 #include <QPushButton>
 
 class ElaRollerPickerPrivate;
@@ -39,4 +38,4 @@ protected:
     virtual void paintEvent(QPaintEvent* event) override;
 };
 
-#endif //ELAWORKSPACE_ELAWIDGETTOOLS_ELAROLLERPICKER_H_
+#endif //ELAFRAMEWORK_ELAROLLERPICKER_H

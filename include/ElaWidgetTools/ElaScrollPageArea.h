@@ -1,10 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELASCROLLPAGEAREA_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELASCROLLPAGEAREA_H_
+#ifndef ELASCROLLPAGEAREA_H
+#define ELASCROLLPAGEAREA_H
 
 #include <QWidget>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 class ElaScrollPageAreaPrivate;
 class ELA_EXPORT ElaScrollPageArea : public QWidget
 {
@@ -19,4 +18,4 @@ protected:
     virtual void paintEvent(QPaintEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELASCROLLPAGEAREA_H_
+#endif // ELASCROLLPAGEAREA_H

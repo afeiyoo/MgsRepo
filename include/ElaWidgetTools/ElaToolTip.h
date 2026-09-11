@@ -1,10 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELATOOLTIP_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELATOOLTIP_H_
+#ifndef ELATOOLTIP_H
+#define ELATOOLTIP_H
 
 #include <QWidget>
 
-#include "ElaPropertyMacro.h"
-#include "ElaWidgetToolsExport.h"
+#include "ElaProperty.h"
 class ElaToolTipPrivate;
 class ELA_EXPORT ElaToolTip : public QWidget
 {
@@ -26,4 +25,4 @@ protected:
     virtual void paintEvent(QPaintEvent* event);
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELATOOLTIP_H_
+#endif // ELATOOLTIP_H

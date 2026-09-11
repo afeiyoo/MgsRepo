@@ -1,10 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAPROGRESSBAR_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAPROGRESSBAR_H_
+#ifndef ELAPROGRESSBAR_H
+#define ELAPROGRESSBAR_H
 
 #include <QProgressBar>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 
 class ElaProgressBarPrivate;
 class ELA_EXPORT ElaProgressBar : public QProgressBar
@@ -22,4 +21,4 @@ protected:
     virtual void resizeEvent(QResizeEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAPROGRESSBAR_H_
+#endif // ELAPROGRESSBAR_H

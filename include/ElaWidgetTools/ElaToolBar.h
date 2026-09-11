@@ -1,9 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELATOOLBAR_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELATOOLBAR_H_
+#ifndef ELATOOLBAR_H
+#define ELATOOLBAR_H
 
 #include <QToolBar>
 
-#include "ElaWidgetToolsDef.h"
+#include "ElaDef.h"
 class ElaToolBarPrivate;
 class ELA_EXPORT ElaToolBar : public QToolBar
 {
@@ -27,4 +27,4 @@ protected:
     virtual void paintEvent(QPaintEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELATOOLBAR_H_
+#endif // ELATOOLBAR_H

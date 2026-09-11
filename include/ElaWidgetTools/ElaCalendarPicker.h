@@ -1,8 +1,7 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELACALENDARPICKER_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELACALENDARPICKER_H_
+#ifndef ELACALENDARPICKER_H
+#define ELACALENDARPICKER_H
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 #include <QDate>
 #include <QPushButton>
 class ElaCalendarPickerPrivate;
@@ -23,4 +22,4 @@ protected:
     virtual void paintEvent(QPaintEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELACALENDARPICKER_H_
+#endif // ELACALENDARPICKER_H

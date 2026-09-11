@@ -1,10 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELATOGGLESWITCH_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELATOGGLESWITCH_H_
+#ifndef ELATOGGLESWITCH_H
+#define ELATOGGLESWITCH_H
 
 #include <QWidget>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 class ElaToggleSwitchPrivate;
 class ELA_EXPORT ElaToggleSwitch : public QWidget
 {
@@ -27,4 +26,4 @@ protected:
     virtual void paintEvent(QPaintEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELATOGGLESWITCH_H_
+#endif // ELATOGGLESWITCH_H
