@@ -83,17 +83,15 @@ void MainWindow::initContent()
     m_mobilePlusTerminalPage = new T_MobilePlusTerminal(this);
     addPageNode("手机+自助终端测试", m_mobilePlusTerminalPage, ElaIconType::MobileScreenButton);
 
+#ifdef Q_OS_LINUX
     m_deployToolPage = new T_DeployTool(this);
     addPageNode("信创车道系统部署", m_deployToolPage, ElaIconType::FerrisWheel);
-
-#ifdef Q_OS_LINUX
-
 #else
-    // auto *deployToolPage = new QWidget(this);
-    // addPageNode("信创车道系统部署", deployToolPage, ElaIconType::FerrisWheel);
-    // m_deployToolKey = deployToolPage->property("ElaPageKey").toString();
-    // setNavigationNodeBlock(m_deployToolKey, true);
-    // connect(this, &ElaWindow::navigationNodeBlocked, this, &MainWindow::onNavigationNodeBlocked);
+    auto *deployToolPage = new QWidget(this);
+    addPageNode("信创车道系统部署", deployToolPage, ElaIconType::FerrisWheel);
+    m_deployToolKey = deployToolPage->property("ElaPageKey").toString();
+    setNavigationNodeBlock(m_deployToolKey, true);
+    connect(this, &ElaWindow::navigationNodeBlocked, this, &MainWindow::onNavigationNodeBlocked);
 #endif
 
     m_vehRecognizerPage = new T_VehRecognizer(this);

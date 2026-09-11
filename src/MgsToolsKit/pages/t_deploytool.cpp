@@ -20,13 +20,13 @@
 #include "ElaMessageBar.h"
 #include "ElaPlainTextEdit.h"
 #include "ElaPushButton.h"
+#include "ElaSteps.h"
 #include "ElaText.h"
 #include "ElaTreeView.h"
 #include "Logger.h"
 #include "global/appdefs.h"
 #include "ideploytool.h"
 #include "utils/datadealutils.h"
-#include "utils/widgets/stepperwidget.h"
 
 using namespace Utils;
 using namespace DeployToolDef;
@@ -117,22 +117,10 @@ void T_DeployTool::initContent()
     inputLayout->setColumnStretch(3, 1);
 
     // 部署步骤指引，由实际部署结果推进步骤。
-    m_deployStepper = new StepperWidget(this);
-    m_deployStepper->setOrientation(StepperWidget::Orientation::Horizontal);
-    m_deployStepper->setInteractive(false);
-    m_deployStepper->setShowStepIcons(false); // 不显示图标
-    m_deployStepper->setFocusPolicy(Qt::NoFocus);
-    m_deployStepper->setFixedHeight(140);
-    QFont stepFont = m_deployStepper->font();
-    stepFont.setPointSize(10);
-    m_deployStepper->setFont(stepFont);
-    m_deployStepper->setSteps({{"收费软件", "配置文件、数据库初始化", StepperWidget::StepState::Pending, true, {}},
-                               {"DtpAgent", "初始化配置并重启", StepperWidget::StepState::Pending, true, {}},
-                               {"Start123", "初始化配置并重启", StepperWidget::StepState::Pending, true, {}},
-                               {"费率", "同步费率参数", StepperWidget::StepState::Pending, true, {}},
-                               {"网络配置", "更新网络配置", StepperWidget::StepState::Pending, true, {}},
-                               {"完成", "部署结束", StepperWidget::StepState::Pending, true, {}}});
-    m_deployStepper->setCurrentIndex(0);
+    m_deployStepper = new ElaSteps(this);
+    m_deployStepper->setStepCount(6);
+    m_deployStepper->setStepTitles({"收费软件初始化", "Dtp初始化", "Start123初始化", "费率同步", "网络配置", "部署完成"});
+    m_deployStepper->setCurrentStep(0);
 
     // 部署执行：上排填写参数，下排依次执行五个步骤。
     auto *executeGroup = new QGroupBox("部署执行", this);
@@ -229,9 +217,8 @@ void T_DeployTool::resetFront()
 {
     m_deployInfo.reset();
     m_deployStep = 0;
-    for (int step = 0; step < m_deployStepper->steps().size(); ++step)
-        m_deployStepper->setStepState(step, StepperWidget::StepState::Pending);
-    m_deployStepper->setCurrentIndex(0);
+    m_deployStepper->setCurrentStep(0);
+    m_deployStepper->update();
 
     m_infoModel->removeRows(0, m_infoModel->rowCount());
     m_statusText->setText("尚未加载");
@@ -408,7 +395,6 @@ void T_DeployTool::executeDeploymentStep(int step)
     }
 
     m_isDeploying = true;
-    m_deployStepper->setStepState(step, StepperWidget::StepState::Current);
     refreshControlButtons();
     appendLog("开始执行：" + deploymentNames[step]);
 
@@ -469,9 +455,9 @@ void T_DeployTool::finishDeploymentStep(int step, bool success, const QString &m
     m_isDeploying = false;
     if (success) {
         m_deployStep = step + 1;
-        m_deployStepper->setCurrentIndex(m_deployStep);
-        if (m_deployStep == 5)
-            m_deployStepper->setStepState(5, StepperWidget::StepState::Completed);
+        // 五项部署完成后，六个节点（含完成节点）全部显示完成标记。
+        m_deployStepper->setCurrentStep(m_deployStep == 5 ? 6 : m_deployStep);
+        m_deployStepper->update();
         const QString text = deploymentNames[step] + "成功";
         appendLog(text);
         if (!message.isEmpty())
@@ -479,7 +465,6 @@ void T_DeployTool::finishDeploymentStep(int step, bool success, const QString &m
 
         ElaMessageBar::success(ElaMessageBarType::BottomRight, "执行成功", text, 2000, this);
     } else {
-        m_deployStepper->setStepState(step, StepperWidget::StepState::Error);
         const QString text = message.isEmpty() ? deploymentNames[step] + "失败" : message;
         appendLog(text);
         ElaMessageBar::error(ElaMessageBarType::BottomRight, "执行失败", text, 2000, this);
