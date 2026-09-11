@@ -1,10 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELACHECKBOX_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELACHECKBOX_H_
+#ifndef ELACHECKBOX_H
+#define ELACHECKBOX_H
 
 #include <QCheckBox>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 class ELA_EXPORT ElaCheckBox : public QCheckBox
 {
     Q_OBJECT
@@ -15,4 +14,4 @@ public:
     ~ElaCheckBox() override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELACHECKBOX_H_
+#endif // ELACHECKBOX_H

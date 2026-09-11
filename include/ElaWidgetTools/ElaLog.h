@@ -1,19 +1,18 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELALOG_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELALOG_H_
+#ifndef ELALOG_H
+#define ELALOG_H
 
 #include <QObject>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
-#include "ElaSingletonMacro.h"
+#include "ElaProperty.h"
+#include "ElaSingleton.h"
 
 class ElaLogPrivate;
 class ELA_EXPORT ElaLog : public QObject
 {
     Q_OBJECT
     Q_Q_CREATE(ElaLog)
-    Q_PROPERTY_REF_CREATE_Q_H(QString, LogSavePath)
-    Q_PROPERTY_REF_CREATE_Q_H(QString, LogFileName)
+    Q_PROPERTY_CREATE_Q_H(QString, LogSavePath)
+    Q_PROPERTY_CREATE_Q_H(QString, LogFileName)
     Q_PROPERTY_CREATE_Q_H(bool, IsLogFileNameWithTime)
     Q_SINGLETON_CREATE_H(ElaLog);
 
@@ -24,7 +23,7 @@ private:
 public:
     void initMessageLog(bool isEnable);
 Q_SIGNALS:
-    void logMessage(const QString& log);
+    void logMessage(QString log);
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELALOG_H_
+#endif // ELALOG_H

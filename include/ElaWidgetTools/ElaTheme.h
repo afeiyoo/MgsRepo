@@ -1,12 +1,11 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELATHEME_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELATHEME_H_
+#ifndef ELATHEME_H
+#define ELATHEME_H
 
-#include "ElaPropertyMacro.h"
-#include "ElaSingletonMacro.h"
-#include "ElaWidgetToolsDef.h"
-#include "ElaWidgetToolsExport.h"
-#include <QColor>
 #include <QObject>
+
+#include "ElaDef.h"
+#include "ElaProperty.h"
+#include "ElaSingleton.h"
 
 #define eTheme ElaTheme::getInstance()
 #define ElaThemeColor(themeMode, themeColor) eTheme->getThemeColor(themeMode, ElaThemeType::themeColor)
@@ -25,12 +24,16 @@ public:
     void setThemeMode(ElaThemeType::ThemeMode themeMode);
     ElaThemeType::ThemeMode getThemeMode() const;
 
-    void drawEffectShadow(QPainter* painter, QRect widgetRect, int shadowBorderWidth, int borderRadius, qreal alphaRatio = 1.0, const QColor& shadowColor = {});
+    void setIsFollowSystemTheme(bool isFollow);
+    bool getIsFollowSystemTheme() const;
 
-    void setThemeColor(ElaThemeType::ThemeMode themeMode, ElaThemeType::ThemeColor themeColor, const QColor& newColor);
+    void drawEffectShadow(QPainter* painter, QRect widgetRect, int shadowBorderWidth, int borderRadius);
+
+    void setThemeColor(ElaThemeType::ThemeMode themeMode, ElaThemeType::ThemeColor themeColor, QColor newColor);
     const QColor& getThemeColor(ElaThemeType::ThemeMode themeMode, ElaThemeType::ThemeColor themeColor);
 Q_SIGNALS:
     Q_SIGNAL void themeModeChanged(ElaThemeType::ThemeMode themeMode);
+    Q_SIGNAL void pIsFollowSystemThemeChanged(bool isFollow);
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELATHEME_H_
+#endif // ELATHEME_H

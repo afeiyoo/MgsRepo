@@ -14,7 +14,7 @@ class ElaText;
 class ElaTreeView;
 class QStandardItem;
 class QStandardItemModel;
-class StepperWidget;
+class ElaSteps;
 
 struct ST_DeployInfo;
 namespace DeployToolDef {
@@ -70,7 +70,7 @@ private:
     ElaPushButton *m_loadButton = nullptr;
 
     // 部署步骤指引
-    StepperWidget *m_deployStepper = nullptr;
+    ElaSteps *m_deployStepper = nullptr;
 
     // 部署执行参数和状态
     std::array<ElaPushButton *, 5> m_deployButtons{};
@@ -80,7 +80,6 @@ private:
     std::shared_ptr<const ST_DeployInfo> m_deployInfo;
     // 当前进行到的部署步骤 0: 收费软件初始化 1.Dtp初始化 2.start123初始化 3.费率同步 4.运行环境初始化
     int m_deployStep = 0;
-    bool m_isDeploying = false;
 
     // 部署信息展示
     ElaText *m_infoTitleText = nullptr;
@@ -93,5 +92,7 @@ private:
     ElaPlainTextEdit *m_logEdit = nullptr;
     ElaPushButton *m_logClearButton = nullptr;
 
+    // 状态
     bool m_isLoading = false;
+    bool m_isDeploying = false;
 };

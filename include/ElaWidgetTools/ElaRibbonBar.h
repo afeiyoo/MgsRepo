@@ -1,57 +1,54 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELARIBBONBAR_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELARIBBONBAR_H_
+#ifndef ELARIBBONBAR_H
+#define ELARIBBONBAR_H
 
-#include "ElaWidgetToolsDef.h"
-
-#include <QTabBar>
 #include <QWidget>
 
+#include "ElaDef.h"
+#include "ElaProperty.h"
+
+class QStackedWidget;
+class ElaRibbonGroup;
+class ElaRibbonTabBar;
 class ElaRibbonBarPrivate;
+
 class ELA_EXPORT ElaRibbonBar : public QWidget
 {
     Q_OBJECT
     Q_Q_CREATE(ElaRibbonBar)
+    Q_PROPERTY_CREATE_Q_H(int, CurrentIndex)
 public:
     explicit ElaRibbonBar(QWidget* parent = nullptr);
     ~ElaRibbonBar() override;
 
-    // 设置绑定的TabBar 切换Ribbon页时进行同步 可以不设置
-    void setRibbonTabBar(QTabBar* tabBar);
-    QTabBar* getRibbonTabBar() const;
+    void bindTabBar(ElaRibbonTabBar* tabBar);
+    ElaRibbonTabBar* tabBar() const;
 
-    void switchRibbonPage(const QString& pageName);
-    const QString& getCurrentRibbonPage() const;
+    QWidget* addTab(const QString& title);
+    ElaRibbonGroup* addGroup(QWidget* page, const QString& title);
 
-    void setRibbonPageEnable(const QString& pageName, bool isEnable);
-    bool getRibbonPageEnable(const QString& pageName) const;
+    int tabCount() const;
+    QString tabText(int index) const;
 
-    // 添加到指定Ribbon页的根组
-    QAction* addRibbonAction(const QString& pageName, const QString& actionName);
-    // 添加到指定Ribbon页的根组 并指定图标（随主题变化）
-    QAction* addRibbonAction(const QString& pageName, const QString& actionName, ElaIconType::IconName icon);
-    // 添加到指定Ribbon页的根组 并指定QIcon
-    QAction* addRibbonAction(const QString& pageName, const QString& actionName, const QIcon& icon);
-    // 添加到指定Ribbon页的指定组
-    QAction* addRibbonAction(const QString& pageName, const QString& groupName, const QString& actionName);
-    // 添加到指定Ribbon页的指定组 并指定图标（随主题变化）
-    QAction* addRibbonAction(const QString& pageName, const QString& groupName, const QString& actionName, ElaIconType::IconName icon);
-    // 添加到指定Ribbon页的指定组 并指定QIcon
-    QAction* addRibbonAction(const QString& pageName, const QString& groupName, const QString& actionName, const QIcon& icon);
-    // 添加自定义窗口到指定Ribbon页的指定组
-    QAction* addRibbonWidget(const QString& pageName, const QString& groupName, QWidget* widget);
+    void setCollapsed(bool collapsed);
+    bool isCollapsed() const;
 
-    void removeRibbonAction(QAction* action);
-    void removeRibbonAction(const QString& pageName, const QString& groupName, const QString& actionName);
+    void setPinned(bool pinned);
+    bool isPinned() const;
 
-    QList<QAction*> getRibbonActions(const QString& pageName);
-    QList<QAction*> getRibbonActions(const QString& pageName, const QString& groupName);
-    QList<QAction*> getRibbonActions(const QString& pageName, const QString& groupName, const QString& actionName);
+    void setAnimationDuration(int durationMs);
+    int getAnimationDuration() const;
+
+    void showPinContextMenu(const QPoint& globalPos);
 
 Q_SIGNALS:
-    Q_SIGNAL void ribbonActionTriggered(const QString& pageName, const QString& groupName, QAction* action);
+    Q_SIGNAL void tabClicked(int index);
+    Q_SIGNAL void collapsedChanged(bool collapsed);
+    Q_SIGNAL void pinnedChanged(bool pinned);
 
 protected:
-    bool eventFilter(QObject* obj, QEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
+    QSize sizeHint() const override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
 };
 
-#endif //ELAWORKSPACE_ELAWIDGETTOOLS_ELARIBBONBAR_H_
+#endif // ELARIBBONBAR_H

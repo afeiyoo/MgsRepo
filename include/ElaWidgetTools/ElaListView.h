@@ -1,10 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELALISTVIEW_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELALISTVIEW_H_
+#ifndef ELALISTVIEW_H
+#define ELALISTVIEW_H
 
 #include <QListView>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 
 class ElaListViewPrivate;
 class ELA_EXPORT ElaListView : public QListView
@@ -18,4 +17,4 @@ public:
     ~ElaListView();
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELALISTVIEW_H_
+#endif // ELALISTVIEW_H

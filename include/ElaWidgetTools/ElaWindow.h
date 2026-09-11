@@ -1,10 +1,11 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAWINDOW_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAWINDOW_H_
+#ifndef ELAWINDOW_H
+#define ELAWINDOW_H
 
 #include <QMainWindow>
+#include <QModelIndex>
 
 #include "ElaAppBar.h"
-#include "ElaWidgetToolsDef.h"
+#include "ElaDef.h"
 #include "ElaSuggestBox.h"
 class ElaWindowPrivate;
 class ELA_EXPORT ElaWindow : public QMainWindow
@@ -15,7 +16,6 @@ class ELA_EXPORT ElaWindow : public QMainWindow
     Q_PROPERTY_CREATE_Q_H(bool, IsFixedSize)
     Q_PROPERTY_CREATE_Q_H(bool, IsDefaultClosed)
     Q_PROPERTY_CREATE_Q_H(int, AppBarHeight)
-    Q_PROPERTY_CREATE_Q_H(int, RibbonHeight)
     Q_PROPERTY_CREATE_Q_H(int, ThemeChangeTime)
     Q_PROPERTY_CREATE_Q_H(bool, IsCentralStackedWidgetTransparent)
     Q_PROPERTY_CREATE_Q_H(bool, IsAllowPageOpenInNewWindow)
@@ -42,9 +42,9 @@ public:
     QMenu* getCustomMenu() const;
 
     void setUserInfoCardVisible(bool isVisible);
-    void setUserInfoCardPixmap(const QPixmap& pix);
-    void setUserInfoCardTitle(const QString& title);
-    void setUserInfoCardSubTitle(const QString& subTitle);
+    void setUserInfoCardPixmap(QPixmap pix);
+    void setUserInfoCardTitle(QString title);
+    void setUserInfoCardSubTitle(QString subTitle);
     ElaNavigationType::NodeResult addExpanderNode(const QString& expanderTitle, QString& expanderKey, ElaIconType::IconName awesome = ElaIconType::None) const;
     ElaNavigationType::NodeResult addExpanderNode(const QString& expanderTitle, QString& expanderKey, const QString& targetExpanderKey, ElaIconType::IconName awesome = ElaIconType::None) const;
     ElaNavigationType::NodeResult addPageNode(const QString& pageTitle, QWidget* page, ElaIconType::IconName awesome = ElaIconType::None);
@@ -58,26 +58,28 @@ public:
 
     void addCentralWidget(QWidget* centralWidget);
     QWidget* getCentralWidget(int index) const;
-    void removeCentralWidget(QWidget* centralWidget);
 
-    bool getNavigationNodeIsExpanded(const QString& expanderKey) const;
-    void expandNavigationNode(const QString& expanderKey);
-    void collapseNavigationNode(const QString& expanderKey);
-    void removeNavigationNode(const QString& nodeKey) const;
-    int getPageOpenInNewWindowCount(const QString& nodeKey) const;
-    void backtrackNavigationNode(const QString& nodeKey);
+    bool getNavigationNodeIsExpanded(QString expanderKey) const;
+    void expandNavigationNode(QString expanderKey);
+    void collapseNavigationNode(QString expanderKey);
+    void removeNavigationNode(QString nodeKey) const;
+    int getPageOpenInNewWindowCount(QString nodeKey) const;
+    void backtrackNavigationNode(QString nodeKey);
 
-    void setNodeKeyPoints(const QString& nodeKey, int keyPoints);
-    int getNodeKeyPoints(const QString& nodeKey) const;
+    void setNodeKeyPoints(QString nodeKey, int keyPoints);
+    int getNodeKeyPoints(QString nodeKey) const;
 
-    void setNavigationNodeTitle(const QString& nodeKey, const QString& nodeTitle);
-    QString getNavigationNodeTitle(const QString& nodeKey) const;
+    void setNavigationNodeTitle(QString nodeKey, QString nodeTitle);
+    QString getNavigationNodeTitle(QString nodeKey) const;
+    QModelIndex getNavigationNodeIndex(const QString& nodeKey) const;
+    // Block navigation without hiding the node; false restores navigation.
+    void setNavigationNodeBlock(const QString& nodeKey, bool blocked);
 
-    void navigation(const QString& pageKey);
+    void navigation(QString pageKey);
     int getCurrentNavigationIndex() const;
     QString getCurrentNavigationPageKey() const;
 
-    const QList<ElaSuggestBox::SuggestData>& getNavigationSuggestDataList() const;
+    QList<ElaSuggestBox::SuggestData> getNavigationSuggestDataList() const;
 
     void setWindowButtonFlag(ElaAppBarType::ButtonType buttonFlag, bool isEnable = true);
     void setWindowButtonFlags(ElaAppBarType::ButtonFlags buttonFlags);
@@ -87,7 +89,7 @@ public:
     QString getWindowMoviePath(ElaThemeType::ThemeMode themeMode) const;
 
     void setWindowPixmap(ElaThemeType::ThemeMode themeMode, const QPixmap& pixmap);
-    const QPixmap& getWindowPixmap(ElaThemeType::ThemeMode themeMode) const;
+    QPixmap getWindowPixmap(ElaThemeType::ThemeMode themeMode) const;
 
     void setWindowMovieRate(qreal rate);
     qreal getWindowMovieRate() const;
@@ -103,16 +105,19 @@ Q_SIGNALS:
     Q_SIGNAL void centralCustomWidgetChanged();
     Q_SIGNAL void customMenuChanged();
     Q_SIGNAL void pageOpenInNewWindow(QString nodeKey);
+    Q_SIGNAL void navigationNodeBlocked(QString nodeKey);
 
 protected:
     virtual bool eventFilter(QObject* watched, QEvent* event) override;
     virtual QMenu* createPopupMenu() override;
     virtual void paintEvent(QPaintEvent* event) override;
+#ifdef Q_OS_MACOS
+    virtual void mousePressEvent(QMouseEvent* event) override;
+#endif
 
 private:
     QWidget* centralWidget() const;
     void setCentralWidget(QWidget* widget);
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAWINDOW_H_
-
+#endif // ELAWINDOW_H

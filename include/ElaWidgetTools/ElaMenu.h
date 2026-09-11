@@ -1,12 +1,11 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAMENU_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAMENU_H_
+#ifndef ELAMENU_H
+#define ELAMENU_H
 
 #include <QMenu>
 #include <QWidget>
 
-#include "ElaWidgetToolsDef.h"
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaDef.h"
+#include "ElaProperty.h"
 class ElaMenuPrivate;
 class ELA_EXPORT ElaMenu : public QMenu
 {
@@ -38,4 +37,4 @@ protected:
     virtual void paintEvent(QPaintEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAMENU_H_
+#endif // ELAMENU_H

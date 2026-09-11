@@ -1,11 +1,10 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELADXGIMANAGER_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELADXGIMANAGER_H_
+﻿#ifndef ELADXGIMANAGER_H
+#define ELADXGIMANAGER_H
 
 #include <QWidget>
 #ifdef Q_OS_WIN
-#include "ElaPropertyMacro.h"
-#include "ElaSingletonMacro.h"
-#include "ElaWidgetToolsExport.h"
+#include "ElaProperty.h"
+#include "ElaSingleton.h"
 
 class ElaDxgiManagerPrivate;
 class ELA_EXPORT ElaDxgiManager : public QObject
@@ -19,8 +18,8 @@ private:
     ~ElaDxgiManager() override;
 
 public:
-    const QStringList& getDxDeviceList() const;
-    const QStringList& getOutputDeviceList() const;
+    QStringList getDxDeviceList() const;
+    QStringList getOutputDeviceList() const;
     QImage grabScreenToImage() const;
     void startGrabScreen();
     void stopGrabScreen();
@@ -37,9 +36,23 @@ public:
     void setTimeoutMsValue(int timeoutValue);
     int getTimeoutMsValue() const;
 Q_SIGNALS:
-    Q_SIGNAL void grabImageUpdate(const QImage& img);
+    Q_SIGNAL void grabImageUpdate(QImage img);
 };
 
-#endif
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELADXGIMANAGER_H_
+class ElaDxgiScreenPrivate;
+class ELA_EXPORT ElaDxgiScreen : public QWidget
+{
+    Q_OBJECT
+    Q_Q_CREATE(ElaDxgiScreen)
+    Q_PROPERTY_CREATE_Q_H(int, BorderRadius)
+public:
+    explicit ElaDxgiScreen(QWidget* parent = nullptr);
+    ~ElaDxgiScreen();
+    void setIsSyncGrabSize(bool isSyncGrabSize);
+    bool getIsSyncGrabSize() const;
 
+protected:
+    void paintEvent(QPaintEvent* event) override;
+};
+#endif
+#endif // ELADXGIMANAGER_H

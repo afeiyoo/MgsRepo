@@ -1,9 +1,6 @@
 #pragma once
 
 #include "ElaWindow.h"
-#include <QPersistentModelIndex>
-
-class QTreeView;
 
 class ElaContentDialog;
 class ElaText;
@@ -27,12 +24,10 @@ public:
     void initEdgeLayout();
     void initContent();
 
+private slots:
+    void onNavigationNodeBlocked(const QString &nodeKey);
+
 private:
-#ifndef Q_OS_LINUX
-    bool eventFilter(QObject *watched, QEvent *event) override;
-    QTreeView *m_navigationView = nullptr;
-    QPersistentModelIndex m_deployToolIndex;
-#endif
     ElaContentDialog *m_closeDialog = nullptr;
     ElaText *m_statusText = nullptr;
 
@@ -43,4 +38,6 @@ private:
     T_MobilePlusTerminal *m_mobilePlusTerminalPage = nullptr;
     T_DeployTool *m_deployToolPage = nullptr;
     T_VehRecognizer *m_vehRecognizerPage = nullptr;
+
+    QString m_deployToolKey;
 };

@@ -1,11 +1,10 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELACONTENTDIALOG_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELACONTENTDIALOG_H_
+﻿#ifndef ELACONTENTDIALOG_H
+#define ELACONTENTDIALOG_H
 #include <QAbstractNativeEventFilter>
 #include <QDialog>
 
 #include "ElaAppBar.h"
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 class ElaContentDialogPrivate;
 class ELA_EXPORT ElaContentDialog : public QDialog
 {
@@ -20,9 +19,13 @@ public:
     Q_SLOT virtual void onRightButtonClicked();
     void setCentralWidget(QWidget* centralWidget);
 
-    void setLeftButtonText(const QString& text);
-    void setMiddleButtonText(const QString& text);
-    void setRightButtonText(const QString& text);
+    void setLeftButtonText(QString text);
+    void setMiddleButtonText(QString text);
+    void setRightButtonText(QString text);
+
+    void setLeftButtonVisible(bool visible);
+    void setMiddleButtonVisible(bool visible);
+    void setRightButtonVisible(bool visible);
 
     void close();
 Q_SIGNALS:
@@ -36,5 +39,4 @@ protected:
     virtual void keyPressEvent(QKeyEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELACONTENTDIALOG_H_
-
+#endif // ELACONTENTDIALOG_H

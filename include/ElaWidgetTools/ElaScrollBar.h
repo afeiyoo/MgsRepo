@@ -1,11 +1,10 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELASCROLLBAR_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELASCROLLBAR_H_
+#ifndef ELASCROLLBAR_H
+#define ELASCROLLBAR_H
 
 #include <QAbstractScrollArea>
 #include <QScrollBar>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 
 class ElaScrollBarPrivate;
 class ELA_EXPORT ElaScrollBar : public QScrollBar
@@ -33,4 +32,4 @@ protected:
     virtual void contextMenuEvent(QContextMenuEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELASCROLLBAR_H_
+#endif // ELASCROLLBAR_H

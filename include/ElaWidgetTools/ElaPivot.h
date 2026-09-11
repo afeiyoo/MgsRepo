@@ -1,9 +1,8 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAPIVOT_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAPIVOT_H_
+#ifndef ELAPIVOT_H
+#define ELAPIVOT_H
 #include <QWidget>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 
 class ElaPivotPrivate;
 class ELA_EXPORT ElaPivot : public QWidget
@@ -18,12 +17,12 @@ public:
     explicit ElaPivot(QWidget* parent = nullptr);
     ~ElaPivot();
 
-    void appendPivot(const QString& pivotTitle);
-    void removePivot(const QString& pivotTitle);
+    void appendPivot(QString pivotTitle);
+    void removePivot(QString pivotTitle);
 
 Q_SIGNALS:
     Q_SIGNAL void pivotClicked(int index);
     Q_SIGNAL void pivotDoubleClicked(int index);
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAPIVOT_H_
+#endif // ELAPIVOT_H

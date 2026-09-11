@@ -1,11 +1,10 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELATEXT_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELATEXT_H_
+#ifndef ELATEXT_H
+#define ELATEXT_H
 
 #include <QLabel>
 
-#include "ElaWidgetToolsDef.h"
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaDef.h"
+#include "ElaProperty.h"
 class ElaTextPrivate;
 class ELA_EXPORT ElaText : public QLabel
 {
@@ -18,12 +17,12 @@ class ELA_EXPORT ElaText : public QLabel
     Q_PROPERTY_CREATE_Q_H(ElaIconType::IconName, ElaIcon)
 public:
     explicit ElaText(QWidget* parent = nullptr);
-    explicit ElaText(const QString& text, QWidget* parent = nullptr);
-    explicit ElaText(const QString& text, int pixelSize, QWidget* parent = nullptr);
+    explicit ElaText(QString text, QWidget* parent = nullptr);
+    explicit ElaText(QString text, int pixelSize, QWidget* parent = nullptr);
     ~ElaText() override;
 
 protected:
     virtual void paintEvent(QPaintEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELATEXT_H_
+#endif // ELATEXT_H

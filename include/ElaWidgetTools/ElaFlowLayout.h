@@ -1,12 +1,11 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAFLOWLAYOUT_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAFLOWLAYOUT_H_
+#ifndef ELAFLOWLAYOUT_H
+#define ELAFLOWLAYOUT_H
 
 #include <QLayout>
 #include <QMap>
 #include <QStyle>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 class ElaFlowLayoutPrivate;
 class ELA_EXPORT ElaFlowLayout : public QLayout
 {
@@ -33,4 +32,4 @@ public:
     void setIsAnimation(bool isAnimation);
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAFLOWLAYOUT_H_
+#endif // ELAFLOWLAYOUT_H

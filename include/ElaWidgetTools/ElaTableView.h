@@ -1,10 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELATABLEVIEW_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELATABLEVIEW_H_
+#ifndef ELATABLEVIEW_H
+#define ELATABLEVIEW_H
 
 #include <QTableView>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 
 class ElaTableViewPrivate;
 class ELA_EXPORT ElaTableView : public QTableView
@@ -27,4 +26,4 @@ protected:
     virtual void leaveEvent(QEvent* event) override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELATABLEVIEW_H_
+#endif // ELATABLEVIEW_H

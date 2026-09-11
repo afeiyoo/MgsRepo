@@ -3,7 +3,7 @@
 #include <QObject>
 
 #include "ElaProperty.h"
-#define ElaDefVersion "2.0.3"
+#define ElaDefVersion "2.0.2"
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
 #define Q_BEGIN_ENUM_CREATE(CLASS) \
@@ -114,7 +114,6 @@ enum ButtonType
     MinimizeButtonHint = 0x00020,
     MaximizeButtonHint = 0x0040,
     CloseButtonHint = 0x0080,
-    None = 0x0100,  // 第三方库修改 2025-07-30 新增None按钮类型
 };
 Q_ENUM_CREATE(ButtonType)
 Q_DECLARE_FLAGS(ButtonFlags, ButtonType)
@@ -185,16 +184,24 @@ enum NavigationNodeType
 Q_ENUM_CREATE(NavigationNodeType)
 Q_END_ENUM_CREATE(ElaNavigationType)
 
-Q_BEGIN_ENUM_CREATE(ElaActionCommanderType)
-enum CommanderState
+Q_BEGIN_ENUM_CREATE(ElaNavigationRouterType)
+enum NavigationRouteType
 {
-    UndoValid = 0x0000,
-    UndoInvalid = 0x0001,
-    RedoValid = 0x0002,
-    RedoInvalid = 0x0003,
+    Success = 0x0000,
+    ObjectInvalid = 0x0001,
+    FunctionNameInvalid = 0x0002,
 };
-Q_ENUM_CREATE(CommanderState)
-Q_END_ENUM_CREATE(ElaActionCommanderType)
+Q_ENUM_CREATE(NavigationRouteType)
+
+enum RouteMode
+{
+    BackValid = 0x0000,
+    BackInvalid = 0x0001,
+    ForwardValid = 0x0002,
+    ForwardInvalid = 0x0003,
+};
+Q_ENUM_CREATE(RouteMode)
+Q_END_ENUM_CREATE(ElaNavigationRouterType)
 
 Q_BEGIN_ENUM_CREATE(ElaEventBusType)
 enum EventBusReturnType
@@ -252,6 +259,17 @@ enum MessageMode
 Q_ENUM_CREATE(MessageMode)
 Q_END_ENUM_CREATE(ElaMessageBarType)
 
+Q_BEGIN_ENUM_CREATE(ElaInfoBarType)
+enum InfoBarSeverity
+{
+    Informational = 0x0000,
+    Success = 0x0001,
+    Warning = 0x0002,
+    Error = 0x0003,
+};
+Q_ENUM_CREATE(InfoBarSeverity)
+Q_END_ENUM_CREATE(ElaInfoBarType)
+
 Q_BEGIN_ENUM_CREATE(ElaProgressRingType)
 enum ValueDisplayMode
 {
@@ -291,6 +309,38 @@ enum ButtonMode
 };
 Q_ENUM_CREATE(ButtonMode)
 Q_END_ENUM_CREATE(ElaSpinBoxType)
+
+Q_BEGIN_ENUM_CREATE(ElaSheetPanelType)
+enum Direction
+{
+    Bottom = 0x0000,
+    Left = 0x0001,
+    Right = 0x0002,
+};
+Q_ENUM_CREATE(Direction)
+
+enum DetentLevel
+{
+    Peek = 0x0000,
+    Half = 0x0001,
+    Full = 0x0002,
+};
+Q_ENUM_CREATE(DetentLevel)
+Q_END_ENUM_CREATE(ElaSheetPanelType)
+
+Q_BEGIN_ENUM_CREATE(ElaRouterType)
+enum NavigationResult
+{
+	Success = 0x0000,
+	RouteNotFound = 0x0001,
+	GuardRejected = 0x0002,
+	FactoryFailed = 0x0003,
+	WindowNotBound = 0x0004,
+	RouteAlreadyExists = 0x0005,
+	ParentRouteNotFound = 0x0006,
+};
+Q_ENUM_CREATE(NavigationResult)
+Q_END_ENUM_CREATE(ElaRouterType)
 
 Q_BEGIN_ENUM_CREATE(ElaIconType)
 enum IconName

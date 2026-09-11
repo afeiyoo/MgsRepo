@@ -1,10 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELASCROLLAREA_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELASCROLLAREA_H_
+#ifndef ELASCROLLAREA_H
+#define ELASCROLLAREA_H
 
 #include <QScrollArea>
 
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaProperty.h"
 
 class ElaScrollAreaPrivate;
 class ELA_EXPORT ElaScrollArea : public QScrollArea
@@ -24,4 +23,4 @@ public:
     bool getIsAnimation(Qt::Orientation orientation) const;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELASCROLLAREA_H_
+#endif // ELASCROLLAREA_H

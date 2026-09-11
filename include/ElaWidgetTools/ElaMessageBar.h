@@ -1,11 +1,10 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAMESSAGEBAR_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAMESSAGEBAR_H_
+#ifndef ELAMESSAGEBAR_H
+#define ELAMESSAGEBAR_H
 
 #include <QWidget>
 
-#include "ElaWidgetToolsDef.h"
-#include "ElaWidgetToolsExport.h"
-#include "ElaPropertyMacro.h"
+#include "ElaDef.h"
+#include "ElaProperty.h"
 
 class ElaMessageBarPrivate;
 class ELA_EXPORT ElaMessageBar : public QWidget
@@ -28,4 +27,4 @@ private:
     ~ElaMessageBar() override;
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAMESSAGEBAR_H_
+#endif // ELAMESSAGEBAR_H

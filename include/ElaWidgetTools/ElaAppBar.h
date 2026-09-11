@@ -1,9 +1,9 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAAPPBAR_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAAPPBAR_H_
+#ifndef ELAAPPBAR_H
+#define ELAAPPBAR_H
 
 #include <QWidget>
 
-#include "ElaWidgetToolsDef.h"
+#include "ElaDef.h"
 
 #ifdef Q_OS_WIN
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -58,7 +58,6 @@ class ELA_EXPORT ElaAppBar : public QWidget
     Q_PROPERTY_CREATE_Q_H(bool, IsDefaultClosed)
     Q_PROPERTY_CREATE_Q_H(bool, IsOnlyAllowMinAndClose)
     Q_PROPERTY_CREATE_Q_H(int, AppBarHeight)
-    Q_PROPERTY_CREATE_Q_H(int, RibbonHeight)
 public:
     explicit ElaAppBar(QWidget* parent = nullptr);
     ~ElaAppBar() override;
@@ -93,10 +92,16 @@ Q_SIGNALS:
     Q_SIGNAL void customMenuChanged();
 
 protected:
-    bool eventFilter(QObject* obj, QEvent* event) override;
+    virtual bool eventFilter(QObject* obj, QEvent* event) override;
 #ifdef Q_OS_WIN
-    void paintEvent(QPaintEvent* event) override;
+    virtual void paintEvent(QPaintEvent* event) override;
+#endif
+#ifdef Q_OS_MACOS
+    virtual void mousePressEvent(QMouseEvent* event) override;
+    virtual void mouseMoveEvent(QMouseEvent* event) override;
+    virtual void mouseReleaseEvent(QMouseEvent* event) override;
+    virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
 #endif
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAAPPBAR_H_
+#endif // ELAAPPBAR_H

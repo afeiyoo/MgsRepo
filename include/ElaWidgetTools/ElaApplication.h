@@ -1,11 +1,11 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELAAPPLICATION_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELAAPPLICATION_H_
+#ifndef ELAAPPLICATION_H
+#define ELAAPPLICATION_H
 
 #include <QIcon>
 #include <QObject>
 
-#include "ElaSingletonMacro.h"
-#include "ElaWidgetToolsDef.h"
+#include "ElaDef.h"
+#include "ElaSingleton.h"
 #define eApp ElaApplication::getInstance()
 class ElaApplicationPrivate;
 class ELA_EXPORT ElaApplication : public QObject
@@ -14,8 +14,7 @@ class ELA_EXPORT ElaApplication : public QObject
     Q_Q_CREATE(ElaApplication)
     Q_SINGLETON_CREATE_H(ElaApplication)
     Q_PROPERTY_CREATE_Q_H(ElaApplicationType::WindowDisplayMode, WindowDisplayMode)
-    Q_PROPERTY_REF_CREATE_Q_H(QString, ElaMicaImagePath)
-    Q_PROPERTY_CREATE_Q_H(int, FontPixelSize)
+    Q_PROPERTY_CREATE_Q_H(QString, ElaMicaImagePath)
 private:
     explicit ElaApplication(QObject* parent = nullptr);
     ~ElaApplication() override;
@@ -26,4 +25,4 @@ public:
     static bool containsCursorToItem(QWidget* item);
 };
 
-#endif // ELAWORKSPACE_ELAWIDGETTOOLS_ELAAPPLICATION_H_
+#endif // ELAAPPLICATION_H

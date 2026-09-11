@@ -1,8 +1,8 @@
-#ifndef ELAWORKSPACE_ELAWIDGETTOOLS_ELADIALOG_H_
-#define ELAWORKSPACE_ELAWIDGETTOOLS_ELADIALOG_H_
+#ifndef ELAFRAMEWORK_ELADIALOG_H
+#define ELAFRAMEWORK_ELADIALOG_H
 
 #include "ElaAppBar.h"
-#include "ElaWidgetToolsDef.h"
+#include "ElaDef.h"
 #include <QDialog>
 
 class ElaDialogPrivate;
@@ -34,4 +34,4 @@ protected:
     virtual void paintEvent(QPaintEvent* event) override;
 };
 
-#endif //ELAWORKSPACE_ELAWIDGETTOOLS_ELADIALOG_H_
+#endif //ELAFRAMEWORK_ELADIALOG_H
